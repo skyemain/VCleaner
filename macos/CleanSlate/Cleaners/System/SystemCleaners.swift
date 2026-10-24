@@ -1,0 +1,200 @@
+import Darwin
+import Foundation
+
+enum SystemCleaners {
+    static let diagnosticRetention: TimeInterval = 30 * 24 * 60 * 60
+    static let temporaryFileAge: TimeInterval = 24 * 60 * 60
+    static let looseCacheAge: TimeInterval = 7 * 24 * 60 * 60
+
+    static func temporaryFiles(_ context: ScanContext) -> ModuleEstimate {
+        estimate(
+            id: "temp",
+            title: "Temporary files",
+            root: context.locations.temporaryDirectory,
+            context: context,
+            minimumAge: context.now.addingTimeInterval(-temporaryFileAge)
+        )
+    }
+
+    static func userCaches(_ context: ScanContext) -> ModuleEstimate {
+        let root = context.locations.url("Library/Caches/com.apple.helpd")
+        return estimate(
+            id: "user-cache",
+            title: "Supported user caches",
+            root: root,
+            context: context,
+            minimumAge: context.now.addingTimeInterval(-looseCacheAge)
+        )
+    }
+
+    static func looseCacheFiles(_ context: ScanContext) -> ModuleEstimate {
+        let root = context.locations.url("Library/Caches")
+        var estimate = ModuleEstimate(id: "loose-cache", title: "Loose cache files", status: .ready, fileCount: 0, byteCount: 0, samplePaths: [])
+        let fm = FileManager()
+        guard let contents = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey, .contentModificationDateKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles]) else {
+            return estimate
+        }
+        let cutoff = context.now.addingTimeInterval(-looseCacheAge)
+        var count = 0
+        var bytes: Int64 = 0
+        var sample: [String] = []
+        for url in contents {
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey, .contentModificationDateKey, .isSymbolicLinkKey])
+            guard values?.isSymbolicLink != true, values?.isRegularFile == true else { continue }
+            guard let modified = values?.contentModificationDate, modified <= cutoff else { continue }
+            if context.isExcluded(url.path) || ProtectedPaths.isReserved(url) { continue }
+            count += 1
+            bytes += Int64(values?.fileSize ?? 0)
+            if sample.count < 20 { sample.append(url.path) }
+        }
+        estimate = ModuleEstimate(id: "loose-cache", title: "Loose cache files", status: .ready, fileCount: count, byteCount: bytes, samplePaths: sample)
+        return estimate
+    }
+
+    static func diagnosticReports(_ context: ScanContext) -> ModuleEstimate {
+        let root = context.locations.url("Library/Logs/DiagnosticReports")
+        let allowed: Set<String> = ["ips", "crash", "spin", "diag", "hang"]
+        let cutoff = context.now.addingTimeInterval(-diagnosticRetention)
+        let fm = FileManager()
+        var count = 0
+        var bytes: Int64 = 0
+        var sample: [String] = []
+        var skipped = 0
+        guard fm.fileExists(atPath: root.path) else {
+            return ModuleEstimate(id: "diagnostics", title: "Diagnostic reports", status: .ready, fileCount: 0, byteCount: 0, samplePaths: [])
+        }
+        if DirectoryWalker.isUnreadable(root) {
+            return ModuleEstimate(id: "diagnostics", title: "Diagnostic reports", status: .unavailable("macOS access restrictions"), fileCount: 0, byteCount: 0, samplePaths: [])
+        }
+        let urls = (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey, .contentModificationDateKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles])) ?? []
+        for url in urls {
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey, .contentModificationDateKey, .isSymbolicLinkKey])
+            guard values?.isSymbolicLink != true, values?.isRegularFile == true else { skipped += 1; continue }
+            guard allowed.contains(url.pathExtension.lowercased()) else { skipped += 1; continue }
+            guard let modified = values?.contentModificationDate, modified <= cutoff else { skipped += 1; continue }
+            if context.isExcluded(url.path) { skipped += 1; continue }
+            count += 1
+            bytes += Int64(values?.fileSize ?? 0)
+            if sample.count < 20 { sample.append(url.path) }
+        }
+        _ = skipped
+        return ModuleEstimate(id: "diagnostics", title: "Diagnostic reports", status: .ready, fileCount: count, byteCount: bytes, samplePaths: sample)
+    }
+
+    static func thumbnails() -> ModuleEstimate {
+        ModuleEstimate(
+            id: "thumbnails",
+            title: "Thumbnails",
+            status: .unsupported("Quick Look thumbnail caches are maintained by macOS. CleanSlate does not delete undocumented system cache databases."),
+            fileCount: 0,
+            byteCount: 0,
+            samplePaths: []
+        )
+    }
+
+    static func cleanTemporary(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+        clean(idRoot: context.locations.temporaryDirectory, context: context, minimumAge: context.now.addingTimeInterval(-temporaryFileAge), allowXcode: false, allowTrash: false, cancel: cancel)
+    }
+
+    static func cleanHelpCaches(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+        clean(
+            idRoot: context.locations.url("Library/Caches/com.apple.helpd"),
+            context: context,
+            minimumAge: context.now.addingTimeInterval(-looseCacheAge),
+            allowXcode: false,
+            allowTrash: false,
+            cancel: cancel
+        )
+    }
+
+    static func cleanLooseCaches(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+        cleanLoose(context, cancel: cancel)
+    }
+
+    static func cleanDiagnostics(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+        let root = context.locations.url("Library/Logs/DiagnosticReports")
+        let allowed: Set<String> = ["ips", "crash", "spin", "diag", "hang"]
+        let cutoff = context.now.addingTimeInterval(-diagnosticRetention)
+        let fm = FileManager()
+        let urls = ((try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.contentModificationDateKey, .isRegularFileKey], options: [.skipsHiddenFiles])) ?? []).filter { url in
+            guard allowed.contains(url.pathExtension.lowercased()) else { return false }
+            let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .isRegularFileKey])
+            guard values?.isRegularFile == true, let modified = values?.contentModificationDate else { return false }
+            return modified <= cutoff && !context.isExcluded(url.path)
+        }
+        let outcome = SafeDeletionService().deleteListedFiles(urls, under: root, context: context, shouldCancel: cancel)
+        return ModuleCleanup(deletedCount: outcome.deletedCount, deletedBytes: outcome.deletedBytes, skippedCount: outcome.skippedCount, errors: outcome.errors, status: .ready)
+    }
+
+    private static func estimate(id: String, title: String, root: URL, context: ScanContext, minimumAge: Date?) -> ModuleEstimate {
+        if DirectoryWalker.isUnreadable(root) {
+            return ModuleEstimate(id: id, title: title, status: .unavailable("macOS access restrictions"), fileCount: 0, byteCount: 0, samplePaths: [])
+        }
+        let stats = DirectoryWalker.collect(root: root, minimumAge: minimumAge, exclusions: context.exclusions, fileManager: FileManager())
+        return ModuleEstimate(id: id, title: title, status: .ready, fileCount: stats.fileCount, byteCount: stats.byteCount, samplePaths: stats.samplePaths)
+    }
+
+    private static func clean(idRoot: URL, context: ScanContext, minimumAge: Date?, allowXcode: Bool, allowTrash: Bool, cancel: () -> Bool) -> ModuleCleanup {
+        var service = SafeDeletionService(allowXcodeDerivedData: allowXcode, allowTrash: allowTrash)
+        let outcome = service.deleteEligibleFiles(under: idRoot, context: context, minimumAge: minimumAge, shouldCancel: cancel)
+        return ModuleCleanup(deletedCount: outcome.deletedCount, deletedBytes: outcome.deletedBytes, skippedCount: outcome.skippedCount, errors: outcome.errors, status: .ready)
+    }
+
+    private static func cleanLoose(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+        let root = context.locations.url("Library/Caches")
+        let cutoff = context.now.addingTimeInterval(-looseCacheAge)
+        var cleanup = ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .ready)
+        let fm = FileManager()
+        guard let contents = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey, .isSymbolicLinkKey, .fileSizeKey], options: [.skipsHiddenFiles]) else {
+            return cleanup
+        }
+        for url in contents {
+            if cancel() { cleanup.errors.append("Cancelled."); break }
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .contentModificationDateKey, .isSymbolicLinkKey, .fileSizeKey])
+            guard values?.isSymbolicLink != true, values?.isRegularFile == true else { continue }
+            guard let modified = values?.contentModificationDate, modified <= cutoff else { continue }
+            if context.isExcluded(url.path) || ProtectedPaths.isReserved(url) { cleanup.skippedCount += 1; continue }
+            if context.dryRun {
+                cleanup.deletedCount += 1
+                cleanup.deletedBytes += Int64(values?.fileSize ?? 0)
+                continue
+            }
+            let outcome = deleteLooseFile(url, context: context)
+            switch outcome {
+            case .deleted(let bytes):
+                cleanup.deletedCount += 1
+                cleanup.deletedBytes += bytes
+            case .skipped:
+                cleanup.skippedCount += 1
+            case .failed(let message):
+                cleanup.errors.append(message)
+            }
+        }
+        return cleanup
+    }
+
+    private enum LooseResult {
+        case deleted(Int64)
+        case skipped
+        case failed(String)
+    }
+
+    /// Deletes one regular file whose parent is exactly `~/Library/Caches`. Subfolders are never entered.
+    private static func deleteLooseFile(_ url: URL, context: ScanContext) -> LooseResult {
+        let parent = url.deletingLastPathComponent().standardizedFileURL.resolvingSymlinksInPath().path
+        let caches = context.locations.url("Library/Caches").standardizedFileURL.resolvingSymlinksInPath().path
+        guard parent == caches else { return .skipped }
+        guard !ProtectedPaths.isReserved(url) else { return .skipped }
+        var info = stat()
+        guard lstat(url.path, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG, info.st_uid == getuid() else { return .skipped }
+        let descriptor = open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        guard descriptor >= 0 else { return .failed("Could not open \(url.lastPathComponent).") }
+        defer { close(descriptor) }
+        var opened = stat()
+        guard fstat(descriptor, &opened) == 0, opened.st_dev == info.st_dev, opened.st_ino == info.st_ino else {
+            return .failed("Skipped \(url.lastPathComponent): it changed before it could be removed.")
+        }
+        guard unlink(url.path) == 0 else { return .failed("Could not remove \(url.lastPathComponent).") }
+        return .deleted(Int64(opened.st_size))
+    }
+}

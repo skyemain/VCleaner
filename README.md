@@ -4,6 +4,8 @@ CleanSlate is a Windows 10 / Windows 11 desktop cleaner written in C# (.NET 10, 
 Chrome / Edge caches, reports registry entries that point to programs that are verifiably gone, and can repair them
 after you approve each one. It is built around one rule: **never delete anything it cannot prove is safe to delete.**
 
+The macOS app lives on the `mac` branch under [`macos/`](macos/README.md). It is a separate SwiftUI project for macOS 13 and newer. It does not change the Windows app.
+
 > **Verification status (read this first).** This repository was developed and built on Linux. The application compiles
 > and cross-publishes to a `win-x64` executable, and 182 automated tests of the safety-critical logic pass on Linux.
 > **It has not been run on Windows.** The WPF user interface, the Windows registry / Recycle Bin / restore point /
