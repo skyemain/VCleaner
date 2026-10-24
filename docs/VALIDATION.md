@@ -87,7 +87,7 @@ Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Clea
 
 - [ ] Run with `%TEMP%` on a different drive, and with a junction inside `%TEMP%` pointing to `C:\Users\<you>\Documents`: the junction target is never entered or deleted.
 - [ ] Run while another CleanSlate action is in progress (try Settings during a scan): navigation is blocked.
-- [ ] Pull the plug on nothing important: kill the process during a clean, restart: the app starts normally, history shows a canceled/partial session at most.
+- [ ] End the CleanSlate process from Task Manager in the middle of a clean, then start it again: it starts normally and the next scan reflects what was actually deleted.
 - [ ] Very large profile (hundreds of thousands of files): UI stays responsive, memory stays reasonable, cancel responds within a couple of seconds. Note timings.
 
 ## 9. Distribution checks

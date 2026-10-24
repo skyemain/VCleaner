@@ -42,6 +42,25 @@ public sealed class EngineIntegrationTests
     }
 
     [Fact]
+    public async Task A_path_reachable_through_two_roots_is_counted_and_deleted_exactly_once()
+    {
+        using var h = new Harness();
+        SeedJunk(h);
+        var paths = h.Paths with { UserTmp = h.Paths.UserTemp + Path.DirectorySeparatorChar };
+        var modules = CleanSlate.Cleaners.CleanerCatalog.CreateModules(paths, h.Deletion, h.Registry, h.Scanner, h.FileProbe, h.Runner, h.Bin, h.Browser, h.Log);
+        var engine = new CleaningEngine(modules, h.Privilege, h.Log, new RunGate());
+        var settings = Harness.Minimal(s => s.CleanUserTemp = true);
+
+        var scan = await engine.ScanAsync(settings, null, CancellationToken.None);
+        var clean = await engine.CleanAsync(PlanBuilder.Build(scan, PlanMode.Automatic), settings, null, CancellationToken.None);
+
+        Assert.Equal(2, scan.AllFindings.Count(f => f.IsEligible && f.Action == ActionType.DeleteFile));
+        Assert.Equal(3000, clean.BytesRecovered);
+        Assert.Equal(2, clean.ItemsCleaned);
+        Assert.Equal(0, clean.Errors);
+    }
+
+    [Fact]
     public async Task Preview_and_execution_use_the_same_eligibility_and_numbers()
     {
         using var h = new Harness();

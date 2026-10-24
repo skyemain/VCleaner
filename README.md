@@ -5,7 +5,7 @@ Chrome / Edge caches, reports registry entries that point to programs that are v
 after you approve each one. It is built around one rule: **never delete anything it cannot prove is safe to delete.**
 
 > **Verification status (read this first).** This repository was developed and built on Linux. The application compiles
-> and cross-publishes to a `win-x64` executable, and 133 automated tests of the safety-critical logic pass on Linux.
+> and cross-publishes to a `win-x64` executable, and 134 automated tests of the safety-critical logic pass on Linux.
 > **It has not been run on Windows.** The WPF user interface, the Windows registry / Recycle Bin / restore point /
 > elevation code paths, DISM and the tray icon are compiled but unexercised. Work through
 > [docs/VALIDATION.md](docs/VALIDATION.md) on a real Windows 10 and Windows 11 machine before relying on it. See
