@@ -18,6 +18,12 @@ public sealed class CleanSlateSettings
     // Cleaning - system junk
     public bool CleanUserTemp { get; set; } = true;
     public bool CleanWindowsTemp { get; set; } = true;
+
+    /// <summary>When true, temporary files are removed whatever their age (files in use are always skipped). When false, only files older than 24 hours.</summary>
+    public bool CleanRecentTempFiles { get; set; } = true;
+
+    /// <summary>Windows prefetch (*.pf) files. Windows recreates them; apps may start slightly slower once. Requires administrator.</summary>
+    public bool CleanPrefetch { get; set; } = true;
     public bool CleanThumbnailCache { get; set; } = true;
     public bool CleanShaderCache { get; set; } = true;
     public bool CleanErrorReports { get; set; } = true;
@@ -31,6 +37,12 @@ public sealed class CleanSlateSettings
     public bool CleanChromeCache { get; set; } = true;
     public bool CleanEdgeCache { get; set; } = true;
     public bool ClearBrowserSiteStorage { get; set; }
+
+    /// <summary>Close Chrome/Edge (gently first, then forcefully) so their caches can be cleaned. Sign-ins, passwords and cookies are never touched.</summary>
+    public bool CloseBrowsersBeforeCleaning { get; set; } = true;
+
+    /// <summary>Show one confirmation naming the browsers that are about to be closed.</summary>
+    public bool AskBeforeClosingBrowsers { get; set; } = true;
 
     /// <summary>Unsupported: requires editing live SQLite databases. Always treated as false.</summary>
     public bool ClearBrowserHistory { get; set; }
@@ -69,6 +81,8 @@ public sealed class CleanSlateSettings
         ShowCompletionNotifications = ShowCompletionNotifications,
         CleanUserTemp = CleanUserTemp,
         CleanWindowsTemp = CleanWindowsTemp,
+        CleanRecentTempFiles = CleanRecentTempFiles,
+        CleanPrefetch = CleanPrefetch,
         CleanThumbnailCache = CleanThumbnailCache,
         CleanShaderCache = CleanShaderCache,
         CleanErrorReports = CleanErrorReports,
@@ -80,6 +94,8 @@ public sealed class CleanSlateSettings
         CleanChromeCache = CleanChromeCache,
         CleanEdgeCache = CleanEdgeCache,
         ClearBrowserSiteStorage = ClearBrowserSiteStorage,
+        CloseBrowsersBeforeCleaning = CloseBrowsersBeforeCleaning,
+        AskBeforeClosingBrowsers = AskBeforeClosingBrowsers,
         ClearBrowserHistory = false,
         ClearBrowserCookies = false,
         ClearActivityHistory = ClearActivityHistory,

@@ -45,6 +45,22 @@ public interface IAppLifecycle
     void Shutdown();
 }
 
+public sealed record InstallStatus(bool IsInstalled, string? InstalledVersion, bool RunningFromInstallFolder, string InstallFolder);
+
+public sealed record InstallActionResult(bool Success, string Message, bool ShouldExit);
+
+/// <summary>The per-user installer: put this copy into its install folder (replacing any older one) or remove CleanSlate again.</summary>
+public interface IInstallManager
+{
+    InstallStatus GetStatus();
+
+    /// <summary>Installs the running copy, replacing an older installed version, then starts the installed copy. <c>ShouldExit</c> tells the app to close.</summary>
+    InstallActionResult InstallThisCopy();
+
+    /// <summary>Removes the program, its shortcut and its startup entry. <c>ShouldExit</c> is true because the running files are deleted after exit.</summary>
+    InstallActionResult Uninstall(bool removeUserData);
+}
+
 public interface ILogAccess
 {
     string LogsDirectory { get; }

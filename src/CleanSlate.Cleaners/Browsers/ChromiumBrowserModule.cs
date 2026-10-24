@@ -172,7 +172,7 @@ public static partial class ChromiumProfileDiscovery
     }
 }
 
-/// <summary>Detects a running browser from its processes and the user-data lock file. Never terminates anything.</summary>
+/// <summary>Detects a running browser from its processes and the user-data lock file. Never terminates anything (see <see cref="ProcessBrowserCloser"/>).</summary>
 public sealed class ProcessBrowserRunningDetector : IBrowserRunningDetector
 {
     public bool IsRunning(BrowserDescriptor browser, string userDataDirectory)
@@ -319,12 +319,14 @@ public sealed class ChromiumBrowserModule : FileRuleModuleBase
     private readonly SystemPaths _paths;
     private readonly IBrowserRunningDetector _detector;
     private readonly IFileProbe _probe;
+    private readonly IBrowserCloser _closer;
 
     public ChromiumBrowserModule(
-        BrowserDescriptor browser, SystemPaths paths, IBrowserRunningDetector detector, IFileProbe probe,
+        BrowserDescriptor browser, SystemPaths paths, IBrowserRunningDetector detector, IBrowserCloser closer, IFileProbe probe,
         ISafeDeletionService deletion, IAppLogger log)
         : base(deletion, log)
     {
+        _closer = closer;
         _browser = browser;
         _paths = paths;
         _detector = detector;
@@ -368,7 +370,7 @@ public sealed class ChromiumBrowserModule : FileRuleModuleBase
             return plan;
         }
 
-        var running = _detector.IsRunning(_browser, userData);
+        var running = _detector.IsRunning(_browser, userData) && !settings.CloseBrowsersBeforeCleaning;
         var userDataScope = new HashSet<string>(PathGuard.Comparer);
 
         foreach (var category in Categories)
@@ -414,6 +416,32 @@ public sealed class ChromiumBrowserModule : FileRuleModuleBase
         }
 
         return plan;
+    }
+
+    protected override void BeforeClean(CleanContext context, IReadOnlyList<Finding> findings, CancellationToken cancellationToken)
+    {
+        if (!context.Settings.CloseBrowsersBeforeCleaning ||
+            !findings.Any(f => f.ModuleId == ModuleId && f.Action == ActionType.DeleteFile) ||
+            !_detector.IsRunning(_browser, UserDataDirectory))
+        {
+            return;
+        }
+
+        context.Reporter.Operation($"Closing {_browser.DisplayName}...");
+        var result = _closer.Close(_browser, cancellationToken);
+        var summary = result.IsClosed
+            ? $"{_browser.DisplayName} was closed ({result.ProcessesFound} processes{(result.ForcedAny ? ", some ended after the grace period" : string.Empty)})."
+            : $"{_browser.DisplayName} could not be fully closed ({result.ProcessesRemaining} of {result.ProcessesFound} processes still running); files it holds open will be skipped.";
+        if (result.IsClosed)
+        {
+            Log.Info(summary);
+        }
+        else
+        {
+            Log.Warning(summary);
+        }
+
+        Log.Audit("CLOSED-BROWSER " + summary);
     }
 
     private FileCleanRule MakeRule(CacheCategory category, CacheDirectory directory, string root, string scope) => new()

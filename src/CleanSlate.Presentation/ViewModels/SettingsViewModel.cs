@@ -108,6 +108,9 @@ public sealed class SettingsViewModel : PageViewModel
     private readonly Action _openBackups;
     private readonly Func<bool> _isBusy;
     private string _message = string.Empty;
+    private string _installStatusText = string.Empty;
+    private string _installButtonText = "Install";
+    private InstallStatus? _installStatus;
 
     public SettingsViewModel(PresentationContext ctx, Action back, Action openBackups, Func<bool> isBusy)
         : base("Settings", back)
@@ -125,7 +128,7 @@ public sealed class SettingsViewModel : PageViewModel
             new UnsupportedFeature("Browser history", "Chrome and Edge keep history in live SQLite databases. Editing or deleting those files while the browser may use them risks corrupting the profile, so CleanSlate does not touch history."),
             new UnsupportedFeature("Browser cookies and download history", "Stored in the same live databases and protected for the same reason. Use the browser's own \"Clear browsing data\" for these."),
             new UnsupportedFeature("Saved passwords, autofill and bookmarks", "Never touched. These are personal data, not cache."),
-            new UnsupportedFeature("Update check", "CleanSlate does not contact the network. Download new versions yourself and replace the folder.")
+            new UnsupportedFeature("Update check", "CleanSlate does not contact the network. To update, run the newer CleanSlate.exe and choose Install: it replaces the old version for you.")
         };
 
         ExcludedFolders = new ObservableCollection<string>(_ctx.Settings.Current.ExcludedFolders);
@@ -140,6 +143,9 @@ public sealed class SettingsViewModel : PageViewModel
         ClearHistoryCommand = new AsyncRelayCommand(ClearHistoryAsync, null, OnError);
         ResetCommand = new AsyncRelayCommand(ResetAsync, null, OnError);
         OpenBackupsCommand = new RelayCommand(_openBackups);
+        InstallCommand = new AsyncRelayCommand(InstallAsync, () => CanInstall, OnError);
+        UninstallCommand = new AsyncRelayCommand(UninstallAsync, () => CanUninstall, OnError);
+        RefreshInstallStatus();
         RefreshHistory();
     }
 
@@ -171,6 +177,28 @@ public sealed class SettingsViewModel : PageViewModel
 
     public RelayCommand OpenBackupsCommand { get; }
 
+    public AsyncRelayCommand InstallCommand { get; }
+
+    public AsyncRelayCommand UninstallCommand { get; }
+
+    public bool InstallerAvailable => _ctx.Installer is not null;
+
+    public string InstallStatusText
+    {
+        get => _installStatusText;
+        private set => SetProperty(ref _installStatusText, value);
+    }
+
+    public string InstallButtonText
+    {
+        get => _installButtonText;
+        private set => SetProperty(ref _installButtonText, value);
+    }
+
+    public bool CanInstall => _installStatus is { RunningFromInstallFolder: false };
+
+    public bool CanUninstall => _installStatus is { IsInstalled: true };
+
     public string VersionText => $"CleanSlate {_ctx.VersionText}";
 
     public string PrivilegeText => _ctx.Elevation.IsElevated ? "Running as administrator" : "Running with standard user rights";
@@ -179,6 +207,105 @@ public sealed class SettingsViewModel : PageViewModel
     {
         get => _message;
         private set => SetProperty(ref _message, value);
+    }
+
+    private void RefreshInstallStatus()
+    {
+        _installStatus = null;
+        if (_ctx.Installer is null)
+        {
+            InstallStatusText = string.Empty;
+        }
+        else
+        {
+            try
+            {
+                var status = _ctx.Installer.GetStatus();
+                _installStatus = status;
+                if (status.IsInstalled)
+                {
+                    InstallStatusText = status.RunningFromInstallFolder
+                        ? $"Installed (version {status.InstalledVersion}) in {status.InstallFolder}"
+                        : $"Version {status.InstalledVersion} is installed. This copy is not installed, so installing replaces the old version.";
+                    InstallButtonText = status.RunningFromInstallFolder ? "Installed" : "Replace installed version";
+                }
+                else
+                {
+                    InstallStatusText = "CleanSlate is not installed. Installing adds a Start menu entry and lets you uninstall it from Windows Settings.";
+                    InstallButtonText = "Install";
+                }
+            }
+            catch (Exception ex)
+            {
+                _ctx.Log.Error("Could not read install status", ex);
+                InstallStatusText = "The install status could not be read.";
+            }
+        }
+
+        InstallCommand.RaiseCanExecuteChanged();
+        UninstallCommand.RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(CanInstall));
+        OnPropertyChanged(nameof(CanUninstall));
+    }
+
+    private async Task InstallAsync()
+    {
+        if (_ctx.Installer is null || _isBusy())
+        {
+            return;
+        }
+
+        var replacing = _installStatus is { IsInstalled: true };
+        var ok = await _ctx.Dialogs.ConfirmAsync(
+            replacing ? "Replace the installed version?" : "Install CleanSlate?",
+            replacing
+                ? "The installed CleanSlate is closed and replaced by this version. Your settings, history and backups are kept. CleanSlate then restarts from the installed copy."
+                : "CleanSlate is copied to your user profile (no administrator rights needed) and added to the Start menu and to Apps & features. CleanSlate then restarts from the installed copy.",
+            replacing ? "Replace" : "Install").ConfigureAwait(true);
+        if (!ok)
+        {
+            return;
+        }
+
+        var result = _ctx.Installer.InstallThisCopy();
+        Message = result.Message;
+        if (result.Success && result.ShouldExit)
+        {
+            _ctx.Lifecycle.Shutdown();
+        }
+
+        RefreshInstallStatus();
+    }
+
+    private async Task UninstallAsync()
+    {
+        if (_ctx.Installer is null || _isBusy())
+        {
+            return;
+        }
+
+        var ok = await _ctx.Dialogs.ConfirmAsync(
+            "Uninstall CleanSlate?",
+            "CleanSlate closes and its program files, Start menu entry and startup entry are removed. You are asked next whether to keep your settings and history.",
+            "Uninstall").ConfigureAwait(true);
+        if (!ok)
+        {
+            return;
+        }
+
+        var keep = await _ctx.Dialogs.ConfirmAsync(
+            "Keep your settings and history?",
+            "Registry backups are stored with them, so keeping them lets you undo an earlier registry repair later.",
+            "Keep my data", "Delete everything").ConfigureAwait(true);
+
+        var result = _ctx.Installer.Uninstall(removeUserData: !keep);
+        Message = result.Message;
+        if (result.Success && result.ShouldExit)
+        {
+            _ctx.Lifecycle.Shutdown();
+        }
+
+        RefreshInstallStatus();
     }
 
     public SettingToggleViewModel Toggle(string key) => Toggles.Single(t => t.Key == key);
@@ -218,8 +345,10 @@ public sealed class SettingsViewModel : PageViewModel
             }),
             new("System junk", "Every item is permanently deleted. Only files older than a minimum age and inside approved folders are touched.", new[]
             {
-                T("user-temp", "User temporary files", "%TEMP% files that are not in use and are older than the minimum age.", s => s.CleanUserTemp, (s, v) => s.CleanUserTemp = v),
-                T("win-temp", "Windows temporary files", "C:\\Windows\\Temp. Requires administrator.", s => s.CleanWindowsTemp, (s, v) => s.CleanWindowsTemp = v, badge: "Administrator"),
+                T("user-temp", "User temp folder (%TEMP%)", "Files in your temp folder that are not in use.", s => s.CleanUserTemp, (s, v) => s.CleanUserTemp = v),
+                T("win-temp", "Windows temp folder", "C:\\Windows\\Temp. Files in use are skipped. Requires administrator.", s => s.CleanWindowsTemp, (s, v) => s.CleanWindowsTemp = v, badge: "Administrator"),
+                T("recent-temp", "Include files created in the last few hours", "Off keeps recent temp files so a running installer is not disturbed. Files that are open are always skipped.", s => s.CleanRecentTempFiles, (s, v) => s.CleanRecentTempFiles = v),
+                T("prefetch", "Prefetch files", "C:\\Windows\\Prefetch trace files. Windows rebuilds them; the next launch of an app may be a little slower. Requires administrator.", s => s.CleanPrefetch, (s, v) => s.CleanPrefetch = v, badge: "Administrator"),
                 T("thumbs", "Thumbnail cache", "Explorer rebuilds thumbnails on demand.", s => s.CleanThumbnailCache, (s, v) => s.CleanThumbnailCache = v),
                 T("shader", "DirectX shader cache", "Games and apps rebuild it; the first launch afterward may be slower.", s => s.CleanShaderCache, (s, v) => s.CleanShaderCache = v),
                 T("wer", "Error reports", "Windows Error Reporting archives and queues.", s => s.CleanErrorReports, (s, v) => s.CleanErrorReports = v),
@@ -232,8 +361,10 @@ public sealed class SettingsViewModel : PageViewModel
                 T("do", "Delivery Optimization cache", "Clears downloaded update content shared with other PCs. Requires administrator.", s => s.CleanDeliveryOptimization, (s, v) => s.CleanDeliveryOptimization = v,
                     "Enable Delivery Optimization cleanup?", "CleanSlate will ask Windows to delete its Delivery Optimization cache after you confirm in the review screen.", "Administrator")
             }),
-            new("Browsers", "Chrome and Edge are only cleaned while they are closed. Passwords, bookmarks, history and cookies are never touched.", new[]
+            new("Browsers", "Chrome and Edge are closed first, then only their cache is cleaned. Passwords, bookmarks, history and cookies are never touched, so you stay signed in.", new[]
             {
+                T("close-browsers", "Close running browsers before cleaning", "Closes the window politely and ends leftovers after a few seconds. Off skips any browser that is open.", s => s.CloseBrowsersBeforeCleaning, (s, v) => s.CloseBrowsersBeforeCleaning = v),
+                T("ask-browsers", "Ask before closing a browser", "Shows a confirmation naming the browser. Off closes it without asking.", s => s.AskBeforeClosingBrowsers, (s, v) => s.AskBeforeClosingBrowsers = v),
                 T("chrome", "Chrome cache", "HTTP, code and GPU caches of every profile.", s => s.CleanChromeCache, (s, v) => s.CleanChromeCache = v),
                 T("edge", "Edge cache", "HTTP, code and GPU caches of every profile.", s => s.CleanEdgeCache, (s, v) => s.CleanEdgeCache = v),
                 T("site-storage", "Website storage (Local Storage, IndexedDB, Cache Storage)", "Can sign you out of some sites and removes offline site data. Off by default.", s => s.ClearBrowserSiteStorage, (s, v) => s.ClearBrowserSiteStorage = v,

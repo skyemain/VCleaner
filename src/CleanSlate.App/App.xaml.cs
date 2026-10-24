@@ -8,6 +8,7 @@ using CleanSlate.Cleaners;
 using CleanSlate.Cleaners.Browsers;
 using CleanSlate.Cleaners.Registry;
 using CleanSlate.Core.Configuration;
+using CleanSlate.Core.Install;
 using CleanSlate.Core.Interfaces;
 using CleanSlate.Core.Services;
 using CleanSlate.Presentation.Infrastructure;
@@ -35,6 +36,20 @@ public partial class App : Application
 
         var restarted = e.Args.Contains("--restarted", StringComparer.OrdinalIgnoreCase);
         var startup = e.Args.Contains("--startup", StringComparer.OrdinalIgnoreCase);
+
+        if (e.Args.Contains("--uninstall", StringComparer.OrdinalIgnoreCase))
+        {
+            RunUninstall(e.Args.Contains("--quiet", StringComparer.OrdinalIgnoreCase));
+            Shutdown();
+            return;
+        }
+
+        var skipInstallOffer = startup || restarted || e.Args.Contains("--no-install-prompt", StringComparer.OrdinalIgnoreCase);
+        if (!skipInstallOffer && OfferInstall())
+        {
+            Shutdown();
+            return;
+        }
 
         if (!AcquireSingleInstance(restarted))
         {
@@ -117,6 +132,105 @@ public partial class App : Application
 
         _services?.Dispose();
         base.OnExit(e);
+    }
+
+    private static InstallService CreateInstallService(AppDataLayout layout) =>
+        new(new WindowsInstallPlatform(layout), new WindowsRegistryAccess(), new StartupRegistration(), NullAppLogger.Instance);
+
+    /// <summary>
+    /// Offers to install this copy (replacing an older installed version) before the app starts. Returns true when the installed copy
+    /// was started instead and this process should exit. Nothing is asked when a <c>portable.txt</c> file sits next to the exe.
+    /// </summary>
+    private bool OfferInstall()
+    {
+        var path = Environment.ProcessPath;
+        if (string.IsNullOrEmpty(path))
+        {
+            return false;
+        }
+
+        try
+        {
+            var folder = Path.GetDirectoryName(path) ?? string.Empty;
+            if (File.Exists(Path.Combine(folder, "portable.txt")))
+            {
+                return false;
+            }
+
+            var service = CreateInstallService(AppDataLayout.ForCurrentUser());
+            if (service.IsRunningFromInstallFolder(path))
+            {
+                return false;
+            }
+
+            var current = VersionText();
+            var installed = service.GetInstalled();
+            var manager = new InstallManager(service, current);
+
+            if (installed is not null && string.Equals(installed.Version, current, StringComparison.OrdinalIgnoreCase))
+            {
+                var open = MessageBox.Show(
+                    $"CleanSlate {current} is already installed.\n\nOpen the installed copy?\n\nYes opens the installed copy.\nNo runs this copy once without installing.",
+                    "CleanSlate", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (open != MessageBoxResult.Yes)
+                {
+                    return false;
+                }
+
+                InstallManager.Launch(installed.ExecutablePath);
+                return true;
+            }
+
+            var message = installed is null
+                ? $"Install CleanSlate {current}?\n\nIt is copied to your user profile and added to the Start menu. No administrator rights are needed, and you can uninstall it from Windows Settings.\n\nYes installs and opens it.\nNo runs this copy once without installing."
+                : $"CleanSlate {installed.Version} is installed. Replace it with {current}?\n\nThe old version is closed and removed. Your settings and history are kept.\n\nYes replaces it and opens the new version.\nNo runs this copy once without installing.";
+            var choice = MessageBox.Show(message, "CleanSlate setup", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (choice != MessageBoxResult.Yes)
+            {
+                return false;
+            }
+
+            var result = manager.InstallThisCopy();
+            if (result.Success && result.ShouldExit)
+            {
+                return true;
+            }
+
+            MessageBox.Show(result.Message + (result.Success ? string.Empty : "\n\nCleanSlate will run from its current location instead."),
+                "CleanSlate setup", MessageBoxButton.OK, result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
+            return false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private void RunUninstall(bool quiet)
+    {
+        var layout = AppDataLayout.ForCurrentUser();
+        var manager = new InstallManager(CreateInstallService(layout), VersionText());
+        var removeData = false;
+        if (!quiet)
+        {
+            var confirm = MessageBox.Show("Uninstall CleanSlate?\n\nThe program, its Start menu entry and its startup entry are removed.",
+                "CleanSlate", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            removeData = MessageBox.Show(
+                "Also delete CleanSlate's settings, history and registry backups?\n\nChoose No to keep them, for example if you plan to reinstall.",
+                "CleanSlate", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) == MessageBoxResult.Yes;
+        }
+
+        var result = manager.Uninstall(removeData);
+        if (!quiet)
+        {
+            MessageBox.Show(result.Success ? "CleanSlate was uninstalled." : result.Message, "CleanSlate",
+                MessageBoxButton.OK, result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        }
     }
 
     private bool AcquireSingleInstance(bool waitForPrevious)
@@ -209,6 +323,13 @@ public partial class App : Application
         services.AddSingleton<IRestorePointService>(sp => new WindowsRestorePointService(sp.GetRequiredService<IPrivilegeInfo>()));
         services.AddSingleton<IStartupRegistration, StartupRegistration>();
         services.AddSingleton<IBrowserRunningDetector, ProcessBrowserRunningDetector>();
+        services.AddSingleton<IBrowserCloser, ProcessBrowserCloser>();
+        services.AddSingleton<IBrowserInventory>(sp => new BrowserInventory(
+            sp.GetRequiredService<CleanSlate.Core.Models.SystemPaths>(), sp.GetRequiredService<IBrowserRunningDetector>()));
+        services.AddSingleton(sp => new InstallService(
+            new WindowsInstallPlatform(sp.GetRequiredService<AppDataLayout>()), sp.GetRequiredService<IRegistryAccess>(),
+            sp.GetRequiredService<IStartupRegistration>(), sp.GetRequiredService<IAppLogger>()));
+        services.AddSingleton<IInstallManager>(sp => new InstallManager(sp.GetRequiredService<InstallService>(), VersionText()));
 
         services.AddSingleton<RunGate>();
         services.AddSingleton(sp => new ProtectedPaths(sp.GetRequiredService<CleanSlate.Core.Models.SystemPaths>()));
@@ -225,7 +346,7 @@ public partial class App : Application
             sp.GetRequiredService<CleanSlate.Core.Models.SystemPaths>(), sp.GetRequiredService<ISafeDeletionService>(),
             sp.GetRequiredService<IRegistryAccess>(), sp.GetRequiredService<RegistryScanner>(), sp.GetRequiredService<IFileProbe>(),
             sp.GetRequiredService<IProcessRunner>(), sp.GetRequiredService<IRecycleBinService>(), sp.GetRequiredService<IBrowserRunningDetector>(),
-            sp.GetRequiredService<IAppLogger>()));
+            sp.GetRequiredService<IBrowserCloser>(), sp.GetRequiredService<IAppLogger>()));
         services.AddSingleton<ICleaningEngine>(sp => new CleaningEngine(
             sp.GetRequiredService<IReadOnlyList<ICleanerModule>>(), sp.GetRequiredService<IPrivilegeInfo>(),
             sp.GetRequiredService<IAppLogger>(), sp.GetRequiredService<RunGate>()));
@@ -251,6 +372,8 @@ public partial class App : Application
             Logs = sp.GetRequiredService<ILogAccess>(),
             Startup = sp.GetRequiredService<IStartupRegistration>(),
             Log = sp.GetRequiredService<IAppLogger>(),
+            Browsers = sp.GetRequiredService<IBrowserInventory>(),
+            Installer = sp.GetRequiredService<IInstallManager>(),
             VersionText = VersionText()
         });
         services.AddSingleton<MainViewModel>();

@@ -47,7 +47,7 @@ public sealed class EngineIntegrationTests
         using var h = new Harness();
         SeedJunk(h);
         var paths = h.Paths with { UserTmp = h.Paths.UserTemp + Path.DirectorySeparatorChar };
-        var modules = CleanSlate.Cleaners.CleanerCatalog.CreateModules(paths, h.Deletion, h.Registry, h.Scanner, h.FileProbe, h.Runner, h.Bin, h.Browser, h.Log);
+        var modules = CleanSlate.Cleaners.CleanerCatalog.CreateModules(paths, h.Deletion, h.Registry, h.Scanner, h.FileProbe, h.Runner, h.Bin, h.Browser, h.Closer, h.Log);
         var engine = new CleaningEngine(modules, h.Privilege, h.Log, new RunGate());
         var settings = Harness.Minimal(s => s.CleanUserTemp = true);
 

@@ -106,6 +106,33 @@ public sealed class FakeBrowserDetector : IBrowserRunningDetector
     public bool IsRunning(BrowserDescriptor browser, string userDataDirectory) => Running;
 }
 
+public sealed class FakeBrowserCloser : IBrowserCloser
+{
+    private readonly FakeBrowserDetector _detector;
+
+    public FakeBrowserCloser(FakeBrowserDetector detector) => _detector = detector;
+
+    public int CloseCalls { get; private set; }
+
+    public List<string> Closed { get; } = new();
+
+    /// <summary>When true the fake leaves the browser running, like a process that cannot be ended.</summary>
+    public bool CannotClose { get; set; }
+
+    public BrowserCloseResult Close(BrowserDescriptor browser, CancellationToken cancellationToken)
+    {
+        CloseCalls++;
+        Closed.Add(browser.Id);
+        if (CannotClose)
+        {
+            return new BrowserCloseResult(3, 3, true);
+        }
+
+        _detector.Running = false;
+        return new BrowserCloseResult(3, 0, true);
+    }
+}
+
 public sealed class FakeRecycleBin : IRecycleBinService
 {
     public bool IsSupported { get; set; } = true;
@@ -351,4 +378,67 @@ public sealed class InMemoryRegistry : IRegistryAccess
             _keys.Remove(Id(key));
         }
     }
+}
+
+public sealed class FakeStartupRegistration : IStartupRegistration
+{
+    public bool IsRegistered { get; set; }
+    public string? Path { get; private set; }
+    public int UnregisterCalls { get; private set; }
+
+    public void Register(string executablePath)
+    {
+        IsRegistered = true;
+        Path = executablePath;
+    }
+
+    public void Unregister()
+    {
+        UnregisterCalls++;
+        IsRegistered = false;
+        Path = null;
+    }
+}
+
+/// <summary>An install platform backed by a real temporary folder. Deferred deletions are recorded instead of run.</summary>
+public sealed class DiskInstallPlatform : CleanSlate.Core.Install.IInstallPlatform
+{
+    public DiskInstallPlatform(TempDirectory temp)
+    {
+        InstallDirectory = temp.Combine("LocalAppData", "Programs", "CleanSlate");
+        UserDataDirectory = temp.Combine("LocalAppData", "CleanSlate");
+        StartMenuShortcutPath = temp.Combine("StartMenu", "CleanSlate.lnk");
+    }
+
+    public string InstallDirectory { get; set; }
+    public string UserDataDirectory { get; set; }
+    public string StartMenuShortcutPath { get; }
+
+    public int InstancesThatCannotBeStopped { get; set; }
+    public List<string> StopRequests { get; } = new();
+    public List<string> ScheduledDeletes { get; } = new();
+
+    public bool FileExists(string path) => File.Exists(path);
+    public bool DirectoryExists(string path) => Directory.Exists(path);
+    public void CreateDirectory(string path) => Directory.CreateDirectory(path);
+    public void CopyFile(string source, string destination) => File.Copy(source, destination, overwrite: true);
+    public void DeleteFile(string path) => File.Delete(path);
+    public void DeleteDirectory(string path) => Directory.Delete(path, recursive: true);
+
+    public int StopOtherInstances(string executablePath)
+    {
+        StopRequests.Add(executablePath);
+        return InstancesThatCannotBeStopped;
+    }
+
+    public void CreateShortcut(string shortcutPath, string targetPath, string description)
+    {
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(shortcutPath)!);
+        File.WriteAllText(shortcutPath, targetPath);
+    }
+
+    public void ScheduleDeleteAfterExit(string directory) => ScheduledDeletes.Add(directory);
+
+    public bool IsSameFile(string a, string b) =>
+        string.Equals(System.IO.Path.GetFullPath(a), System.IO.Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
 }

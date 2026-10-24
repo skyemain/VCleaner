@@ -38,7 +38,8 @@ public sealed class Harness : IDisposable
         RestorePoint = new FakeRestorePoint();
         Repair = new RegistryRepairService(Registry, Scanner, Backups, RestorePoint, Privilege, Gate, Log);
 
-        Modules = CleanerCatalog.CreateModules(Paths, Deletion, Registry, Scanner, FileProbe, Runner, Bin, Browser, Log);
+        Closer = new FakeBrowserCloser(Browser);
+        Modules = CleanerCatalog.CreateModules(Paths, Deletion, Registry, Scanner, FileProbe, Runner, Bin, Browser, Closer, Log);
         Engine = new CleaningEngine(Modules, Privilege, Log, Gate);
     }
 
@@ -61,6 +62,7 @@ public sealed class Harness : IDisposable
     public FakeRecycleBin Bin { get; } = new();
     public FakeProcessRunner Runner { get; } = new();
     public FakeBrowserDetector Browser { get; } = new();
+    public FakeBrowserCloser Closer { get; }
     public IReadOnlyList<ICleanerModule> Modules { get; }
     public CleaningEngine Engine { get; }
 
@@ -71,6 +73,9 @@ public sealed class Harness : IDisposable
         {
             CleanUserTemp = false,
             CleanWindowsTemp = false,
+            CleanRecentTempFiles = false,
+            CleanPrefetch = false,
+            CloseBrowsersBeforeCleaning = false,
             CleanThumbnailCache = false,
             CleanShaderCache = false,
             CleanErrorReports = false,

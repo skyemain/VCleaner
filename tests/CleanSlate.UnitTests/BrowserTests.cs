@@ -173,6 +173,145 @@ public sealed class BrowserTests
     }
 
     [Fact]
+    public async Task A_running_browser_is_closed_then_cleaned_and_sign_in_data_is_preserved()
+    {
+        using var h = new Harness();
+        BuildProfile(h, EdgeData, "Default", "Default");
+        BuildProfile(h, EdgeData, "Profile 1", "Work");
+        h.Browser.Running = true;
+        var settings = Harness.Minimal(s =>
+        {
+            s.CleanEdgeCache = true;
+            s.CloseBrowsersBeforeCleaning = true;
+        });
+
+        var (scan, clean) = await RunAsync(h, "browser.edge", settings);
+
+        Assert.Equal(1, h.Closer.CloseCalls);
+        Assert.Equal(new[] { "edge" }, h.Closer.Closed);
+        Assert.DoesNotContain(scan.Findings, f => f.Action == ActionType.None);
+        Assert.False(File.Exists(h.Temp.Combine(EdgeData, "Default", "Cache", "Cache_Data", "data_0")));
+        Assert.False(File.Exists(h.Temp.Combine(EdgeData, "Profile 1", "GPUCache", "data_1")));
+        Assert.Equal(0, clean.Errors);
+        foreach (var profile in new[] { "Default", "Profile 1" })
+        {
+            foreach (var kept in Preserved(EdgeData, profile))
+            {
+                Assert.True(File.Exists(h.Temp.Combine(kept)), kept);
+            }
+        }
+
+        Assert.True(File.Exists(h.Temp.Combine(EdgeData, "Default", "Local Storage", "leveldb", "000003.log")));
+        Assert.Contains(h.Log.Lines, e => e.Contains("CLOSED-BROWSER", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task The_browser_is_not_closed_when_it_is_not_running_or_the_option_is_off_or_nothing_is_to_clean()
+    {
+        using var h = new Harness();
+        BuildProfile(h, EdgeData, "Default", "Default");
+
+        await RunAsync(h, "browser.edge", Harness.Minimal(s => { s.CleanEdgeCache = true; s.CloseBrowsersBeforeCleaning = true; }));
+        Assert.Equal(0, h.Closer.CloseCalls);
+
+        h.Browser.Running = true;
+        await RunAsync(h, "browser.edge", Harness.Minimal(s => { s.CleanEdgeCache = true; s.CloseBrowsersBeforeCleaning = false; }));
+        Assert.Equal(0, h.Closer.CloseCalls);
+
+        await RunAsync(h, "browser.edge", Harness.Minimal(s => { s.CleanEdgeCache = false; s.CloseBrowsersBeforeCleaning = true; }));
+        Assert.Equal(0, h.Closer.CloseCalls);
+    }
+
+    [Fact]
+    public async Task A_browser_that_cannot_be_closed_is_reported_and_locked_files_are_skipped_safely()
+    {
+        using var h = new Harness();
+        BuildProfile(h, ChromeData, "Default", "Default");
+        h.Browser.Running = true;
+        h.Closer.CannotClose = true;
+        var locked = h.Temp.Combine(ChromeData, "Default", "Cache", "Cache_Data", "data_0");
+
+        using var hold = new FileStream(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var (_, clean) = await RunAsync(h, "browser.chrome", Harness.Minimal(s => { s.CleanChromeCache = true; s.CloseBrowsersBeforeCleaning = true; }));
+
+        Assert.Equal(1, h.Closer.CloseCalls);
+        Assert.True(File.Exists(locked));
+        Assert.Equal(1, clean.ItemsSkipped);
+        Assert.Contains(h.Log.Lines, e => e.Contains("could not be fully closed", StringComparison.Ordinal));
+        foreach (var kept in Preserved(ChromeData, "Default"))
+        {
+            Assert.True(File.Exists(h.Temp.Combine(kept)), kept);
+        }
+    }
+
+    [Fact]
+    public void The_inventory_names_only_running_enabled_browsers_when_closing_is_allowed()
+    {
+        using var h = new Harness();
+        BuildProfile(h, EdgeData, "Default", "Default");
+        BuildProfile(h, ChromeData, "Default", "Default");
+        var inventory = new BrowserInventory(h.Paths, h.Browser);
+        var settings = Harness.Minimal(s => { s.CleanEdgeCache = true; s.CleanChromeCache = true; s.CloseBrowsersBeforeCleaning = true; });
+
+        Assert.Empty(inventory.GetBrowsersThatWouldBeClosed(settings));
+
+        h.Browser.Running = true;
+        Assert.Equal(new[] { "Google Chrome", "Microsoft Edge" }, inventory.GetBrowsersThatWouldBeClosed(settings));
+
+        settings.CleanChromeCache = false;
+        Assert.Equal(new[] { "Microsoft Edge" }, inventory.GetBrowsersThatWouldBeClosed(settings));
+
+        settings.CloseBrowsersBeforeCleaning = false;
+        Assert.Empty(inventory.GetBrowsersThatWouldBeClosed(settings));
+    }
+
+    [Fact]
+    public void The_process_closer_ends_a_stubborn_browser_process_and_ignores_unrelated_ones()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using var temp = new TempDirectory();
+        var dir = temp.Combine("cs-fake-browser-dir");
+        Directory.CreateDirectory(dir);
+        var fake = Path.Combine(dir, "csfakebrowser");
+        File.Copy(File.Exists("/bin/sleep") ? "/bin/sleep" : "/usr/bin/sleep", fake);
+        File.SetUnixFileMode(fake, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        using var target = System.Diagnostics.Process.Start(fake, "120")!;
+        using var bystander = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("sleep", "120"))!;
+        try
+        {
+            var descriptor = new BrowserDescriptor("fake", "Fake Browser", CleanerGroup.Chrome, "x", new[] { "csfakebrowser" },
+                @"\cs-fake-browser-dir\", Array.Empty<string>(), "close it");
+            var closer = new ProcessBrowserCloser { GracePeriod = TimeSpan.FromMilliseconds(400), SettleTime = TimeSpan.FromMilliseconds(100) };
+
+            var result = closer.Close(descriptor, CancellationToken.None);
+
+            Assert.Equal(1, result.ProcessesFound);
+            Assert.True(result.IsClosed);
+            Assert.True(result.ForcedAny);
+            Assert.True(target.WaitForExit(3000));
+            Assert.False(bystander.HasExited);
+            Assert.Equal(BrowserCloseResult.NotRunning, closer.Close(descriptor, CancellationToken.None));
+        }
+        finally
+        {
+            if (!bystander.HasExited)
+            {
+                bystander.Kill();
+            }
+
+            if (!target.HasExited)
+            {
+                target.Kill();
+            }
+        }
+    }
+
+    [Fact]
     public async Task Locked_cache_files_are_skipped_and_other_files_still_cleaned()
     {
         using var h = new Harness();

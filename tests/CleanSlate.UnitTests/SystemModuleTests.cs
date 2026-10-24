@@ -56,7 +56,7 @@ public sealed class SystemModuleTests
         using var h = new Harness();
         var docs = h.Temp.CreateFile("Users/tester/Documents/report.docx", 10, Harness.OldUtc);
         var evilPaths = h.Paths with { UserTemp = h.Paths.Documents, UserTmp = h.Paths.UserProfile };
-        var modules = CleanSlate.Cleaners.CleanerCatalog.CreateModules(evilPaths, h.Deletion, h.Registry, h.Scanner, h.FileProbe, h.Runner, h.Bin, h.Browser, h.Log);
+        var modules = CleanSlate.Cleaners.CleanerCatalog.CreateModules(evilPaths, h.Deletion, h.Registry, h.Scanner, h.FileProbe, h.Runner, h.Bin, h.Browser, h.Closer, h.Log);
         var module = modules.Single(m => m.ModuleId == "system.user-temp");
 
         var scan = await module.ScanAsync(Scan(Harness.Minimal(s => s.CleanUserTemp = true)), CancellationToken.None);
@@ -72,7 +72,7 @@ public sealed class SystemModuleTests
         using var h = new Harness();
         h.Temp.CreateFile("Users/tester/AppData/Local/Temp/a.tmp", 100, Harness.OldUtc);
         var paths = h.Paths with { UserTmp = h.Paths.UserTemp + Path.DirectorySeparatorChar };
-        var modules = CleanSlate.Cleaners.CleanerCatalog.CreateModules(paths, h.Deletion, h.Registry, h.Scanner, h.FileProbe, h.Runner, h.Bin, h.Browser, h.Log);
+        var modules = CleanSlate.Cleaners.CleanerCatalog.CreateModules(paths, h.Deletion, h.Registry, h.Scanner, h.FileProbe, h.Runner, h.Bin, h.Browser, h.Closer, h.Log);
 
         var scan = await modules.Single(m => m.ModuleId == "system.user-temp")
             .ScanAsync(Scan(Harness.Minimal(s => s.CleanUserTemp = true)), CancellationToken.None);
@@ -181,6 +181,67 @@ public sealed class SystemModuleTests
         Assert.Equal(1, clean.ItemsCleaned);
         Assert.False(File.Exists(temp));
         Assert.True(File.Exists(system));
+    }
+
+    [Fact]
+    public async Task Recent_temp_files_are_included_only_when_the_option_is_on_and_files_in_use_are_always_skipped()
+    {
+        using var h = new Harness();
+        var fresh = h.Temp.CreateFile("Users/tester/AppData/Local/Temp/fresh.tmp", 77, DateTime.UtcNow);
+        var inUse = h.Temp.CreateFile("Users/tester/AppData/Local/Temp/in-use.tmp", 88, DateTime.UtcNow);
+        var winFresh = h.Temp.CreateFile("Windows/Temp/fresh-win.tmp", 99, DateTime.UtcNow);
+        var module = h.Module("system.user-temp");
+        var winModule = h.Module("system.windows-temp");
+
+        var off = Harness.Minimal(s => { s.CleanUserTemp = true; s.CleanWindowsTemp = true; s.CleanRecentTempFiles = false; });
+        Assert.Equal(0, (await module.ScanAsync(Scan(off), CancellationToken.None)).EligibleCount);
+        Assert.Equal(0, (await winModule.ScanAsync(Scan(off), CancellationToken.None)).EligibleCount);
+
+        var on = Harness.Minimal(s => { s.CleanUserTemp = true; s.CleanWindowsTemp = true; s.CleanRecentTempFiles = true; });
+        using (new FileStream(inUse, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            var scan = await module.ScanAsync(Scan(on), CancellationToken.None);
+            var clean = await module.CleanAsync(Clean(on), scan.Findings, CancellationToken.None);
+            var winScan = await winModule.ScanAsync(Scan(on), CancellationToken.None);
+            var winClean = await winModule.CleanAsync(Clean(on), winScan.Findings, CancellationToken.None);
+
+            Assert.False(File.Exists(fresh));
+            Assert.False(File.Exists(winFresh));
+            Assert.True(File.Exists(inUse));
+            Assert.Equal(1, clean.ItemsCleaned);
+            Assert.Equal(1, clean.ItemsSkipped);
+            Assert.Equal(1, winClean.ItemsCleaned);
+        }
+    }
+
+    [Fact]
+    public async Task Prefetch_removes_only_top_level_pf_files_and_requires_administrator()
+    {
+        using var h = new Harness();
+        var oldPf = h.Temp.CreateFile("Windows/Prefetch/NOTEPAD.EXE-D8414F97.pf", 100, Harness.OldUtc);
+        var freshPf = h.Temp.CreateFile("Windows/Prefetch/CHROME.EXE-1A2B3C4D.pf", 200, DateTime.UtcNow);
+        var layout = h.Temp.CreateFile("Windows/Prefetch/Layout.ini", 10, Harness.OldUtc);
+        var readyBoot = h.Temp.CreateFile("Windows/Prefetch/ReadyBoot/ReadyBoot.etl", 300, Harness.OldUtc);
+        var nestedPf = h.Temp.CreateFile("Windows/Prefetch/Sub/NESTED.EXE-00000000.pf", 50, Harness.OldUtc);
+        var settings = Harness.Minimal(s => s.CleanPrefetch = true);
+        var module = h.Module("system.prefetch");
+
+        Assert.True(module.RequiresElevation);
+        Assert.False(module.IsEnabled(Harness.Minimal()));
+        Assert.True(module.IsEnabled(settings));
+
+        var scan = await module.ScanAsync(Scan(settings, elevated: true), CancellationToken.None);
+        Assert.Equal(2, scan.EligibleCount);
+        var clean = await module.CleanAsync(Clean(settings, elevated: true), scan.Findings, CancellationToken.None);
+
+        Assert.Equal(2, clean.ItemsCleaned);
+        Assert.Equal(300, clean.BytesRecovered);
+        Assert.False(File.Exists(oldPf));
+        Assert.False(File.Exists(freshPf));
+        Assert.True(File.Exists(layout));
+        Assert.True(File.Exists(readyBoot));
+        Assert.True(File.Exists(nestedPf));
+        Assert.True(Directory.Exists(h.Temp.Combine("Windows/Prefetch")));
     }
 
     [Fact]

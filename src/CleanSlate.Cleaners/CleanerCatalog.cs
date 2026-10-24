@@ -20,6 +20,7 @@ public static class CleanerCatalog
         IProcessRunner processRunner,
         IRecycleBinService recycleBin,
         IBrowserRunningDetector browserDetector,
+        IBrowserCloser browserCloser,
         IAppLogger log)
     {
         var modules = new List<ICleanerModule>();
@@ -27,8 +28,8 @@ public static class CleanerCatalog
         modules.Add(new RecycleBinModule(recycleBin, log));
         modules.Add(new WindowsUpdateCleanupModule(paths, fileProbe, processRunner, log));
         modules.Add(new DeliveryOptimizationModule(paths, fileProbe, processRunner, log));
-        modules.Add(new ChromiumBrowserModule(BrowserCatalog.Chrome(paths), paths, browserDetector, fileProbe, deletion, log));
-        modules.Add(new ChromiumBrowserModule(BrowserCatalog.Edge(paths), paths, browserDetector, fileProbe, deletion, log));
+        modules.Add(new ChromiumBrowserModule(BrowserCatalog.Chrome(paths), paths, browserDetector, browserCloser, fileProbe, deletion, log));
+        modules.Add(new ChromiumBrowserModule(BrowserCatalog.Edge(paths), paths, browserDetector, browserCloser, fileProbe, deletion, log));
         modules.Add(new RegistryModule(registryScanner, log));
         modules.Add(new PrivacyModule(registry, paths, deletion, log));
         return modules;

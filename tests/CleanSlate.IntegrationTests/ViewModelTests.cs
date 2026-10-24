@@ -301,6 +301,90 @@ public sealed class MainViewModelTests
     }
 }
 
+public sealed class BrowserCloseFlowTests
+{
+    private const string EdgeData = "Users/tester/AppData/Local/Microsoft/Edge/User Data";
+
+    private static PresentationHarness Create(Action<CleanSlate.Core.Configuration.CleanSlateSettings>? configure = null)
+    {
+        var h = new PresentationHarness(s =>
+        {
+            s.CleanEdgeCache = true;
+            s.CloseBrowsersBeforeCleaning = true;
+            s.AskBeforeClosingBrowsers = true;
+            configure?.Invoke(s);
+        });
+        h.Core.Temp.CreateFile($"{EdgeData}/Default/Cache/Cache_Data/data_0", 4096, Harness.OldUtc);
+        h.Core.Temp.CreateFile($"{EdgeData}/Default/Preferences", 50, Harness.OldUtc);
+        h.Core.Temp.CreateFile($"{EdgeData}/Default/Network/Cookies", 100, Harness.OldUtc);
+        h.Core.Temp.CreateFile($"{EdgeData}/Default/Login Data", 100, Harness.OldUtc);
+        File.WriteAllText(h.Core.Temp.Combine(EdgeData, "Local State"), "{\"profile\":{\"info_cache\":{\"Default\":{\"name\":\"Me\"}}}}");
+        h.Core.Browser.Running = true;
+        return h;
+    }
+
+    [Fact]
+    public async Task A_running_browser_triggers_a_confirmation_that_promises_sign_ins_are_kept()
+    {
+        using var h = Create();
+
+        await h.Main.PrimaryCommand.ExecuteAsync();
+
+        var ask = Assert.Single(h.Dialogs.Confirmations);
+        Assert.Contains("Microsoft Edge", ask.Title);
+        Assert.Contains("signed-in", ask.Message);
+    }
+
+    [Fact]
+    public async Task Confirming_closes_the_browser_cleans_its_cache_and_keeps_sign_in_data()
+    {
+        using var h = Create();
+        h.Dialogs.Answer = true;
+
+        await h.Main.PrimaryCommand.ExecuteAsync();
+
+        Assert.Equal(1, h.Core.Closer.CloseCalls);
+        Assert.False(File.Exists(h.Core.Temp.Combine(EdgeData, "Default", "Cache", "Cache_Data", "data_0")));
+        Assert.True(File.Exists(h.Core.Temp.Combine(EdgeData, "Default", "Network", "Cookies")));
+        Assert.True(File.Exists(h.Core.Temp.Combine(EdgeData, "Default", "Login Data")));
+    }
+
+    [Fact]
+    public async Task Declining_leaves_the_running_browser_alone()
+    {
+        using var h = Create();
+        h.Dialogs.Answer = false;
+
+        await h.Main.PrimaryCommand.ExecuteAsync();
+
+        Assert.Equal(0, h.Core.Closer.CloseCalls);
+        Assert.True(File.Exists(h.Core.Temp.Combine(EdgeData, "Default", "Cache", "Cache_Data", "data_0")));
+    }
+
+    [Fact]
+    public async Task With_ask_off_the_browser_is_closed_without_a_prompt()
+    {
+        using var h = Create(s => s.AskBeforeClosingBrowsers = false);
+
+        await h.Main.PrimaryCommand.ExecuteAsync();
+
+        Assert.Empty(h.Dialogs.Confirmations);
+        Assert.Equal(1, h.Core.Closer.CloseCalls);
+    }
+
+    [Fact]
+    public async Task No_prompt_when_no_browser_is_running()
+    {
+        using var h = Create();
+        h.Core.Browser.Running = false;
+
+        await h.Main.PrimaryCommand.ExecuteAsync();
+
+        Assert.Empty(h.Dialogs.Confirmations);
+        Assert.Equal(0, h.Core.Closer.CloseCalls);
+    }
+}
+
 public sealed class RegistryReviewTests
 {
     private static void SeedBroken(PresentationHarness h)
@@ -557,5 +641,91 @@ public sealed class SettingsViewModelTests
 
         Assert.Contains(settings.UnsupportedFeatures, u => u.Name.Contains("history", StringComparison.OrdinalIgnoreCase) && u.Reason.Length > 20);
         Assert.Contains(settings.UnsupportedFeatures, u => u.Name.Contains("Update", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void New_toggles_exist_and_persist()
+    {
+        using var h = new PresentationHarness();
+        var settings = Open(h);
+
+        foreach (var key in new[] { "recent-temp", "prefetch", "close-browsers", "ask-browsers" })
+        {
+            Assert.NotNull(settings.Toggle(key));
+        }
+
+        settings.Toggle("prefetch").IsOn = true;
+        Assert.True(h.Store.Stored.CleanPrefetch);
+    }
+
+    [Fact]
+    public async Task Install_confirms_runs_the_installer_and_closes_this_copy()
+    {
+        using var h = new PresentationHarness();
+        var settings = Open(h);
+        Assert.True(settings.CanInstall);
+        Assert.False(settings.CanUninstall);
+
+        await settings.InstallCommand.ExecuteAsync();
+
+        Assert.Equal(1, h.Installer.InstallCalls);
+        Assert.Equal(1, h.Lifecycle.ShutdownCalls);
+    }
+
+    [Fact]
+    public async Task Declining_the_install_changes_nothing()
+    {
+        using var h = new PresentationHarness();
+        var settings = Open(h);
+        h.Dialogs.Answer = false;
+
+        await settings.InstallCommand.ExecuteAsync();
+
+        Assert.Equal(0, h.Installer.InstallCalls);
+        Assert.Equal(0, h.Lifecycle.ShutdownCalls);
+    }
+
+    [Fact]
+    public async Task Failed_install_shows_the_reason_and_keeps_running()
+    {
+        using var h = new PresentationHarness();
+        h.Installer.InstallResult = new InstallActionResult(false, "The installed CleanSlate is still running.", false);
+        var settings = Open(h);
+
+        await settings.InstallCommand.ExecuteAsync();
+
+        Assert.Contains("still running", settings.Message);
+        Assert.Equal(0, h.Lifecycle.ShutdownCalls);
+    }
+
+    [Fact]
+    public async Task Uninstall_asks_twice_and_can_delete_everything()
+    {
+        using var h = new PresentationHarness();
+        h.Installer.Status = new InstallStatus(true, "1.1.0", true, "folder");
+        var settings = Open(h);
+        Assert.True(settings.CanUninstall);
+        Assert.False(settings.CanInstall);
+        h.Dialogs.Scripted.Enqueue(true);
+        h.Dialogs.Scripted.Enqueue(false);
+
+        await settings.UninstallCommand.ExecuteAsync();
+
+        Assert.Equal(new[] { true }, h.Installer.Uninstalls);
+        Assert.Equal(1, h.Lifecycle.ShutdownCalls);
+    }
+
+    [Fact]
+    public async Task Uninstall_keeps_data_when_asked()
+    {
+        using var h = new PresentationHarness();
+        h.Installer.Status = new InstallStatus(true, "1.1.0", true, "folder");
+        var settings = Open(h);
+        h.Dialogs.Scripted.Enqueue(true);
+        h.Dialogs.Scripted.Enqueue(true);
+
+        await settings.UninstallCommand.ExecuteAsync();
+
+        Assert.Equal(new[] { false }, h.Installer.Uninstalls);
     }
 }

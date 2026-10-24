@@ -17,6 +17,8 @@ public sealed class ProtectedPaths
 
         AddSubtree(paths.Documents, paths.Desktop, paths.Downloads, paths.Pictures, paths.Videos, paths.Music);
         AddSubtree(paths.ProgramFiles, paths.ProgramFilesX86);
+        // Windows\Prefetch is deliberately not listed: the prefetch cleaner is restricted to top-level *.pf files by its rule,
+        // so sub-folders such as ReadyBoot and every other file type stay untouched.
         AddSubtree(paths.SystemDirectory);
         AddSubtree(
             Path.Combine(win, "SysWOW64"),
@@ -30,7 +32,6 @@ public sealed class ProtectedPaths
             Path.Combine(win, "Microsoft.NET"),
             Path.Combine(win, "System"),
             Path.Combine(win, "SystemApps"),
-            Path.Combine(win, "Prefetch"),
             Path.Combine(win, "Security"),
             Path.Combine(win, "Logs", "SIH"));
         AddSubtree(

@@ -240,8 +240,14 @@ public abstract class FileRuleModuleBase : ICleanerModule
     public Task<ModuleCleanResult> CleanAsync(CleanContext context, IReadOnlyList<Finding> findings, CancellationToken cancellationToken) =>
         Task.Run(() => Clean(context, findings, cancellationToken), CancellationToken.None);
 
+    /// <summary>Called once before the findings are executed, for example to close an application that holds the files open.</summary>
+    protected virtual void BeforeClean(CleanContext context, IReadOnlyList<Finding> findings, CancellationToken cancellationToken)
+    {
+    }
+
     private ModuleCleanResult Clean(CleanContext context, IReadOnlyList<Finding> findings, CancellationToken ct)
     {
+        BeforeClean(context, findings, ct);
         var roots = PrepareRoots(context.Settings, context.IsElevated, context.Exclusions);
         var outcomes = new List<ActionOutcome>();
         var perCategory = new Dictionary<string, CategoryAccumulator>(StringComparer.Ordinal);

@@ -1,3 +1,4 @@
+using CleanSlate.Cleaners.Browsers;
 using CleanSlate.Cleaners.Registry;
 using CleanSlate.Core.Interfaces;
 using CleanSlate.Core.Services;
@@ -19,6 +20,8 @@ public sealed class PresentationContext
     public required ILogAccess Logs { get; init; }
     public required IStartupRegistration Startup { get; init; }
     public required IAppLogger Log { get; init; }
+    public IBrowserInventory? Browsers { get; init; }
+    public IInstallManager? Installer { get; init; }
     public TimeProvider Time { get; init; } = TimeProvider.System;
     public string VersionText { get; init; } = "1.0.0";
 }

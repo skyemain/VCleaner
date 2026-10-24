@@ -1,3 +1,4 @@
+using CleanSlate.Cleaners.Browsers;
 using CleanSlate.Cleaners.Registry;
 using CleanSlate.Core.Configuration;
 using CleanSlate.Core.Interfaces;
@@ -12,6 +13,7 @@ namespace CleanSlate.IntegrationTests;
 public sealed class FakeDialogs : IDialogService
 {
     public bool Answer { get; set; } = true;
+    public Queue<bool> Scripted { get; } = new();
     public List<(string Title, string Message)> Confirmations { get; } = new();
     public List<(string Title, string Message)> Messages { get; } = new();
     public string? SaveFile { get; set; }
@@ -21,7 +23,7 @@ public sealed class FakeDialogs : IDialogService
     public Task<bool> ConfirmAsync(string title, string message, string confirmText, string cancelText = "Cancel")
     {
         Confirmations.Add((title, message));
-        return Task.FromResult(Answer);
+        return Task.FromResult(Scripted.Count > 0 ? Scripted.Dequeue() : Answer);
     }
 
     public Task ShowMessageAsync(string title, string message)
@@ -67,6 +69,29 @@ public sealed class FakeLifecycle : IAppLifecycle
     public int ShutdownCalls { get; private set; }
 
     public void Shutdown() => ShutdownCalls++;
+}
+
+public sealed class FakeInstaller : IInstallManager
+{
+    public InstallStatus Status { get; set; } = new(false, null, false, @"C:\Users\tester\AppData\Local\Programs\CleanSlate");
+    public InstallActionResult InstallResult { get; set; } = new(true, "Installed.", true);
+    public InstallActionResult UninstallResult { get; set; } = new(true, "Removed.", true);
+    public int InstallCalls { get; private set; }
+    public List<bool> Uninstalls { get; } = new();
+
+    public InstallStatus GetStatus() => Status;
+
+    public InstallActionResult InstallThisCopy()
+    {
+        InstallCalls++;
+        return InstallResult;
+    }
+
+    public InstallActionResult Uninstall(bool removeUserData)
+    {
+        Uninstalls.Add(removeUserData);
+        return UninstallResult;
+    }
 }
 
 public sealed class FakeLogs : ILogAccess
@@ -130,6 +155,7 @@ public sealed class PresentationHarness : IDisposable
         Lifecycle = new FakeLifecycle();
         Logs = new FakeLogs();
         Startup = new FakeStartup();
+        Installer = new FakeInstaller();
 
         Context = new PresentationContext
         {
@@ -144,7 +170,9 @@ public sealed class PresentationHarness : IDisposable
             Lifecycle = Lifecycle,
             Logs = Logs,
             Startup = Startup,
-            Log = Core.Log
+            Log = Core.Log,
+            Browsers = new BrowserInventory(Core.Paths, Core.Browser),
+            Installer = Installer
         };
         Main = new MainViewModel(Context);
     }
@@ -159,6 +187,7 @@ public sealed class PresentationHarness : IDisposable
     public FakeLifecycle Lifecycle { get; }
     public FakeLogs Logs { get; }
     public FakeStartup Startup { get; }
+    public FakeInstaller Installer { get; }
     public PresentationContext Context { get; }
     public MainViewModel Main { get; }
 

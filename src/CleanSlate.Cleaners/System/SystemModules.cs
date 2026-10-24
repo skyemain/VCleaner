@@ -46,6 +46,9 @@ public static class SystemModuleFactory
     public static readonly TimeSpan DiagnosticsMinAge = TimeSpan.FromDays(7);
     public static readonly TimeSpan LogMinAge = TimeSpan.FromDays(30);
 
+    /// <summary>Temp files are removed whatever their age when the user chose so; files that are in use are skipped either way.</summary>
+    public static TimeSpan TempAge(CleanSlateSettings settings) => settings.CleanRecentTempFiles ? TimeSpan.Zero : TempMinAge;
+
     public static IReadOnlyList<ICleanerModule> CreateFileModules(SystemPaths paths, ISafeDeletionService deletion, IAppLogger log)
     {
         var local = paths.LocalAppData;
@@ -56,19 +59,29 @@ public static class SystemModuleFactory
         {
             new SystemFileModule(
                 "system.user-temp", "User temporary files",
-                "Files in your Temp folder that have not been modified for 24 hours and are not in use.",
+                "Files in your %TEMP% folder that are not in use (older than 24 hours unless \"recent temp files\" is on).",
                 false, RiskLevel.Safe,
                 s => s.CleanUserTemp,
-                (_, _) => UserTempPlan(paths),
+                (s, _) => UserTempPlan(paths, TempAge(s)),
                 deletion, log),
 
             new SystemFileModule(
                 "system.windows-temp", "Windows temporary files",
-                "Files in the Windows Temp folder older than 24 hours. Files you are not permitted to delete are skipped.",
+                "Files in C:\\Windows\\Temp that are not in use. Without administrator rights, files you are not permitted to delete are skipped.",
                 false, RiskLevel.Low,
                 s => s.CleanWindowsTemp,
-                (_, _) => Single("windows-temp", "Windows temporary files",
-                    "Old files in the Windows Temp folder", paths.WindowsTemp, TempMinAge, RiskLevel.Low),
+                (s, _) => Single("windows-temp", "Windows temporary files",
+                    "Temporary file in the Windows Temp folder", paths.WindowsTemp, TempAge(s), RiskLevel.Low),
+                deletion, log),
+
+            new SystemFileModule(
+                "system.prefetch", "Prefetch files",
+                "Windows prefetch (*.pf) files. Windows recreates them as you use apps; the first launch of each app may be slightly slower. Requires administrator.",
+                true, RiskLevel.Low,
+                s => s.CleanPrefetch,
+                (_, _) => Single("prefetch", "Prefetch files", "Prefetch trace file",
+                    Path.Combine(win, "Prefetch"), TimeSpan.Zero, RiskLevel.Low,
+                    patterns: new[] { "*.pf" }, recursive: false),
                 deletion, log),
 
             new SystemFileModule(
@@ -142,7 +155,7 @@ public static class SystemModuleFactory
         };
     }
 
-    private static RulePlan UserTempPlan(SystemPaths paths)
+    private static RulePlan UserTempPlan(SystemPaths paths, TimeSpan minAge)
     {
         var plan = new RulePlan();
         var roots = new[] { paths.UserTemp, paths.UserTmp }
@@ -165,9 +178,9 @@ public static class SystemModuleFactory
             {
                 Id = "user-temp:" + root,
                 Category = "User temporary files",
-                Description = "Temporary file not modified in the last 24 hours",
+                Description = "Temporary file",
                 RootPath = root!,
-                MinAge = TempMinAge,
+                MinAge = minAge,
                 Risk = RiskLevel.Safe
             });
         }

@@ -44,11 +44,11 @@ public sealed class MainViewModel : ObservableObject
         _ctx = ctx;
         Rows = new ObservableCollection<CategoryRowViewModel>
         {
-            new(CleanerGroup.SystemJunk, "Temporary files, caches, logs and crash reports"),
-            new(CleanerGroup.Chrome, "Browser cache for every profile"),
-            new(CleanerGroup.Edge, "Browser cache for every profile"),
-            new(CleanerGroup.Registry, "Broken startup, App Paths and uninstall entries (never changed automatically)"),
-            new(CleanerGroup.Privacy, "Run history and recent items (opt-in)")
+            new(CleanerGroup.SystemJunk, "Temp, Prefetch, caches, logs and crash reports"),
+            new(CleanerGroup.Chrome, "Cache for every profile; sign-ins kept"),
+            new(CleanerGroup.Edge, "Cache for every profile; sign-ins kept"),
+            new(CleanerGroup.Registry, "Broken entries, only fixed after your review"),
+            new(CleanerGroup.Privacy, "Run history and recent items, opt-in")
         };
 
         PrimaryCommand = new AsyncRelayCommand(RunAsync, () => CanStart, OnUnexpectedError);
@@ -203,7 +203,7 @@ public sealed class MainViewModel : ObservableObject
 
     public bool ShowAdminHint => !_ctx.Elevation.IsElevated && IsHome;
 
-    public string AdminHint => "Running without administrator rights: system-wide areas such as Windows Temp and Windows logs are skipped. You can restart elevated if you want them included.";
+    public string AdminHint => "Standard rights: Windows Temp, Prefetch and Windows logs need administrator access and are skipped.";
 
     public bool HasResults => _scan is not null && CanNavigate;
 
@@ -305,6 +305,8 @@ public sealed class MainViewModel : ObservableObject
             IsIndeterminate = true;
             ProgressFraction = 0;
 
+            await ConfirmBrowserCloseAsync(settings).ConfigureAwait(true);
+
             var scanProgress = new DispatchedProgress<EngineProgress>(_ctx.Dispatcher, p => ApplyProgress(runId, p));
             var scan = await Task.Run(() => _ctx.Engine.ScanAsync(settings, scanProgress, token), CancellationToken.None).ConfigureAwait(true);
             _scan = scan;
@@ -363,6 +365,33 @@ public sealed class MainViewModel : ObservableObject
         {
             _cts?.Dispose();
             _cts = null;
+        }
+    }
+
+    /// <summary>
+    /// Running browsers can only have their cache cleaned after they are closed. Ask once; if the user declines, the clean still runs
+    /// but leaves the running browsers alone.
+    /// </summary>
+    private async Task ConfirmBrowserCloseAsync(CleanSlate.Core.Configuration.CleanSlateSettings settings)
+    {
+        var running = _ctx.Browsers?.GetBrowsersThatWouldBeClosed(settings) ?? Array.Empty<string>();
+        if (running.Count == 0 || !settings.AskBeforeClosingBrowsers)
+        {
+            return;
+        }
+
+        var names = string.Join(" and ", running);
+        var plural = running.Count > 1;
+        var ok = await _ctx.Dialogs.ConfirmAsync(
+            $"Close {names} to clean {(plural ? "them" : "it")}?",
+            $"{names} {(plural ? "are" : "is")} running, and a browser's cache cannot be cleaned while it is open.\n\n" +
+            $"CleanSlate will close {(plural ? "them" : "it")} politely first and only end what is still running after a few seconds. " +
+            "Your signed-in accounts, saved passwords, cookies, bookmarks and settings are not touched, so you stay signed in. " +
+            "Unsaved text in open pages may be lost.",
+            $"Close {(plural ? "browsers" : names)} and clean", "Skip browsers").ConfigureAwait(true);
+        if (!ok)
+        {
+            settings.CloseBrowsersBeforeCleaning = false;
         }
     }
 
