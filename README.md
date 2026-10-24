@@ -5,7 +5,7 @@ Chrome / Edge caches, reports registry entries that point to programs that are v
 after you approve each one. It is built around one rule: **never delete anything it cannot prove is safe to delete.**
 
 > **Verification status (read this first).** This repository was developed and built on Linux. The application compiles
-> and cross-publishes to a `win-x64` executable, and 134 automated tests of the safety-critical logic pass on Linux.
+> and cross-publishes to a `win-x64` executable, and 165 automated tests of the safety-critical logic pass on Linux.
 > **It has not been run on Windows.** The WPF user interface, the Windows registry / Recycle Bin / restore point /
 > elevation code paths, DISM and the tray icon are compiled but unexercised. Work through
 > [docs/VALIDATION.md](docs/VALIDATION.md) on a real Windows 10 and Windows 11 machine before relying on it. See
@@ -13,14 +13,34 @@ after you approve each one. It is built around one rule: **never delete anything
 
 ## What it does
 
-The home screen has one **Clean Now** button and five rows: System Junk, Chrome, Edge, Registry, Privacy.
+The home screen is a wide, minimal layout: one ring-shaped **Clean Now** button on the left and the five targets (System Junk, Chrome, Edge, Registry, Privacy) on the right. It fits without scrolling.
 
 | Area | Cleaned by default | Opt-in (Settings) |
 | --- | --- | --- |
-| **System junk** | User temp files (older than 24 h), Windows temp (24 h, admin), thumbnail cache, DirectX shader caches, Windows Error Reporting (user and, with admin, system; 7 days), crash dumps (7 days), old rotated Windows logs (30 days, admin) | Empty Recycle Bin, Windows Update component cleanup (DISM, admin), Delivery Optimization cache (admin) |
-| **Chrome / Edge** | Disk, media, code, GPU and shader caches for **every profile**, only while that browser is closed | Website storage (Local Storage, IndexedDB, Session Storage, Cache Storage) |
+| **System junk** | User temp files (`%TEMP%`, everything not in use), Windows temp (admin, everything not in use), Prefetch `*.pf` files (admin), thumbnail cache, DirectX shader caches, Windows Error Reporting (user and, with admin, system; 7 days), crash dumps (7 days), old rotated Windows logs (30 days, admin) | Empty Recycle Bin, Windows Update component cleanup (DISM, admin), Delivery Optimization cache (admin) |
+| **Chrome / Edge** | Disk, media, code, GPU and shader caches for **every profile**. A running browser is closed first (see below) | Website storage (Local Storage, IndexedDB, Session Storage, Cache Storage) |
 | **Registry** | Read-only scan of `Run` values, `App Paths` entries and orphaned (non-MSI) uninstall keys. Nothing is changed during one-click cleaning. | Repairs, only from the registry review page |
 | **Privacy** | Off | Run dialog history, typed Explorer paths, recent documents list and Recent folder shortcuts |
+
+### Closing Chrome and Edge safely
+
+A browser's cache cannot be cleaned while it is open. When Chrome or Edge is running, CleanSlate asks once ("Close Microsoft
+Edge to clean it?"). If you agree it closes each window the way you would (so the browser saves its session), waits a few
+seconds, and only then ends whatever is left. Only processes of your own Windows session that live in the browser's own
+install folder are touched. **Your sign-ins survive**: cookies, saved passwords, autofill, bookmarks, history and
+preferences are never in the cleaning rules, and website storage stays opt-in. If you decline, the clean continues and the
+running browser is skipped. Settings has *Close running browsers before cleaning* and *Ask before closing a browser*.
+
+### Install, update and uninstall
+
+Run `CleanSlate.exe` from anywhere. If this copy is not the installed one, CleanSlate offers to install itself
+(per user, no administrator rights): the program is copied to `%LOCALAPPDATA%\Programs\CleanSlate`, a Start menu entry and an
+**Apps & features** entry are created, and the installed copy opens. Running a **newer** build later offers to *replace*
+the installed version: the old copy is closed and overwritten, your settings, history and registry backups are kept, and a
+startup entry is re-pointed. Uninstall from Windows Settings > Apps, from Settings > Installation in the app, or with
+`CleanSlate.exe --uninstall` (`--quiet` keeps your data and shows no prompts). Put an empty `portable.txt` next to the exe, or pass
+`--no-install-prompt`, to run without ever being asked. The install code is tested against a fake platform on Linux; the
+Windows parts (shortcut, Apps & features entry, closing the old process, deferred folder removal) are **not run yet**.
 
 ### Flows
 
@@ -43,7 +63,7 @@ These are shown in the Settings page too.
 * **Browser history, cookies and download history.** They live in live SQLite databases. Editing them while a browser
   may be using them, or deleting the files wholesale, risks corrupting a profile. The settings are forced off.
 * **Saved passwords, autofill, bookmarks, extensions** are never touched.
-* **Update check.** CleanSlate has no network code at all.
+* **Update check.** CleanSlate has no network code at all. To update, run the newer exe and choose Install.
 * **Recoverable deletion.** Caches and temp files are deleted permanently (not sent to the Recycle Bin). This is
   documented in the UI.
 * **Measured space for DISM.** Component cleanup frees an amount Windows does not report, so none is claimed.
@@ -161,7 +181,7 @@ long paths, and declares Windows 10/11 support.
 
 ## Data locations
 
-`%LOCALAPPDATA%\CleanSlate\` holds `settings.json`, `logs\` (application and audit logs, rotated), `history\` and
+`%LOCALAPPDATA%\Programs\CleanSlate\` holds the installed program (when installed). `%LOCALAPPDATA%\CleanSlate\` holds `settings.json`, `logs\` (application and audit logs, rotated), `history\` and
 `registry-backups\`. The optional startup entry is the single value `HKCU\...\Run\CleanSlate`.
 
 ## Verification status
@@ -171,6 +191,7 @@ long paths, and declares Windows 10/11 support.
 | Core engine, safe deletion, exclusions, dedup, plan policy, settings, history, logging | **Tested on Linux** (unit and integration tests, including symlink escape and swapped-directory cases) |
 | Chrome/Edge profile discovery and cache cleaning | **Tested on Linux** against fixture profiles; real browsers not exercised |
 | Registry scanner, backup, repair, restore | **Tested on Linux** against an in-memory registry; `WindowsTests` repeat the flow on a real isolated `HKCU` key but have **not been run** |
+| Browser close flow, prefetch/temp rules, installer logic (install, replace, uninstall, data removal guards) | **Tested on Linux** with fakes |
 | View models (flow, review, cancel, errors, settings consent, registry review) | **Tested on Linux** with the real engine and fakes for dialogs/elevation |
 | `Release` build, `win-x64` self-contained cross-publish, manifest and version info embedded | **Done on Linux** (PE32+ GUI executable produced and inspected) |
 | WPF views, theming, dark title bar, tray icon, notifications, dialogs, keyboard/screen reader behavior | **Compiled only; never rendered or run** |

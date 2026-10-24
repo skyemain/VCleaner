@@ -199,6 +199,16 @@ public sealed class MainViewModel : ObservableObject
         _ => string.Empty
     };
 
+    public string ShortVersion
+    {
+        get
+        {
+            var text = _ctx.VersionText;
+            var plus = text.IndexOf('+', StringComparison.Ordinal);
+            return "v" + (plus > 0 ? text[..plus] : text);
+        }
+    }
+
     public bool IsElevated => _ctx.Elevation.IsElevated;
 
     public bool ShowAdminHint => !_ctx.Elevation.IsElevated && IsHome;

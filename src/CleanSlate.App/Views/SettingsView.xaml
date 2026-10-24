@@ -3,11 +3,31 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:CleanSlate.Presentation.ViewModels;assembly=CleanSlate.Presentation">
     <ScrollViewer Style="{StaticResource PageScroll}">
-        <StackPanel Margin="24,0,24,28">
+        <StackPanel Margin="40,0,40,28" MaxWidth="1100">
             <Border Margin="0,4,0,0" Padding="14,10" CornerRadius="10" Background="{DynamicResource InfoBackgroundBrush}"
                     Visibility="{Binding Message, Converter={StaticResource NotEmptyToVisibility}}">
                 <TextBlock Text="{Binding Message}" FontSize="12" />
             </Border>
+
+            <StackPanel Visibility="{Binding InstallerAvailable, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="// INSTALLATION" Style="{StaticResource SectionTitle}" />
+                <Border Style="{StaticResource Card}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding InstallStatusText}" FontSize="13" />
+                            <TextBlock Text="Installing needs no administrator rights. A newer version replaces the old one automatically; uninstall any time from here or from Windows Settings." Style="{StaticResource SecondaryText}" Margin="0,4,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                            <Button Style="{StaticResource AccentButton}" Content="{Binding InstallButtonText}" Command="{Binding InstallCommand}" Margin="0,0,8,0" />
+                            <Button Content="Uninstall" Command="{Binding UninstallCommand}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </StackPanel>
 
             <ItemsControl ItemsSource="{Binding Sections}" Focusable="False" IsTabStop="False">
                 <ItemsControl.ItemTemplate>
@@ -17,9 +37,10 @@
                             <TextBlock Text="{Binding Description}" Style="{StaticResource SecondaryText}" Margin="4,-4,0,8"
                                        Visibility="{Binding Description, Converter={StaticResource NotEmptyToVisibility}}" />
                             <ItemsControl ItemsSource="{Binding Toggles}" Focusable="False" IsTabStop="False">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type vm:SettingToggleViewModel}">
-                                        <Border Style="{StaticResource Card}" Margin="0,0,0,6" Padding="16,10">
+                                        <Border Style="{StaticResource Card}" Margin="0,0,10,10" Padding="16,10">
                                             <CheckBox Style="{StaticResource SwitchCheckBox}" IsChecked="{Binding IsOn, Mode=TwoWay}"
                                                       AutomationProperties.Name="{Binding Label}"
                                                       AutomationProperties.HelpText="{Binding Description}">
@@ -42,11 +63,12 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <TextBlock Text="NOT SUPPORTED" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="// NOT SUPPORTED" Style="{StaticResource SectionTitle}" />
             <ItemsControl ItemsSource="{Binding UnsupportedFeatures}" Focusable="False" IsTabStop="False">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:UnsupportedFeature}">
-                        <Border Style="{StaticResource Card}" Margin="0,0,0,6" Padding="16,10">
+                        <Border Style="{StaticResource Card}" Margin="0,0,10,10" Padding="16,10">
                             <StackPanel>
                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
                                 <TextBlock Text="{Binding Reason}" Style="{StaticResource SecondaryText}" />
@@ -56,7 +78,7 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <TextBlock Text="NEVER CLEAN THESE" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="// NEVER CLEAN THESE" Style="{StaticResource SectionTitle}" />
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="Folders and files listed here are skipped by every cleaner, even inside approved locations." Style="{StaticResource SecondaryText}" />
@@ -101,7 +123,7 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="REGISTRY BACKUPS" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="// REGISTRY BACKUPS" Style="{StaticResource SectionTitle}" />
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="Every registry repair saves a verified backup first. Open the list to restore one." Style="{StaticResource SecondaryText}" />
@@ -109,7 +131,7 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="HISTORY AND LOGS" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="// HISTORY AND LOGS" Style="{StaticResource SectionTitle}" />
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="No sessions recorded yet.">
@@ -142,7 +164,7 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="ABOUT" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="// ABOUT" Style="{StaticResource SectionTitle}" />
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="{Binding VersionText}" FontWeight="SemiBold" />

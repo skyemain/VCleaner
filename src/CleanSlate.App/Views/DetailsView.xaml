@@ -3,14 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:CleanSlate.Presentation.ViewModels;assembly=CleanSlate.Presentation">
     <ScrollViewer Style="{StaticResource PageScroll}">
-        <StackPanel Margin="24,8,24,24">
+        <StackPanel Margin="40,8,40,24" MaxWidth="1100">
             <TextBlock Text="{Binding Summary}" FontSize="13" Margin="0,4,0,0" />
 
-            <TextBlock Text="BY CATEGORY" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="// BY CATEGORY" Style="{StaticResource SectionTitle}" />
             <ItemsControl ItemsSource="{Binding Rows}" Focusable="False" IsTabStop="False">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:DetailRow}">
-                        <Border Style="{StaticResource Card}" Margin="0,0,0,6" Padding="14,10"
+                        <Border Style="{StaticResource Card}" Margin="0,0,10,10" Padding="14,10"
                                 AutomationProperties.Name="{Binding Category}">
                             <StackPanel>
                                 <Grid>
@@ -39,7 +40,7 @@
             </ItemsControl>
 
             <StackPanel Visibility="{Binding HasProblems, Converter={StaticResource BoolToVisibility}}">
-                <TextBlock Text="SKIPPED AND ERRORS" Style="{StaticResource SectionTitle}" />
+                <TextBlock Text="// SKIPPED AND ERRORS" Style="{StaticResource SectionTitle}" />
                 <TextBlock Text="{Binding ProblemsNote}" Style="{StaticResource SecondaryText}" Margin="4,0,0,6"
                            Visibility="{Binding ProblemsNote, Converter={StaticResource NotEmptyToVisibility}}" />
                 <ItemsControl ItemsSource="{Binding Problems}" Focusable="False" IsTabStop="False">

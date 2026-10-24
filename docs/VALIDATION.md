@@ -10,6 +10,8 @@ should pass first.
 
 ## 1. Launch and appearance
 
+- [ ] The window opens wide (about 1120x680). The home screen shows the ring button on the left and five targets on the right with **no scroll bar**, in both light and dark themes. The ring spins while a scan or clean runs.
+
 - [ ] Starts without a console window or UAC prompt (standard user). Title bar shows the CleanSlate icon.
 - [ ] Layout matches the spec: **Clean Now** in the center, five rows (System Junk, Chrome, Edge, Registry, Privacy), a settings gear at the top right.
 - [ ] Switch Windows between light and dark app mode while the app is open: colors and the title bar follow. Turn off "Follow the Windows light/dark theme" in Settings: it stays light.
@@ -41,10 +43,20 @@ read-only old file.
 
 Use profiles with real browsing history, bookmarks and a saved password you can check afterward; create a second profile.
 
-- [ ] With Chrome open: row says it is skipped because Chrome is running; nothing deleted.
+- [ ] With Chrome open and *Close running browsers* on: a dialog names Chrome. Choosing *Skip browsers* cleans everything else and leaves Chrome open with nothing of it deleted.
+- [ ] Accepting closes Chrome (windows close first; check that no "Chrome didn't shut down correctly" bubble appears), then its caches are cleaned, and after reopening you are **still signed in** to the Google account and to a site with a saved cookie login. Repeat for Edge with a Microsoft account.
+- [ ] With *Ask before closing* off the browser closes without a dialog. With *Close running browsers* off a running browser is skipped.
 - [ ] Close Chrome (and background processes: "Continue running background apps" off, or end them): run again. Cache folders of **both** profiles are cleaned. Bookmarks, passwords, history, cookies, extensions and settings are intact and the browser starts normally.
 - [ ] Same for Edge (also check that Startup Boost does not make Edge count as running; if it does, the row must say so rather than deleting).
 - [ ] Enable "Website storage": a consent dialog appears; the review screen then lists it separately with a warning; declining there leaves it untouched.
+
+## 4b. Temp, Prefetch and installer
+
+- [ ] As administrator: `C:\Windows\Prefetch` loses only `*.pf` files (`Layout.ini`, `ReadyBoot` stay). Windows Temp and `%TEMP%` lose files that are not in use, including recent ones when *Include files created in the last few hours* is on. Locked files are listed as skipped.
+- [ ] Run the exe from Downloads: the install offer appears. *No* runs once without installing. *Yes* installs to `%LOCALAPPDATA%\Programs\CleanSlate`, opens the installed copy, adds a Start menu entry and an Apps & features entry showing the version.
+- [ ] Run a **newer** exe: the offer says "Replace". After *Yes* the old process is gone, the new version number shows in Settings, settings and history are still there, and the startup entry (if enabled) points to the installed exe.
+- [ ] Settings > Installation > Uninstall (and, separately, Windows Settings > Apps > CleanSlate > Uninstall): program folder, Start menu entry and startup entry disappear a few seconds after exit; data is kept or deleted according to your answer. `CleanSlate.exe --uninstall --quiet` removes the program silently and keeps data.
+- [ ] A `portable.txt` next to the exe suppresses the install offer.
 
 ## 5. Review mode and confirmations
 

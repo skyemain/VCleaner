@@ -5,6 +5,16 @@ see "Versioning" in the README.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-24
+
+### Added
+- Running Chrome or Edge is now closed (politely first, then forcibly) so their cache can be cleaned; sign-in data is never touched. A confirmation names the browser; both the closing and the question can be switched off in Settings.
+- Prefetch cleaning (`*.pf` files only, administrator) and the option to include recently created temp files, so `%TEMP%` and `C:\Windows\Temp` are emptied of everything not in use.
+- Built-in per-user installer: installing a newer build replaces the old one; Settings > Installation and `--uninstall [--quiet]` remove it; Apps & features and Start menu entries.
+
+### Changed
+- Wide, landscape, minimal and more futuristic interface (ring button, hairline cards, monospace labels, calmer scroll bars). Home fits without scrolling; Settings, review and details use two columns.
+
 ## [1.1.0] - 2026-10-24
 
 ### Added

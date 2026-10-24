@@ -3,93 +3,101 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="clr-namespace:CleanSlate.App.Views"
              xmlns:vm="clr-namespace:CleanSlate.Presentation.ViewModels;assembly=CleanSlate.Presentation">
-    <ScrollViewer Style="{StaticResource PageScroll}">
-        <StackPanel Margin="24,4,24,28" MaxWidth="640">
+    <Grid Margin="40,0,40,28" MaxWidth="1240">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="400" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
-            <StackPanel HorizontalAlignment="Center" Margin="0,8,0,4">
-                <Button Style="{StaticResource HeroButton}" Content="{Binding PrimaryButtonText}" Command="{Binding PrimaryCommand}"
-                        HorizontalAlignment="Center" Margin="0,28,0,0"
-                        AutomationProperties.Name="{Binding PrimaryButtonText}"
-                        AutomationProperties.HelpText="Scans your PC, then removes the junk that is safe to remove." />
-                <TextBlock Text="{Binding LastCleanedText}" Style="{StaticResource SecondaryText}" HorizontalAlignment="Center"
-                           TextAlignment="Center" Margin="0,32,0,0" />
+        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,40,0">
+            <Button Style="{StaticResource HeroButton}" Content="{Binding PrimaryButtonText}" Command="{Binding PrimaryCommand}"
+                    HorizontalAlignment="Center" Margin="0,8,0,0"
+                    AutomationProperties.Name="{Binding PrimaryButtonText}"
+                    AutomationProperties.HelpText="Scans your PC, then removes the junk that is safe to remove." />
+
+            <TextBlock Text="{Binding LastCleanedText}" Style="{StaticResource SecondaryText}" FontFamily="{StaticResource MonoFont}"
+                       FontSize="11" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,30,0,0" />
+
+            <StackPanel Margin="0,18,0,0" Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibility}}">
+                <ProgressBar IsIndeterminate="{Binding IsIndeterminate}" Value="{Binding ProgressFraction, Mode=OneWay}"
+                             AutomationProperties.Name="Progress" />
+                <TextBlock Text="{Binding OperationText}" Margin="0,12,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
+                           HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding LiveStatsText}" Style="{StaticResource SecondaryText}" HorizontalAlignment="Center" Margin="0,2,0,0"
+                           Visibility="{Binding LiveStatsText, Converter={StaticResource NotEmptyToVisibility}}" />
+                <Button Content="Cancel" Command="{Binding CancelCommand}" HorizontalAlignment="Center" Margin="0,14,0,0"
+                        AutomationProperties.Name="Cancel the current operation" />
             </StackPanel>
 
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0" Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                    <ProgressBar IsIndeterminate="{Binding IsIndeterminate}" Value="{Binding ProgressFraction, Mode=OneWay}"
-                                 AutomationProperties.Name="Progress" />
-                    <TextBlock Text="{Binding OperationText}" Margin="0,10,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
-                    <TextBlock Text="{Binding LiveStatsText}" Style="{StaticResource SecondaryText}" Margin="0,2,0,0"
-                               Visibility="{Binding LiveStatsText, Converter={StaticResource NotEmptyToVisibility}}" />
-                    <Button Content="Cancel" Command="{Binding CancelCommand}" HorizontalAlignment="Left" Margin="0,12,0,0"
-                            AutomationProperties.Name="Cancel the current operation" />
+            <StackPanel Margin="0,18,0,0" Visibility="{Binding ShowResults, Converter={StaticResource BoolToVisibility}}"
+                        AutomationProperties.Name="Cleanup result">
+                <TextBlock Text="{Binding Headline}" FontFamily="{StaticResource DisplayFont}" FontSize="22" FontWeight="Light"
+                           TextAlignment="Center" />
+                <TextBlock Text="{Binding Detail}" Style="{StaticResource SecondaryText}" TextAlignment="Center" Margin="0,6,0,0" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
+                    <Button Content="View details" Command="{Binding ViewDetailsCommand}" Margin="0,0,8,0" />
+                    <Button Content="Done" Command="{Binding DoneCommand}" />
                 </StackPanel>
-            </Border>
+            </StackPanel>
 
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0" Visibility="{Binding ShowResults, Converter={StaticResource BoolToVisibility}}"
-                    AutomationProperties.Name="Cleanup result">
-                <StackPanel>
-                    <TextBlock Text="{Binding Headline}" FontFamily="{StaticResource DisplayFont}" FontSize="22" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Detail}" Style="{StaticResource SecondaryText}" Margin="0,4,0,0" FontSize="13" />
-                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                        <Button Content="View details" Command="{Binding ViewDetailsCommand}" Margin="0,0,8,0" />
-                        <Button Content="Done" Command="{Binding DoneCommand}" />
-                    </StackPanel>
-                </StackPanel>
-            </Border>
+            <StackPanel Margin="0,18,0,0" Visibility="{Binding ShowNotice, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="{Binding Headline}" FontWeight="SemiBold" TextAlignment="Center" />
+                <TextBlock Text="{Binding Detail}" Style="{StaticResource SecondaryText}" TextAlignment="Center" />
+            </StackPanel>
 
-            <Border Margin="0,16,0,0" Padding="14,10" CornerRadius="10" Background="{DynamicResource InfoBackgroundBrush}"
-                    Visibility="{Binding ShowNotice, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                    <TextBlock Text="{Binding Headline}" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Detail}" Style="{StaticResource SecondaryText}" />
-                </StackPanel>
-            </Border>
-
-            <Border Margin="0,16,0,0" Padding="14,10" CornerRadius="10" Background="{DynamicResource ErrorBackgroundBrush}"
+            <Border Margin="0,16,0,0" Padding="14,10" CornerRadius="12" Background="{DynamicResource ErrorBackgroundBrush}"
                     Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="Error">
-                <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource ErrorBrush}" />
-            </Border>
-
-            <ItemsControl ItemsSource="{Binding Rows}" Margin="0,16,0,0" Focusable="False" IsTabStop="False">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type vm:CategoryRowViewModel}">
-                        <Border Style="{StaticResource Card}" Margin="0,0,0,8" Padding="18,14" AutomationProperties.Name="{Binding AutomationName}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="30" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" MaxWidth="260" />
-                                </Grid.ColumnDefinitions>
-                                <Ellipse Style="{StaticResource StatusDot}" />
-                                <views:Spinner VerticalAlignment="Center" HorizontalAlignment="Left"
-                                               Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibility}}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13" />
-                                    <TextBlock Text="{Binding Description}" Style="{StaticResource SecondaryText}" />
-                                </StackPanel>
-                                <TextBlock Grid.Column="2" Text="{Binding Status}" Style="{StaticResource StatusText}"
-                                           VerticalAlignment="Center" Margin="12,0,0,0" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <Button Style="{StaticResource LinkButton}" Content="{Binding ReviewRegistryText}" Command="{Binding ReviewRegistryCommand}"
-                    HorizontalAlignment="Left" Margin="4,4,0,0"
-                    Visibility="{Binding HasRegistryIssues, Converter={StaticResource BoolToVisibility}}" />
-
-            <Border Margin="0,16,0,0" Padding="14,10" CornerRadius="10" Background="{DynamicResource InfoBackgroundBrush}"
-                    Visibility="{Binding ShowAdminHint, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                    <TextBlock Text="{Binding AdminHint}" Style="{StaticResource SecondaryText}" FontSize="12" />
-                    <Button Style="{StaticResource LinkButton}" Content="Restart as administrator..." Command="{Binding RestartAsAdministratorCommand}"
-                            HorizontalAlignment="Left" Margin="-4,6,0,0"
-                            AutomationProperties.HelpText="Windows will ask for permission before CleanSlate restarts." />
-                </StackPanel>
+                <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource ErrorBrush}" FontSize="12" />
             </Border>
         </StackPanel>
-    </ScrollViewer>
+
+        <Grid Grid.Column="1" VerticalAlignment="Center" MaxWidth="720" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Text="// TARGETS" Style="{StaticResource SectionTitle}" Margin="2,0,0,12" />
+
+                <ItemsControl ItemsSource="{Binding Rows}" Focusable="False" IsTabStop="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:CategoryRowViewModel}">
+                            <Border Style="{StaticResource Card}" Margin="0,0,0,8" Padding="18,11" AutomationProperties.Name="{Binding AutomationName}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" MaxWidth="280" />
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Style="{StaticResource StatusDot}" />
+                                    <views:Spinner VerticalAlignment="Center" HorizontalAlignment="Left"
+                                                   Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibility}}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontFamily="{StaticResource MonoFont}" FontWeight="SemiBold" FontSize="12" />
+                                        <TextBlock Text="{Binding Description}" Style="{StaticResource SecondaryText}" FontSize="12" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding Status}" Style="{StaticResource StatusText}"
+                                               VerticalAlignment="Center" Margin="16,0,0,0" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Button Style="{StaticResource LinkButton}" Content="{Binding ReviewRegistryText}" Command="{Binding ReviewRegistryCommand}"
+                        HorizontalAlignment="Left" Margin="2,6,0,0"
+                        Visibility="{Binding HasRegistryIssues, Converter={StaticResource BoolToVisibility}}" />
+
+                <Border Margin="0,10,0,0" Padding="16,10" CornerRadius="12" Background="{DynamicResource InfoBackgroundBrush}"
+                        Visibility="{Binding ShowAdminHint, Converter={StaticResource BoolToVisibility}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding AdminHint}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Style="{StaticResource LinkButton}" Content="Run as administrator" Command="{Binding RestartAsAdministratorCommand}"
+                                VerticalAlignment="Center" Margin="16,0,0,0"
+                                AutomationProperties.HelpText="Windows will ask for permission before CleanSlate restarts." />
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </Grid>
 </UserControl>
