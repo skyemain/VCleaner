@@ -48,19 +48,19 @@ struct CleanSlateApp: App {
                 .environmentObject(container.settings)
         }
 
-        menuBar
+        MenuBarExtra("CleanSlate", systemImage: "circle.hexagongrid", isInserted: menuBarInserted) {
+            Button("Open CleanSlate") {
+                NSApp.activate(ignoringOtherApps: true)
+            }
+            Button("Quit") { NSApp.terminate(nil) }
+        }
     }
 
-    @SceneBuilder
-    private var menuBar: some Scene {
-        if container.settings.preferences.showMenuBarIcon {
-            MenuBarExtra("CleanSlate", systemImage: "circle.hexagongrid") {
-                Button("Open CleanSlate") {
-                    NSApp.activate(ignoringOtherApps: true)
-                }
-                Button("Quit") { NSApp.terminate(nil) }
-            }
-        }
+    private var menuBarInserted: Binding<Bool> {
+        Binding(
+            get: { container.settings.preferences.showMenuBarIcon },
+            set: { value in container.settings.update { $0.showMenuBarIcon = value } }
+        )
     }
 
     private var colorScheme: ColorScheme? {
