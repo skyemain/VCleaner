@@ -182,32 +182,25 @@ public partial class App : Application
 
             var current = VersionText();
             var installed = service.GetInstalled();
-            var manager = new InstallManager(service, current);
+            var certificate = new WindowsCertificateTrust(new ElevationService(), Assembly.GetExecutingAssembly(), path);
+            var manager = new InstallManager(service, current, certificate);
 
             if (installed is not null && string.Equals(installed.Version, current, StringComparison.OrdinalIgnoreCase))
             {
-                var open = MessageBox.Show(
-                    $"CleanSlate {current} is already installed.\n\nOpen the installed copy?\n\nYes opens the installed copy.\nNo runs this copy once without installing.",
-                    "CleanSlate", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                if (open != MessageBoxResult.Yes)
-                {
-                    return false;
-                }
-
                 InstallManager.Launch(installed.ExecutablePath);
                 return true;
             }
 
             var message = installed is null
-                ? $"Install CleanSlate {current}?\n\nIt is copied to your user profile and added to the Start menu. No administrator rights are needed, and you can uninstall it from Windows Settings.\n\nYes installs and opens it.\nNo runs this copy once without installing."
-                : $"CleanSlate {installed.Version} is installed. Replace it with {current}?\n\nThe old version is closed and removed. Your settings and history are kept.\n\nYes replaces it and opens the new version.\nNo runs this copy once without installing.";
+                ? $"Install CleanSlate {current}?\n\nIt is copied to your user profile and added to the Start menu. No administrator rights are needed, and you can uninstall it from Windows Settings.{TrustLine(certificate)}\n\nYes installs and opens it.\nNo runs this copy once without installing."
+                : $"CleanSlate {installed.Version} is installed. Replace it with {current}?\n\nThe old version is closed and removed. Your settings and history are kept.{TrustLine(certificate)}\n\nYes replaces it and opens the new version.\nNo runs this copy once without installing.";
             var choice = MessageBox.Show(message, "CleanSlate setup", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (choice != MessageBoxResult.Yes)
             {
                 return false;
             }
 
-            var result = manager.InstallThisCopy();
+            var result = manager.InstallThisCopy(trustCertificate: true);
             if (result.Success && result.ShouldExit)
             {
                 return true;
@@ -223,10 +216,16 @@ public partial class App : Application
         }
     }
 
+    private static string TrustLine(WindowsCertificateTrust certificate) =>
+        certificate.IsAvailable && !certificate.IsTrusted
+            ? "\n\nThis build is signed with its own certificate. Installing also trusts that certificate on this PC; Windows will ask you to confirm."
+            : string.Empty;
+
     private void RunUninstall(bool quiet)
     {
         var layout = AppDataLayout.ForCurrentUser();
-        var manager = new InstallManager(CreateInstallService(layout), VersionText());
+        var manager = new InstallManager(CreateInstallService(layout), VersionText(),
+            new WindowsCertificateTrust(new ElevationService(), Assembly.GetExecutingAssembly(), Environment.ProcessPath));
         var removeData = false;
         if (!quiet)
         {
@@ -238,7 +237,7 @@ public partial class App : Application
             }
 
             removeData = MessageBox.Show(
-                "Also delete CleanSlate's settings, history and registry backups?\n\nChoose No to keep them, for example if you plan to reinstall.",
+                "Also delete CleanSlate's settings, history and registry backups, and remove its trusted signing certificate?\n\nChoose No to keep them, for example if you plan to reinstall.",
                 "CleanSlate", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) == MessageBoxResult.Yes;
         }
 
@@ -348,7 +347,10 @@ public partial class App : Application
         services.AddSingleton(sp => new InstallService(
             new WindowsInstallPlatform(sp.GetRequiredService<AppDataLayout>()), sp.GetRequiredService<IRegistryAccess>(),
             sp.GetRequiredService<IStartupRegistration>(), sp.GetRequiredService<IAppLogger>(), sp.GetRequiredService<IStartupTask>()));
-        services.AddSingleton<IInstallManager>(sp => new InstallManager(sp.GetRequiredService<InstallService>(), VersionText()));
+        services.AddSingleton<ICertificateTrust>(sp => new WindowsCertificateTrust(
+            sp.GetRequiredService<IPrivilegeInfo>(), Assembly.GetExecutingAssembly(), Environment.ProcessPath));
+        services.AddSingleton<IInstallManager>(sp => new InstallManager(
+            sp.GetRequiredService<InstallService>(), VersionText(), sp.GetRequiredService<ICertificateTrust>()));
 
         services.AddSingleton<RunGate>();
         services.AddSingleton(sp => new ProtectedPaths(sp.GetRequiredService<CleanSlate.Core.Models.SystemPaths>()));

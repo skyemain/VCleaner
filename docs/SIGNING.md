@@ -7,6 +7,14 @@ What it does not do: it does **not** make Windows SmartScreen trust the file on 
 Those PCs show "Unknown publisher" and may show the SmartScreen warning. If you later distribute to people you cannot
 visit, you will need a certificate from a public certificate authority.
 
+## Installing the certificate from the exe itself
+
+Builds signed with `-Sign` embed the public `.cer`. Running the exe's installer (or Settings > Installation > Trust certificate) trusts
+it on that PC after verifying that the exe is signed by exactly that certificate, so `trust-certificate.ps1` is only needed for
+PCs where you do not install CleanSlate. The embedded certificate comes from `artifacts/dev-cert/CleanSlate-dev.cer`
+(falling back to `release/CleanSlate-dev.cer`) at build time. Smart App Control does not accept self-signed certificates even when
+trusted; see "Signing certificate and Smart App Control" in the README.
+
 ## One-time setup
 
 On the Windows build machine:

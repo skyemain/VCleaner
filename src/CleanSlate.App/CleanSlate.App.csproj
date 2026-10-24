@@ -26,6 +26,13 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
   </ItemGroup>
+  <PropertyGroup>
+    <SigningCertificatePath Condition="Exists('$(MSBuildProjectDirectory)\..\..\artifacts\dev-cert\CleanSlate-dev.cer')">$(MSBuildProjectDirectory)\..\..\artifacts\dev-cert\CleanSlate-dev.cer</SigningCertificatePath>
+    <SigningCertificatePath Condition="'$(SigningCertificatePath)' == '' And Exists('$(MSBuildProjectDirectory)\..\..\release\CleanSlate-dev.cer')">$(MSBuildProjectDirectory)\..\..\release\CleanSlate-dev.cer</SigningCertificatePath>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(SigningCertificatePath)' != ''">
+    <EmbeddedResource Include="$(SigningCertificatePath)" LogicalName="CleanSlate.SigningCertificate.cer" />
+  </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\CleanSlate.ico" />
     <Resource Include="Assets\CleanSlate.png" />

@@ -5,6 +5,14 @@ see "Versioning" in the README.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-24
+
+### Added
+- The exe embeds its self-signed certificate and trusts it when installing (or from Settings > Installation), after checking the exe is signed by it. Removed again with "Delete everything" on uninstall.
+
+### Changed
+- Running a copy whose version is already installed now just opens the installed copy; no question is asked.
+
 ## [1.3.0] - 2026-10-24
 
 ### Added

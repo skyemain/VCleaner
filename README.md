@@ -5,7 +5,7 @@ Chrome / Edge caches, reports registry entries that point to programs that are v
 after you approve each one. It is built around one rule: **never delete anything it cannot prove is safe to delete.**
 
 > **Verification status (read this first).** This repository was developed and built on Linux. The application compiles
-> and cross-publishes to a `win-x64` executable, and 177 automated tests of the safety-critical logic pass on Linux.
+> and cross-publishes to a `win-x64` executable, and 179 automated tests of the safety-critical logic pass on Linux.
 > **It has not been run on Windows.** The WPF user interface, the Windows registry / Recycle Bin / restore point /
 > elevation code paths, DISM and the tray icon are compiled but unexercised. Work through
 > [docs/VALIDATION.md](docs/VALIDATION.md) on a real Windows 10 and Windows 11 machine before relying on it. See
@@ -43,6 +43,22 @@ Temp, Prefetch and Windows logs need administrator rights. To include them witho
 once and turn on **Start with administrator rights**: that creates a scheduled task named `CleanSlate` (highest privileges,
 at your logon) and replaces the normal startup entry. Turning it off, or uninstalling as administrator, removes the task; if
 uninstalling without administrator rights, delete the task in Task Scheduler.
+
+### Signing certificate and Smart App Control
+
+Signed builds embed their own public certificate. When you install (or press **Trust certificate** in Settings > Installation) and
+this exe really is signed by it, CleanSlate adds it to your *Trusted Root* and *Trusted Publishers* stores (per user; machine-wide
+too if elevated). Windows shows its own confirmation for the root store. Result: the signature shows as valid and the publisher as
+"CleanSlate Development", and SmartScreen's "unknown publisher" goes away. *Delete everything* when uninstalling also removes it.
+Running a copy that is already installed from Downloads simply opens the installed copy, with no question.
+
+**Smart App Control is different and may still block it.** SAC is a Windows 11 allow-list: it runs only apps signed by a CA in
+Microsoft's trusted program or with good cloud reputation, and as far as documented it does not honour a certificate you added
+yourself. I could not test it. If the installed copy is still blocked, open Event Viewer > Applications and Services Logs >
+Microsoft > Windows > CodeIntegrity > Operational and look for event 3077 around the time of the block: it names the exact file
+that was refused. The options that actually work are a signature from a public CA (for example Azure Trusted Signing or a
+purchased code-signing certificate) or turning Smart App Control off (Windows Security > App & browser control > Smart App
+Control; it cannot be turned back on without resetting Windows).
 
 ### Free up RAM
 

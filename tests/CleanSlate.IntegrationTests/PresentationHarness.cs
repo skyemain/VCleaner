@@ -81,10 +81,24 @@ public sealed class FakeInstaller : IInstallManager
 
     public InstallStatus GetStatus() => Status;
 
-    public InstallActionResult InstallThisCopy()
+    public CertificateStatus Certificate { get; set; } = new(false, false, string.Empty);
+    public int TrustCalls { get; private set; }
+    public bool TrustRequestedOnInstall { get; private set; }
+
+    public InstallActionResult InstallThisCopy(bool trustCertificate)
     {
         InstallCalls++;
+        TrustRequestedOnInstall = trustCertificate;
         return InstallResult;
+    }
+
+    public CertificateStatus GetCertificateStatus() => Certificate;
+
+    public InstallActionResult TrustCertificate()
+    {
+        TrustCalls++;
+        Certificate = Certificate with { Trusted = true };
+        return new InstallActionResult(true, "Trusted.", false);
     }
 
     public InstallActionResult Uninstall(bool removeUserData)

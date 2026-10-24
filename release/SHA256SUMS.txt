@@ -1,1 +1,1 @@
-6ff8d259d3f9ab7444a16eaf298425ed7227dd59cef65574e92d4c694a7b7032  CleanSlate-1.3.0-win-x64.exe
+4c6e45f2c2f9acdd0ed9d303fbc54519fc12325e97a7ddc4128a052bd0f4fcb6  CleanSlate-1.3.1-win-x64.exe

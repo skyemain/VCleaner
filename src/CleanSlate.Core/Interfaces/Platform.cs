@@ -107,6 +107,25 @@ public interface IStartupTask
     void Unregister();
 }
 
+/// <summary>
+/// The self-signed certificate that signed this build, embedded in the exe. Trusting it makes Windows show the signature as valid
+/// and the publisher as "CleanSlate Development" on this PC. It is only offered when the running exe is really signed by it.
+/// </summary>
+public interface ICertificateTrust
+{
+    /// <summary>False when the certificate is not embedded or this exe is not signed with it (for example an unsigned dev build).</summary>
+    bool IsAvailable { get; }
+
+    bool IsTrusted { get; }
+
+    string Description { get; }
+
+    /// <summary>Adds the certificate to the trusted stores. Windows shows its own confirmation for the root store.</summary>
+    void Trust();
+
+    void Remove();
+}
+
 public sealed record MemoryStatus(long TotalBytes, long AvailableBytes)
 {
     public long UsedBytes => Math.Max(0, TotalBytes - AvailableBytes);

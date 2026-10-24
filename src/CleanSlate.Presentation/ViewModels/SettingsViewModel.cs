@@ -111,6 +111,8 @@ public sealed class SettingsViewModel : PageViewModel
     private string _installStatusText = string.Empty;
     private string _installButtonText = "Install";
     private InstallStatus? _installStatus;
+    private CertificateStatus? _certificateStatus;
+    private string _certificateText = string.Empty;
 
     public SettingsViewModel(PresentationContext ctx, Action back, Action openBackups, Func<bool> isBusy)
         : base("Settings", back)
@@ -143,6 +145,7 @@ public sealed class SettingsViewModel : PageViewModel
         ClearHistoryCommand = new AsyncRelayCommand(ClearHistoryAsync, null, OnError);
         ResetCommand = new AsyncRelayCommand(ResetAsync, null, OnError);
         OpenBackupsCommand = new RelayCommand(_openBackups);
+        TrustCertificateCommand = new RelayCommand(TrustCertificate, () => CanTrustCertificate);
         InstallCommand = new AsyncRelayCommand(InstallAsync, () => CanInstall, OnError);
         UninstallCommand = new AsyncRelayCommand(UninstallAsync, () => CanUninstall, OnError);
         RefreshInstallStatus();
@@ -178,6 +181,16 @@ public sealed class SettingsViewModel : PageViewModel
     public RelayCommand OpenBackupsCommand { get; }
 
     public AsyncRelayCommand InstallCommand { get; }
+
+    public RelayCommand TrustCertificateCommand { get; }
+
+    public string CertificateText
+    {
+        get => _certificateText;
+        private set => SetProperty(ref _certificateText, value);
+    }
+
+    public bool CanTrustCertificate => _certificateStatus is { Available: true, Trusted: false };
 
     public AsyncRelayCommand UninstallCommand { get; }
 
@@ -242,10 +255,48 @@ public sealed class SettingsViewModel : PageViewModel
             }
         }
 
+        RefreshCertificate();
         InstallCommand.RaiseCanExecuteChanged();
         UninstallCommand.RaiseCanExecuteChanged();
         OnPropertyChanged(nameof(CanInstall));
         OnPropertyChanged(nameof(CanUninstall));
+    }
+
+    private void RefreshCertificate()
+    {
+        _certificateStatus = null;
+        CertificateText = string.Empty;
+        if (_ctx.Installer is not null)
+        {
+            try
+            {
+                var status = _ctx.Installer.GetCertificateStatus();
+                _certificateStatus = status;
+                CertificateText = !status.Available
+                    ? "Signing certificate: this copy is not signed with a CleanSlate certificate."
+                    : status.Trusted
+                        ? $"Signing certificate trusted on this PC ({status.Description})."
+                        : $"Signing certificate not trusted yet ({status.Description}). Windows shows an unknown publisher until it is.";
+            }
+            catch (Exception ex)
+            {
+                _ctx.Log.Warning("Could not read the certificate status: " + ex.Message);
+            }
+        }
+
+        TrustCertificateCommand.RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(CanTrustCertificate));
+    }
+
+    private void TrustCertificate()
+    {
+        if (_ctx.Installer is null)
+        {
+            return;
+        }
+
+        Message = _ctx.Installer.TrustCertificate().Message;
+        RefreshCertificate();
     }
 
     private async Task InstallAsync()
@@ -259,15 +310,15 @@ public sealed class SettingsViewModel : PageViewModel
         var ok = await _ctx.Dialogs.ConfirmAsync(
             replacing ? "Replace the installed version?" : "Install CleanSlate?",
             replacing
-                ? "The installed CleanSlate is closed and replaced by this version. Your settings, history and backups are kept. CleanSlate then restarts from the installed copy."
-                : "CleanSlate is copied to your user profile (no administrator rights needed) and added to the Start menu and to Apps & features. CleanSlate then restarts from the installed copy.",
+                ? "The installed CleanSlate is closed and replaced by this version. Your settings, history and backups are kept. CleanSlate then restarts from the installed copy. If this build is signed, its signing certificate is trusted on this PC (Windows asks you to confirm)."
+                : "CleanSlate is copied to your user profile (no administrator rights needed) and added to the Start menu and to Apps & features. If this build is signed, its signing certificate is trusted on this PC (Windows asks you to confirm). CleanSlate then restarts from the installed copy.",
             replacing ? "Replace" : "Install").ConfigureAwait(true);
         if (!ok)
         {
             return;
         }
 
-        var result = _ctx.Installer.InstallThisCopy();
+        var result = _ctx.Installer.InstallThisCopy(trustCertificate: true);
         Message = result.Message;
         if (result.Success && result.ShouldExit)
         {
@@ -295,7 +346,7 @@ public sealed class SettingsViewModel : PageViewModel
 
         var keep = await _ctx.Dialogs.ConfirmAsync(
             "Keep your settings and history?",
-            "Registry backups are stored with them, so keeping them lets you undo an earlier registry repair later.",
+            "Registry backups are stored with them, so keeping them lets you undo an earlier registry repair later. Choosing \"Delete everything\" also removes CleanSlate's trusted signing certificate from this PC.",
             "Keep my data", "Delete everything").ConfigureAwait(true);
 
         var result = _ctx.Installer.Uninstall(removeUserData: !keep);

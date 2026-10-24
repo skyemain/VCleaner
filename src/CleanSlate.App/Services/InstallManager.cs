@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using CleanSlate.Core.Install;
+using CleanSlate.Core.Interfaces;
 using CleanSlate.Presentation.Infrastructure;
 
 namespace CleanSlate.App.Services;
@@ -10,11 +11,13 @@ public sealed class InstallManager : IInstallManager
 {
     private readonly InstallService _service;
     private readonly string _versionText;
+    private readonly ICertificateTrust? _certificate;
 
-    public InstallManager(InstallService service, string versionText)
+    public InstallManager(InstallService service, string versionText, ICertificateTrust? certificate = null)
     {
         _service = service;
         _versionText = versionText;
+        _certificate = certificate;
     }
 
     public static string? CurrentExecutable => Environment.ProcessPath;
@@ -26,7 +29,7 @@ public sealed class InstallManager : IInstallManager
         return new InstallStatus(installed is not null, installed?.Version, running, installed?.Directory ?? Path.GetDirectoryName(_service.InstalledExecutablePath) ?? string.Empty);
     }
 
-    public InstallActionResult InstallThisCopy()
+    public InstallActionResult InstallThisCopy(bool trustCertificate)
     {
         var source = CurrentExecutable;
         if (string.IsNullOrEmpty(source))
@@ -42,9 +45,10 @@ public sealed class InstallManager : IInstallManager
                 return new InstallActionResult(true, "This copy is already the installed one.", false);
             }
 
+            var trustNote = trustCertificate ? TryTrust() : string.Empty;
             Launch(result.ExecutablePath);
             var verb = result.Kind == InstallResultKind.Updated ? $"Replaced version {result.PreviousVersion}." : "Installed.";
-            return new InstallActionResult(true, verb + " Restarting from the installed copy...", true);
+            return new InstallActionResult(true, verb + trustNote + " Restarting from the installed copy...", true);
         }
         catch (InstallException ex)
         {
@@ -56,10 +60,51 @@ public sealed class InstallManager : IInstallManager
         }
     }
 
+    public CertificateStatus GetCertificateStatus() =>
+        _certificate is null
+            ? new CertificateStatus(false, false, string.Empty)
+            : new CertificateStatus(_certificate.IsAvailable, _certificate.IsAvailable && _certificate.IsTrusted, _certificate.Description);
+
+    public InstallActionResult TrustCertificate()
+    {
+        if (_certificate is not { IsAvailable: true })
+        {
+            return new InstallActionResult(false, "This copy is not signed with a CleanSlate certificate, so there is nothing to trust.", false);
+        }
+
+        try
+        {
+            _certificate.Trust();
+            return _certificate.IsTrusted
+                ? new InstallActionResult(true, "The CleanSlate signing certificate is now trusted on this PC.", false)
+                : new InstallActionResult(false, "Windows did not add the certificate (the confirmation may have been declined).", false);
+        }
+        catch (Exception ex) when (ex is System.Security.Cryptography.CryptographicException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return new InstallActionResult(false, "The certificate could not be trusted: " + ex.Message, false);
+        }
+    }
+
+    private string TryTrust()
+    {
+        if (_certificate is not { IsAvailable: true } || _certificate.IsTrusted)
+        {
+            return string.Empty;
+        }
+
+        var result = TrustCertificate();
+        return result.Success ? " The signing certificate is trusted." : " " + result.Message;
+    }
+
     public InstallActionResult Uninstall(bool removeUserData)
     {
         try
         {
+            if (removeUserData && _certificate is { IsAvailable: true })
+            {
+                _certificate.Remove();
+            }
+
             var result = _service.Uninstall(removeUserData);
             if (!result.WasInstalled)
             {

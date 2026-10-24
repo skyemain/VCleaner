@@ -927,4 +927,35 @@ public sealed class SettingsViewModelTests
 
         Assert.Equal(new[] { false }, h.Installer.Uninstalls);
     }
+
+    [Fact]
+    public async Task Install_asks_to_trust_the_signing_certificate()
+    {
+        using var h = new PresentationHarness();
+        var settings = Open(h);
+
+        await settings.InstallCommand.ExecuteAsync();
+
+        Assert.True(h.Installer.TrustRequestedOnInstall);
+        Assert.Contains(h.Dialogs.Confirmations, c => c.Message.Contains("certificate"));
+    }
+
+    [Fact]
+    public void Trust_button_appears_only_for_an_untrusted_embedded_certificate_and_trusts_it()
+    {
+        using var none = new PresentationHarness();
+        Assert.False(Open(none).CanTrustCertificate);
+
+        using var h = new PresentationHarness();
+        h.Installer.Certificate = new CertificateStatus(true, false, "CleanSlate Development, valid until 2027-10-24");
+        var settings = Open(h);
+        Assert.True(settings.CanTrustCertificate);
+        Assert.Contains("not trusted yet", settings.CertificateText);
+
+        settings.TrustCertificateCommand.Execute(null);
+
+        Assert.Equal(1, h.Installer.TrustCalls);
+        Assert.False(settings.CanTrustCertificate);
+        Assert.Contains("trusted on this PC", settings.CertificateText);
+    }
 }

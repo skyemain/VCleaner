@@ -57,6 +57,9 @@ Use profiles with real browsing history, bookmarks and a saved password you can 
 - [ ] Run a **newer** exe: the offer says "Replace". After *Yes* the old process is gone, the new version number shows in Settings, settings and history are still there, and the startup entry (if enabled) points to the installed exe.
 - [ ] Settings > Installation > Uninstall (and, separately, Windows Settings > Apps > CleanSlate > Uninstall): program folder, Start menu entry and startup entry disappear a few seconds after exit; data is kept or deleted according to your answer. `CleanSlate.exe --uninstall --quiet` removes the program silently and keeps data.
 - [ ] A `portable.txt` next to the exe suppresses the install offer.
+- [ ] Run the same version from Downloads when it is already installed: no question, the installed copy opens.
+- [ ] Install a signed build: the offer mentions the certificate; Windows shows its root-certificate confirmation; afterwards `Get-AuthenticodeSignature` on the installed exe is `Valid` and Settings > Installation says the certificate is trusted. An unsigned dev build shows no certificate line.
+- [ ] Smart App Control (Windows 11, enforcing): record whether the installed exe from the Start menu is blocked and, if so, the CodeIntegrity event 3077 file name.
 
 ## 4c. Automation and RAM
 

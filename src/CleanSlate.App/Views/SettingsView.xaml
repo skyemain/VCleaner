@@ -19,9 +19,14 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="{Binding InstallStatusText}" FontSize="13" />
+                            <TextBlock Text="{Binding CertificateText}" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"
+                                       Visibility="{Binding CertificateText, Converter={StaticResource NotEmptyToVisibility}}" />
                             <TextBlock Text="Installing needs no administrator rights. A newer version replaces the old one automatically; uninstall any time from here or from Windows Settings." Style="{StaticResource SecondaryText}" Margin="0,4,0,0" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                            <Button Content="Trust certificate" Command="{Binding TrustCertificateCommand}" Margin="0,0,8,0"
+                                    Visibility="{Binding CanTrustCertificate, Converter={StaticResource BoolToVisibility}}"
+                                    ToolTip="Makes Windows show this build's signature as valid on this PC." />
                             <Button Style="{StaticResource AccentButton}" Content="{Binding InstallButtonText}" Command="{Binding InstallCommand}" Margin="0,0,8,0" />
                             <Button Content="Uninstall" Command="{Binding UninstallCommand}" />
                         </StackPanel>
