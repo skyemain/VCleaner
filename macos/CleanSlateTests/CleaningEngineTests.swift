@@ -72,6 +72,20 @@ final class LoginAndSettingsTests: XCTestCase {
     }
 
     @MainActor
+    func testMenuBarAndOtherSettingsDoNotTouchTheLoginItem() {
+        let login = FakeLoginItems()
+        let settings = SettingsViewModel(store: MemoryPreferenceStore(), loginItems: login)
+        let statusAfterInit = login.statusCalls
+        let writesAfterInit = login.setCalls
+        settings.setMenuBarVisible(true)
+        settings.setMenuBarVisible(true)
+        settings.update { $0.cleanTemporaryFiles = false }
+        XCTAssertTrue(settings.preferences.showMenuBarIcon)
+        XCTAssertEqual(login.statusCalls, statusAfterInit)
+        XCTAssertEqual(login.setCalls, writesAfterInit)
+    }
+
+    @MainActor
     func testPreferencesRoundTrip() throws {
         let fixture = try Fixture()
         defer { fixture.destroy() }
@@ -112,8 +126,16 @@ final class CancelBox: @unchecked Sendable {
 
 final class FakeLoginItems: LoginItemRegistering, @unchecked Sendable {
     var enabled = false
-    func status() -> LoginItemState { enabled ? .enabled : .notRegistered }
-    func setEnabled(_ enabled: Bool) throws { self.enabled = enabled }
+    var statusCalls = 0
+    var setCalls = 0
+    func status() -> LoginItemState {
+        statusCalls += 1
+        return enabled ? .enabled : .notRegistered
+    }
+    func setEnabled(_ enabled: Bool) throws {
+        setCalls += 1
+        self.enabled = enabled
+    }
 }
 
 final class PermissionAndHistoryTests: XCTestCase {

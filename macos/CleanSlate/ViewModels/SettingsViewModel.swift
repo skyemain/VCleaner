@@ -14,10 +14,15 @@ final class SettingsViewModel: ObservableObject {
         self.store = store
         self.loginItems = loginItems
         preferences = store.load()
-        loginState = loginItems.status()
+        if loginItems.mustLeaveMainThread {
+            refreshLoginStatus()
+        } else {
+            loginState = loginItems.status()
+        }
     }
 
     func update(_ body: (inout CleaningPreferences) -> Void) {
+        let previousLogin = preferences.startAtLogin
         body(&preferences)
         if preferences.cleanAtLogin {
             preferences.startAtLogin = true
@@ -25,8 +30,19 @@ final class SettingsViewModel: ObservableObject {
         if !preferences.startAtLogin {
             preferences.cleanAtLogin = false
         }
+        let loginChanged = preferences.startAtLogin != previousLogin
         persist()
-        applyLoginRegistration()
+        if loginChanged {
+            applyLoginRegistration()
+        }
+    }
+
+    /// Menu bar insertion writes this binding during ordinary window updates, including a click
+    /// on Clean. It must only store the flag. Calling `SMAppService` from that path freezes the app.
+    func setMenuBarVisible(_ visible: Bool) {
+        guard preferences.showMenuBarIcon != visible else { return }
+        preferences.showMenuBarIcon = visible
+        persist()
     }
 
     func addExclusion(_ path: String) {
@@ -57,26 +73,69 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
+    private var loginGeneration = 0
+
+    private func refreshLoginStatus() {
+        let items = loginItems
+        loginGeneration += 1
+        let generation = loginGeneration
+        Task.detached { [weak self] in
+            let state = items.status()
+            await self?.apply(LoginItemReconciler.Outcome(state: state, message: nil), generation: generation)
+        }
+    }
+
     private func applyLoginRegistration() {
         let desired = preferences.startAtLogin
-        let current = loginItems.status()
-        if desired && current == .enabled {
-            loginState = current
+        let items = loginItems
+        if !items.mustLeaveMainThread {
+            apply(LoginItemReconciler.reconcile(desired: desired, loginItems: items), generation: loginGeneration)
             return
         }
+        loginGeneration += 1
+        let generation = loginGeneration
+        Task.detached { [weak self] in
+            let outcome = LoginItemReconciler.reconcile(desired: desired, loginItems: items)
+            await self?.apply(outcome, generation: generation)
+        }
+    }
+
+    private func apply(_ outcome: LoginItemReconciler.Outcome, generation: Int) {
+        guard generation == loginGeneration else { return }
+        loginState = outcome.state
+        if let message = outcome.message {
+            self.message = message
+        }
+    }
+}
+
+enum LoginItemReconciler {
+    struct Outcome: Sendable {
+        var state: LoginItemState
+        var message: String?
+    }
+
+    static func reconcile(desired: Bool, loginItems: any LoginItemRegistering) -> Outcome {
+        let current = loginItems.status()
+        if desired && current == .enabled {
+            return Outcome(state: current, message: nil)
+        }
         if !desired && current == .notRegistered {
-            loginState = current
-            return
+            return Outcome(state: current, message: nil)
+        }
+        if case .unavailable(let reason) = current {
+            return Outcome(state: current, message: reason)
         }
         do {
             try loginItems.setEnabled(desired)
-            loginState = loginItems.status()
-            if loginState == .requiresApproval {
-                message = "Allow CleanSlate in System Settings > General > Login Items."
+            let state = loginItems.status()
+            if state == .requiresApproval {
+                return Outcome(state: state, message: "Allow CleanSlate in System Settings > General > Login Items.")
             }
+            return Outcome(state: state, message: nil)
         } catch {
-            loginState = loginItems.status()
-            message = "macOS refused the login item change."
+            let state = loginItems.status()
+            return Outcome(state: state, message: "macOS refused the login item change. Cleaning still works.")
         }
     }
 }

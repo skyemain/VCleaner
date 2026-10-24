@@ -1,8 +1,8 @@
 # CleanSlate for macOS
 
-CleanSlate 1.0.0 is the native macOS counterpart of CleanSlate for Windows 1.4.0. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes only cache and temporary files it can prove are disposable, and it does not pretend to be a registry cleaner or a RAM booster.
+CleanSlate 1.0.1 is the native macOS counterpart of CleanSlate for Windows 1.4.0. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes only cache and temporary files it can prove are disposable, and it does not pretend to be a registry cleaner or a RAM booster.
 
-This tree was written on Linux. **It has not been compiled, tested, signed, or packaged here.** Xcode, `codesign`, and `hdiutil` are required, and they are not available in this environment. Do not treat a missing DMG as a finished Mac release.
+GitHub Actions builds the universal disk image when the `mac` branch is pushed. The copy in that image is ad-hoc signed so it can launch; it is not notarized, so the first open is a right-click → Open. Xcode is required to build it locally.
 
 ## What it cleans
 
@@ -53,9 +53,9 @@ To sign, package, and notarize, using credentials that stay outside the reposito
 ```bash
 export DEVELOPER_ID_APPLICATION="Developer ID Application: Your Name (TEAMID)"
 scripts/sign.sh
-scripts/package-dmg.sh 1.0.0
+scripts/package-dmg.sh 1.0.1
 xcrun notarytool store-credentials cleanslate --apple-id you@example.com --team-id TEAMID
-NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.0-mac-universal.dmg
+NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.1-mac-universal.dmg
 scripts/verify-release.sh
 ```
 

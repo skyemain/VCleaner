@@ -59,7 +59,7 @@ struct CleanSlateApp: App {
     private var menuBarInserted: Binding<Bool> {
         Binding(
             get: { container.settings.preferences.showMenuBarIcon },
-            set: { value in container.settings.update { $0.showMenuBarIcon = value } }
+            set: { value in container.settings.setMenuBarVisible(value) }
         )
     }
 

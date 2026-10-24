@@ -5,6 +5,9 @@ see "Versioning" in the README.
 
 ## [Unreleased]
 
+### Fixed
+- macOS 1.0.1: Clicking Clean froze the window and macOS offered to send a hang report. The menu bar icon was checking login items on the main thread during ordinary redraws, and that system call can wait forever. Login items are now checked in the background, and only when the login setting changes. Cleaning itself was not the part that failed.
+
 ## [1.4.0] - 2026-10-24
 
 ### Changed
