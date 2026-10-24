@@ -2,13 +2,14 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
     <Style x:Key="FocusVisual">
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Rectangle Margin="-2" RadiusX="6" RadiusY="6" StrokeThickness="2"
+                    <Rectangle Margin="-2" RadiusX="10" RadiusY="10" StrokeThickness="2"
                                Stroke="{DynamicResource FocusBrush}" SnapsToDevicePixels="True" />
                 </ControlTemplate>
             </Setter.Value>
@@ -25,10 +26,43 @@
     </Style>
 
     <Style x:Key="SectionTitle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="11" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
-        <Setter Property="Margin" Value="4,20,0,8" />
+        <Setter Property="Margin" Value="6,24,0,10" />
+    </Style>
+
+    <Style x:Key="PageTitle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+        <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+        <Setter Property="FontSize" Value="26" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="StatusDot" TargetType="Ellipse">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="Height" Value="10" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="3,0,0,0" />
+        <Setter Property="Fill" Value="{DynamicResource DisabledTextBrush}" />
+        <Setter Property="Opacity" Value="0.55" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Kind}" Value="Success">
+                <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+                <Setter Property="Opacity" Value="1" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Warning">
+                <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+                <Setter Property="Opacity" Value="1" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Error">
+                <Setter Property="Fill" Value="{DynamicResource ErrorBrush}" />
+                <Setter Property="Opacity" Value="1" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Active">
+                <Setter Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <Style x:Key="StatusText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
@@ -71,14 +105,14 @@
         <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Padding" Value="16,7" />
-        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Padding" Value="18,8" />
+        <Setter Property="MinHeight" Value="36" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -107,7 +141,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -161,7 +195,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Chrome" Background="Transparent" CornerRadius="6">
+                    <Border x:Name="Chrome" Background="Transparent" CornerRadius="10">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -182,30 +216,65 @@
 
     <Style x:Key="HeroButton" TargetType="Button">
         <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}" />
-        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
-        <Setter Property="FontSize" Value="24" />
+        <Setter Property="Foreground" Value="{DynamicResource HeroTextBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+        <Setter Property="FontSize" Value="22" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Width" Value="190" />
-        <Setter Property="Height" Value="190" />
+        <Setter Property="Width" Value="184" />
+        <Setter Property="Height" Value="184" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Grid>
-                        <Ellipse x:Name="Halo" Fill="{DynamicResource AccentBrush}" Opacity="0.16" Margin="-8" />
-                        <Ellipse x:Name="Disc" Fill="{DynamicResource AccentBrush}" />
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" TextBlock.TextAlignment="Center" />
+                    <Grid x:Name="Root" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform x:Name="Scale" ScaleX="1" ScaleY="1" />
+                        </Grid.RenderTransform>
+                        <Ellipse x:Name="Halo" Fill="{DynamicResource HeroBrush}" Opacity="0.12" Margin="-18" />
+                        <Ellipse x:Name="Ring" Fill="{DynamicResource HeroBrush}" Opacity="0.20" Margin="-7" />
+                        <Ellipse x:Name="Disc" Fill="{DynamicResource HeroBrush}">
+                            <Ellipse.Effect>
+                                <DropShadowEffect Color="{DynamicResource HeroGlowColor}" BlurRadius="40" ShadowDepth="10" Direction="270" Opacity="0.45" />
+                            </Ellipse.Effect>
+                        </Ellipse>
+                        <Ellipse Margin="5" Stroke="#40FFFFFF" StrokeThickness="1" />
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Path x:Name="Sparkle" Width="30" Height="30" Stretch="Uniform" Fill="{DynamicResource HeroTextBrush}"
+                                  HorizontalAlignment="Center" Margin="0,0,0,8"
+                                  Data="M12,0 C12.8,7 17,11.2 24,12 C17,12.8 12.8,17 12,24 C11.2,17 7,12.8 0,12 C7,11.2 11.2,7 12,0 Z" />
+                            <ContentPresenter HorizontalAlignment="Center" TextBlock.TextAlignment="Center" />
+                        </StackPanel>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Disc" Property="Fill" Value="{DynamicResource AccentHoverBrush}" />
+                            <Setter TargetName="Disc" Property="Fill" Value="{DynamicResource HeroHoverBrush}" />
+                            <Setter TargetName="Halo" Property="Opacity" Value="0.20" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleX" To="1.04" Duration="0:0:0.16" />
+                                        <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleY" To="1.04" Duration="0:0:0.16" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.2" />
+                                        <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.2" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Disc" Property="Fill" Value="{DynamicResource AccentPressedBrush}" />
+                            <Setter TargetName="Disc" Property="Fill" Value="{DynamicResource HeroPressedBrush}" />
+                            <Setter TargetName="Root" Property="Opacity" Value="0.96" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Disc" Property="Fill" Value="{DynamicResource AccentDisabledBrush}" />
-                            <Setter TargetName="Halo" Property="Opacity" Value="0.06" />
+                            <Setter TargetName="Disc" Property="Effect" Value="{x:Null}" />
+                            <Setter TargetName="Halo" Property="Opacity" Value="0.05" />
+                            <Setter TargetName="Ring" Property="Opacity" Value="0.08" />
                             <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -227,7 +296,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border x:Name="Box" Width="20" Height="20" CornerRadius="4" BorderThickness="1" VerticalAlignment="Top"
+                        <Border x:Name="Box" Width="20" Height="20" CornerRadius="6" BorderThickness="1" VerticalAlignment="Top"
                                 BorderBrush="{DynamicResource SwitchOffBrush}" Background="Transparent">
                             <Path x:Name="Tick" Data="M3,9 L8,14 L17,4" Stroke="{DynamicResource OnAccentBrush}" StrokeThickness="2"
                                   StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Visibility="Collapsed" />
@@ -265,9 +334,9 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" />
-                        <Border x:Name="Track" Grid.Column="1" Width="42" Height="22" CornerRadius="11" Margin="12,0,0,0" VerticalAlignment="Center"
+                        <Border x:Name="Track" Grid.Column="1" Width="44" Height="24" CornerRadius="12" Margin="14,0,0,0" VerticalAlignment="Center"
                                 BorderThickness="1" BorderBrush="{DynamicResource SwitchOffBrush}" Background="Transparent">
-                            <Ellipse x:Name="Thumb" Width="12" Height="12" HorizontalAlignment="Left" Margin="4,0,0,0"
+                            <Ellipse x:Name="Thumb" Width="14" Height="14" HorizontalAlignment="Left" Margin="4,0,0,0"
                                      Fill="{DynamicResource SwitchOffBrush}" />
                         </Border>
                     </Grid>
@@ -277,6 +346,8 @@
                             <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                             <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right" />
                             <Setter TargetName="Thumb" Property="Margin" Value="0,0,4,0" />
+                            <Setter TargetName="Thumb" Property="Width" Value="16" />
+                            <Setter TargetName="Thumb" Property="Height" Value="16" />
                             <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource OnAccentBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
@@ -291,7 +362,7 @@
 
     <!-- Progress bar (determinate and indeterminate) -->
     <Style TargetType="ProgressBar">
-        <Setter Property="Height" Value="4" />
+        <Setter Property="Height" Value="6" />
         <Setter Property="Minimum" Value="0" />
         <Setter Property="Maximum" Value="1" />
         <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
@@ -299,9 +370,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ProgressBar">
                     <Grid x:Name="TemplateRoot" SnapsToDevicePixels="True">
-                        <Border x:Name="PART_Track" Background="{DynamicResource DividerBrush}" CornerRadius="2" />
-                        <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="2" HorizontalAlignment="Left" />
-                        <Border x:Name="Shimmer" CornerRadius="2" Visibility="Collapsed" ClipToBounds="True">
+                        <Border x:Name="PART_Track" Background="{DynamicResource DividerBrush}" CornerRadius="3" />
+                        <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="3" HorizontalAlignment="Left" />
+                        <Border x:Name="Shimmer" CornerRadius="3" Visibility="Collapsed" ClipToBounds="True">
                             <Rectangle>
                                 <Rectangle.Fill>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
@@ -421,8 +492,8 @@
         <Setter Property="Background" Value="{DynamicResource CardBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Padding" Value="16,12" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="18,14" />
     </Style>
 
     <Style TargetType="ScrollViewer">
@@ -434,5 +505,14 @@
         <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
         <Setter Property="Focusable" Value="False" />
+        <Style.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.24" />
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Style.Triggers>
     </Style>
 </ResourceDictionary>

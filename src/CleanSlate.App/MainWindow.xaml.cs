@@ -18,7 +18,11 @@ public partial class MainWindow : Window
         _minimizeToTray = minimizeToTray;
         DataContext = viewModel;
         InitializeComponent();
-        SourceInitialized += (_, _) => ApplyTitleBarTheme(ThemeManager.IsDark);
+        SourceInitialized += (_, _) =>
+        {
+            ApplyTitleBarTheme(ThemeManager.IsDark);
+            ApplyBackdrop();
+        };
         ThemeManager.ThemeChanged += (_, dark) => ApplyTitleBarTheme(dark);
         PreviewKeyDown += OnPreviewKeyDown;
         StateChanged += OnStateChanged;
@@ -72,6 +76,29 @@ public partial class MainWindow : Window
         e.Cancel = true;
         MessageBox.Show(this, "CleanSlate is still working. Press Cancel first, wait for it to stop, then close the window.",
             "CleanSlate", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ApplyBackdrop()
+    {
+        try
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+            var source = HwndSource.FromHwnd(handle);
+            if (handle == IntPtr.Zero || source?.CompositionTarget is null)
+            {
+                return;
+            }
+
+            if (CleanSlate.Windows.DwmInterop.TryEnableMica(handle))
+            {
+                source.CompositionTarget.BackgroundColor = System.Windows.Media.Colors.Transparent;
+                Background = System.Windows.Media.Brushes.Transparent;
+            }
+        }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
+        {
+            // The backdrop is cosmetic; the solid theme background stays.
+        }
     }
 
     private void ApplyTitleBarTheme(bool dark)
