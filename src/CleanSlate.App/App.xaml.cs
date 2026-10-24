@@ -270,7 +270,6 @@ public partial class App : Application
     {
         var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
                       ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
-        var plus = version.IndexOf('+');
-        return plus > 0 ? version[..plus] : version;
+        return version;
     }
 }

@@ -1,37 +1,40 @@
 <#
 .SYNOPSIS
-    Builds, tests and publishes CleanSlate as a self-contained Windows x64 application.
+    Builds, tests and publishes CleanSlate as a single self-contained Windows x64 .exe.
 
 .DESCRIPTION
-    Default output is a folder (artifacts\publish\win-x64) containing CleanSlate.exe and everything it needs;
-    no .NET installation is required on the target PC. The output is NOT code-signed.
+    Output: artifacts\release\CleanSlate-<version>-win-x64.exe (+ SHA256SUMS.txt). No .NET installation is needed on the target PC.
+    Development builds are versioned MAJOR.MINOR.PATCH-dev.<commit count>+<commit>; -Release drops the -dev suffix.
+    The base version comes from the VERSION file (change it with build\bump-version.ps1).
 
-.PARAMETER Configuration
-    Build configuration. Default: Release.
+.PARAMETER Release
+    Produce a release version (no -dev suffix). Use from a clean, tagged commit.
 
-.PARAMETER Output
-    Publish folder. Default: artifacts\publish\win-x64 under the repository root.
+.PARAMETER Sign
+    Authenticode-sign the .exe with build\sign.ps1 (see docs\SIGNING.md for the supported certificate sources).
 
-.PARAMETER SingleFile
-    Also produce a single-file executable layout (self-extracting native libraries). Larger first start; less tested than the folder layout.
+.PARAMETER Folder
+    Also keep the unpacked folder layout (artifacts\publish\win-x64). Starts faster than the single file, which unpacks native libraries on first run.
 
 .PARAMETER ReadyToRun
-    Precompile assemblies for faster startup (larger output, needs the runtime pack to be downloadable).
+    Precompile assemblies for faster startup (larger output).
 
 .PARAMETER Zip
-    Create a .zip next to the publish folder and write SHA256SUMS.txt.
+    Also create CleanSlate-<version>-win-x64.zip containing the .exe.
 
 .PARAMETER SkipTests
     Do not run the automated tests before publishing.
 
 .EXAMPLE
-    pwsh build\publish.ps1 -Zip
+    pwsh build\publish.ps1                    # development build
+    pwsh build\publish.ps1 -Release -Sign     # signed release build
 #>
 [CmdletBinding()]
 param(
     [string]$Configuration = 'Release',
-    [string]$Output,
-    [switch]$SingleFile,
+    [switch]$Release,
+    [switch]$Sign,
+    [switch]$Folder,
     [switch]$ReadyToRun,
     [switch]$Zip,
     [switch]$SkipTests
@@ -40,9 +43,8 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$root = Resolve-Path (Join-Path $PSScriptRoot '..')
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $runtime = 'win-x64'
-if (-not $Output) { $Output = Join-Path $root "artifacts\publish\$runtime" }
 $project = Join-Path $root 'src\CleanSlate.App\CleanSlate.App.csproj'
 $solution = Join-Path $root 'CleanSlate.sln'
 
@@ -59,9 +61,27 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
 
 Push-Location $root
 try {
-    Invoke-Dotnet -DotnetArguments @('restore', $solution)
+    $baseVersion = (Get-Content (Join-Path $root 'VERSION') -Raw).Trim()
+    $sha = 'unknown'; $count = '0'
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        $sha = (& git rev-parse --short=7 HEAD 2>$null); if ($LASTEXITCODE -ne 0) { $sha = 'unknown' }
+        $count = (& git rev-list --count HEAD 2>$null); if ($LASTEXITCODE -ne 0) { $count = '0' }
+    }
+    $versionArgs = @("-p:BuildNumber=$count", "-p:SourceRevisionId=$sha")
+    if ($Release) {
+        $version = $baseVersion
+        if (Get-Command git -ErrorAction SilentlyContinue) {
+            if (& git status --porcelain 2>$null) { Write-Warning 'Building a release from a working tree with uncommitted changes.' }
+        }
+    }
+    else {
+        $version = "$baseVersion-dev.$count"
+        $versionArgs += "-p:VersionSuffix=dev.$count"
+    }
+    Write-Host "Version: $version+$sha" -ForegroundColor Cyan
 
-    Invoke-Dotnet -DotnetArguments @('build', $solution, '-c', $Configuration, '--no-restore')
+    Invoke-Dotnet -DotnetArguments @('restore', $solution)
+    Invoke-Dotnet -DotnetArguments (@('build', $solution, '-c', $Configuration, '--no-restore') + $versionArgs)
 
     if (-not $SkipTests) {
         $onWindows = $env:OS -eq 'Windows_NT'
@@ -70,45 +90,47 @@ try {
         Invoke-Dotnet -DotnetArguments (@('test', $solution, '-c', $Configuration, '--no-build') + $filter)
     }
 
-    if (Test-Path $Output) { Remove-Item $Output -Recurse -Force }
+    $r2r = "-p:PublishReadyToRun=$($ReadyToRun.IsPresent.ToString().ToLower())"
+    $common = @('-c', $Configuration, '-r', $runtime, '--self-contained', 'true', $r2r, '-p:DebugType=none', '-p:DebugSymbols=false') + $versionArgs
 
-    $publishArgs = @(
-        'publish', $project, '-c', $Configuration, '-r', $runtime, '--self-contained', 'true',
-        '-o', $Output, "-p:PublishReadyToRun=$($ReadyToRun.IsPresent.ToString().ToLower())",
-        '-p:DebugType=none', '-p:DebugSymbols=false'
-    )
-    Invoke-Dotnet -DotnetArguments $publishArgs
+    $work = Join-Path $root 'artifacts\publish-single'
+    if (Test-Path $work) { Remove-Item $work -Recurse -Force }
+    Invoke-Dotnet -DotnetArguments (@('publish', $project) + $common + @('-o', $work,
+            '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:EnableCompressionInSingleFile=true'))
 
-    if ($SingleFile) {
-        $singleOut = Join-Path (Split-Path $Output -Parent) "$runtime-singlefile"
-        if (Test-Path $singleOut) { Remove-Item $singleOut -Recurse -Force }
-        $singleArgs = @(
-            'publish', $project, '-c', $Configuration, '-r', $runtime, '--self-contained', 'true', '-o', $singleOut,
-            '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:EnableCompressionInSingleFile=true',
-            "-p:PublishReadyToRun=$($ReadyToRun.IsPresent.ToString().ToLower())", '-p:DebugType=none', '-p:DebugSymbols=false'
-        )
-        Invoke-Dotnet -DotnetArguments $singleArgs
-        Write-Host "Single-file layout: $singleOut"
+    $releaseDir = Join-Path $root 'artifacts\release'
+    New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
+    $exe = Join-Path $releaseDir "CleanSlate-$version-$runtime.exe"
+    Copy-Item (Join-Path $work 'CleanSlate.exe') $exe -Force
+
+    if ($Folder) {
+        $folderOut = Join-Path $root "artifacts\publish\$runtime"
+        if (Test-Path $folderOut) { Remove-Item $folderOut -Recurse -Force }
+        Invoke-Dotnet -DotnetArguments (@('publish', $project) + $common + @('-o', $folderOut))
+        Write-Host "Folder layout: $folderOut"
     }
 
-    $exe = Join-Path $Output 'CleanSlate.exe'
-    if (-not (Test-Path $exe)) { throw "Publish finished but $exe was not produced." }
+    if ($Sign) {
+        & (Join-Path $PSScriptRoot 'sign.ps1') -Path $exe
+    }
+    else {
+        Write-Host 'Not code-signed (use -Sign). Windows SmartScreen warns about unsigned downloads.' -ForegroundColor Yellow
+    }
 
+    $files = @($exe)
     if ($Zip) {
-        $version = (Get-Item $exe).VersionInfo.ProductVersion
-        $zipPath = Join-Path (Split-Path $Output -Parent) "CleanSlate-$version-$runtime.zip"
+        $zipPath = Join-Path $releaseDir "CleanSlate-$version-$runtime.zip"
         if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-        Compress-Archive -Path (Join-Path $Output '*') -DestinationPath $zipPath
-        $hash = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLower()
-        "$hash  $(Split-Path $zipPath -Leaf)" | Set-Content (Join-Path (Split-Path $zipPath -Parent) 'SHA256SUMS.txt') -Encoding ascii
-        Write-Host "Archive: $zipPath"
-        Write-Host "SHA-256: $hash"
+        Compress-Archive -Path $exe -DestinationPath $zipPath
+        $files += $zipPath
     }
 
-    $size = (Get-ChildItem $Output -Recurse -File | Measure-Object Length -Sum).Sum / 1MB
+    $sums = foreach ($f in $files) { "$((Get-FileHash $f -Algorithm SHA256).Hash.ToLower())  $(Split-Path $f -Leaf)" }
+    $sums | Set-Content (Join-Path $releaseDir 'SHA256SUMS.txt') -Encoding ascii
+
     Write-Host ''
-    Write-Host ("Published CleanSlate to {0} ({1:N0} MB)" -f $Output, $size) -ForegroundColor Green
-    Write-Host 'This build is not code-signed; Windows SmartScreen may warn on first launch.'
+    Write-Host ("Built {0} ({1:N0} MB)" -f $exe, ((Get-Item $exe).Length / 1MB)) -ForegroundColor Green
+    $sums | ForEach-Object { Write-Host $_ }
 }
 finally {
     Pop-Location

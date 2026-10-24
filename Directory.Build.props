@@ -7,7 +7,11 @@
     <WarningsNotAsErrors>NU1900;NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Deterministic>true</Deterministic>
-    <Version>1.0.0</Version>
+    <BaseVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</BaseVersion>
+    <BuildNumber Condition="'$(BuildNumber)' == ''">0</BuildNumber>
+    <VersionPrefix>$(BaseVersion)</VersionPrefix>
+    <AssemblyVersion>$(BaseVersion).0</AssemblyVersion>
+    <FileVersion>$(BaseVersion).$(BuildNumber)</FileVersion>
     <Authors>CleanSlate</Authors>
     <Company>CleanSlate</Company>
     <Product>CleanSlate</Product>

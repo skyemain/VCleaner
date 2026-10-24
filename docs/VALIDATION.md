@@ -4,8 +4,8 @@ CleanSlate was built and unit/integration-tested on Linux. Everything below has 
 **disposable or backed-up** Windows 10 (21H2 or newer) machine and a Windows 11 machine, using a standard user account
 and, where noted, an administrator account. Record the result of each step.
 
-Prepare once: build with `pwsh build/publish.ps1 -Zip`, copy `artifacts\publish\win-x64` to the test PC (or install the
-.NET 10 SDK there and use `dotnet run`). All of `dotnet test CleanSlate.sln -c Release` (including `CleanSlate.WindowsTests`)
+Prepare once: build with `pwsh build/publish.ps1`, copy the single `artifacts\release\CleanSlate-<version>-win-x64.exe` to the test PC (or install the
+.NET 10 SDK there and use `dotnet run`). Note the exact version string for the results. All of `dotnet test CleanSlate.sln -c Release` (including `CleanSlate.WindowsTests`)
 should pass first.
 
 ## 1. Launch and appearance
@@ -92,6 +92,8 @@ Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Clea
 
 ## 9. Distribution checks
 
-- [ ] File properties of `CleanSlate.exe`: product name, version 1.0.0, copyright and icon are present.
-- [ ] Unblock the zip (Properties) or expect SmartScreen: the build is unsigned.
+- [ ] File properties of the `.exe`: product name, file version `MAJOR.MINOR.PATCH.N`, product version (`-dev.N+commit` for development builds), copyright and icon are present.
+- [ ] Settings shows the same version string as the file properties, and the log's first line matches.
+- [ ] First launch of the single file works from a read-only location and from `%USERPROFILE%\Downloads`; the second launch is noticeably faster.
+- [ ] Unsigned build: expect SmartScreen. Signed build: Properties > Digital Signatures lists the signer and a timestamp, and `signtool verify /pa` succeeds. Record whether SmartScreen still warned.
 - [ ] Runs on a machine with no .NET installed.

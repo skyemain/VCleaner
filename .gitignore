@@ -7,3 +7,7 @@ release/
 TestResults/
 *.log
 terminals/
+*.pfx
+*.p12
+*.snk
+*.key
