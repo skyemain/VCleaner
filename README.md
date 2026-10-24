@@ -108,6 +108,12 @@ On Linux or macOS you can build everything and run the portable tests, but not s
 dotnet test CleanSlate.sln -c Release --filter "FullyQualifiedName!~WindowsTests"
 ```
 
+### Get the .exe
+
+The latest signed build is committed in [`release/`](release/): `CleanSlate-<version>-win-x64.exe` plus the
+`CleanSlate-dev.cer` certificate and a checksum. To refresh it after changes:
+`pwsh build/publish.ps1 -Sign -ToRelease` (or `build/publish.sh --sign --to-release`).
+
 ### Build the single-file .exe
 
 ```powershell

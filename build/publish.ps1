@@ -22,6 +22,9 @@
 .PARAMETER Zip
     Also create CleanSlate-<version>-win-x64.zip containing the .exe.
 
+.PARAMETER ToRelease
+    Also copy the .exe, the certificate (.cer, when signing) and checksums into the tracked release\ folder, replacing the previous CleanSlate-*.exe there.
+
 .PARAMETER SkipTests
     Do not run the automated tests before publishing.
 
@@ -37,7 +40,8 @@ param(
     [switch]$Folder,
     [switch]$ReadyToRun,
     [switch]$Zip,
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    [switch]$ToRelease
 )
 
 $ErrorActionPreference = 'Stop'
@@ -127,6 +131,18 @@ try {
 
     $sums = foreach ($f in $files) { "$((Get-FileHash $f -Algorithm SHA256).Hash.ToLower())  $(Split-Path $f -Leaf)" }
     $sums | Set-Content (Join-Path $releaseDir 'SHA256SUMS.txt') -Encoding ascii
+
+    if ($ToRelease) {
+        $releaseFolder = Join-Path $root 'release'
+        New-Item -ItemType Directory -Force -Path $releaseFolder | Out-Null
+        Get-ChildItem $releaseFolder -Filter 'CleanSlate-*.exe' | Remove-Item -Force
+        Copy-Item $exe $releaseFolder -Force
+        $cer = Join-Path $root 'artifacts\dev-cert\CleanSlate-dev.cer'
+        if ($Sign -and (Test-Path $cer)) { Copy-Item $cer (Join-Path $releaseFolder 'CleanSlate-dev.cer') -Force }
+        "$((Get-FileHash (Join-Path $releaseFolder (Split-Path $exe -Leaf)) -Algorithm SHA256).Hash.ToLower())  $(Split-Path $exe -Leaf)" |
+            Set-Content (Join-Path $releaseFolder 'SHA256SUMS.txt') -Encoding ascii
+        Write-Host "Copied to $releaseFolder"
+    }
 
     Write-Host ''
     Write-Host ("Built {0} ({1:N0} MB)" -f $exe, ((Get-Item $exe).Length / 1MB)) -ForegroundColor Green

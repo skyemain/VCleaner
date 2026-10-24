@@ -6,6 +6,8 @@
 #   build/publish.sh --sign          also Authenticode-sign the .exe (see build/sign.sh)
 #   build/publish.sh --folder        additionally keep the unpacked folder layout
 #   build/publish.sh --skip-tests    skip the automated tests
+#   build/publish.sh --to-release    also copy the .exe, the certificate (.cer) and checksums into the tracked release/ folder,
+#                                    replacing the previous CleanSlate-*.exe there
 #
 # The result is a single self-contained .exe in artifacts/release/ plus SHA256SUMS.txt. The app only runs on Windows;
 # for the Windows-native flow (including the Windows-only tests) use build/publish.ps1.
@@ -13,13 +15,14 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 configuration="${CONFIGURATION:-Release}"
-release=0 sign=0 folder=0 skip_tests=0
+release=0 sign=0 folder=0 skip_tests=0 to_release=0
 for arg in "$@"; do
   case "$arg" in
     --release) release=1 ;;
     --sign) sign=1 ;;
     --folder) folder=1 ;;
     --skip-tests) skip_tests=1 ;;
+    --to-release) to_release=1 ;;
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -72,6 +75,16 @@ else
 fi
 
 (cd "$out_dir" && sha256sum "$exe_name" > SHA256SUMS.txt)
+if [ "$to_release" = 1 ]; then
+  mkdir -p "$root/release"
+  rm -f "$root"/release/CleanSlate-*.exe
+  cp "$out_dir/$exe_name" "$root/release/"
+  cert="$root/artifacts/dev-cert/CleanSlate-dev.cer"
+  [ "$sign" = 1 ] && [ -f "$cert" ] && cp "$cert" "$root/release/CleanSlate-dev.cer"
+  (cd "$root/release" && sha256sum "$exe_name" > SHA256SUMS.txt)
+  echo "Copied to $root/release/"
+fi
+
 echo
 echo "Built $out_dir/$exe_name ($(du -h "$out_dir/$exe_name" | cut -f1))"
 cat "$out_dir/SHA256SUMS.txt"
