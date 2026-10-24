@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CleanSlate.Core\CleanSlate.Core.csproj" />
+    <ProjectReference Include="..\..\src\CleanSlate.Cleaners\CleanSlate.Cleaners.csproj" />
+  </ItemGroup>
+</Project>
