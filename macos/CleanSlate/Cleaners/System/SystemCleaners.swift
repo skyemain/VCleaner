@@ -92,11 +92,11 @@ enum SystemCleaners {
         )
     }
 
-    static func cleanTemporary(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+    static func cleanTemporary(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
         clean(idRoot: context.locations.temporaryDirectory, context: context, minimumAge: context.now.addingTimeInterval(-temporaryFileAge), allowXcode: false, allowTrash: false, cancel: cancel)
     }
 
-    static func cleanHelpCaches(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+    static func cleanHelpCaches(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
         clean(
             idRoot: context.locations.url("Library/Caches/com.apple.helpd"),
             context: context,
@@ -107,11 +107,11 @@ enum SystemCleaners {
         )
     }
 
-    static func cleanLooseCaches(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+    static func cleanLooseCaches(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
         cleanLoose(context, cancel: cancel)
     }
 
-    static func cleanDiagnostics(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+    static func cleanDiagnostics(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
         let root = context.locations.url("Library/Logs/DiagnosticReports")
         let allowed: Set<String> = ["ips", "crash", "spin", "diag", "hang"]
         let cutoff = context.now.addingTimeInterval(-diagnosticRetention)
@@ -134,13 +134,13 @@ enum SystemCleaners {
         return ModuleEstimate(id: id, title: title, status: .ready, fileCount: stats.fileCount, byteCount: stats.byteCount, samplePaths: stats.samplePaths)
     }
 
-    private static func clean(idRoot: URL, context: ScanContext, minimumAge: Date?, allowXcode: Bool, allowTrash: Bool, cancel: () -> Bool) -> ModuleCleanup {
+    private static func clean(idRoot: URL, context: ScanContext, minimumAge: Date?, allowXcode: Bool, allowTrash: Bool, cancel: @escaping () -> Bool) -> ModuleCleanup {
         var service = SafeDeletionService(allowXcodeDerivedData: allowXcode, allowTrash: allowTrash)
         let outcome = service.deleteEligibleFiles(under: idRoot, context: context, minimumAge: minimumAge, shouldCancel: cancel)
         return ModuleCleanup(deletedCount: outcome.deletedCount, deletedBytes: outcome.deletedBytes, skippedCount: outcome.skippedCount, errors: outcome.errors, status: .ready)
     }
 
-    private static func cleanLoose(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+    private static func cleanLoose(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
         let root = context.locations.url("Library/Caches")
         let cutoff = context.now.addingTimeInterval(-looseCacheAge)
         var cleanup = ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .ready)

@@ -5,7 +5,7 @@ enum EdgeCleaner {
         ChromiumCacheCleaner.estimate(KnownBrowsers.edge, context: context)
     }
 
-    static func clean(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+    static func clean(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
         ChromiumCacheCleaner.clean(KnownBrowsers.edge, context: context, cancel: cancel)
     }
 }

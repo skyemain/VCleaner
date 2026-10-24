@@ -21,7 +21,7 @@ struct SafeDeletionService: Sendable {
         under root: URL,
         context: ScanContext,
         minimumAge: Date?,
-        shouldCancel: () -> Bool = { false }
+        shouldCancel: @escaping () -> Bool = { false }
     ) -> DeletionOutcome {
         var outcome = DeletionOutcome()
         let resolvedRoot = root.standardizedFileURL.resolvingSymlinksInPath()
@@ -79,7 +79,7 @@ struct SafeDeletionService: Sendable {
     }
 
     /// Deletes specific files that are already known to sit inside an approved root. Used for filtered sets such as old diagnostic reports.
-    func deleteListedFiles(_ urls: [URL], under root: URL, context: ScanContext, shouldCancel: () -> Bool = { false }) -> DeletionOutcome {
+    func deleteListedFiles(_ urls: [URL], under root: URL, context: ScanContext, shouldCancel: @escaping () -> Bool = { false }) -> DeletionOutcome {
         var outcome = DeletionOutcome()
         let resolvedRoot = root.standardizedFileURL.resolvingSymlinksInPath()
         guard ProtectedPaths.isApprovedRoot(

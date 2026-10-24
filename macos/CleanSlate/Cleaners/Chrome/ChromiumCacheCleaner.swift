@@ -54,7 +54,7 @@ enum ChromiumCacheCleaner {
         return ModuleEstimate(id: browser.id, title: browser.title, status: .ready, fileCount: count, byteCount: bytes, samplePaths: sample)
     }
 
-    static func clean(_ browser: BrowserDefinition, context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+    static func clean(_ browser: BrowserDefinition, context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
         var cleanup = ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .ready)
         for root in cacheRoots(browser, home: context.locations.home) {
             if cancel() {

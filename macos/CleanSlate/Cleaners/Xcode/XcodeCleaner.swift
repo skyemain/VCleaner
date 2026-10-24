@@ -8,7 +8,7 @@ enum XcodeCleaner {
         return ModuleEstimate(id: "xcode", title: "Xcode DerivedData", status: .ready, fileCount: stats.fileCount, byteCount: stats.byteCount, samplePaths: stats.samplePaths)
     }
 
-    static func clean(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+    static func clean(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
         let derived = context.locations.url("Library/Developer/Xcode/DerivedData")
         let fm = FileManager()
         guard let projects = try? fm.contentsOfDirectory(at: derived, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) else {

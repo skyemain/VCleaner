@@ -8,7 +8,7 @@ enum TrashInspector {
     }
 
     /// Irreversible. Callers must already have a confirmation from the person using the Mac.
-    static func empty(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+    static func empty(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
         let trash = context.locations.home.appendingPathComponent(".Trash")
         let outcome = SafeDeletionService(allowTrash: true).deleteEligibleFiles(under: trash, context: context, minimumAge: nil, shouldCancel: cancel)
         return ModuleCleanup(deletedCount: outcome.deletedCount, deletedBytes: outcome.deletedBytes, skippedCount: outcome.skippedCount, errors: outcome.errors, status: .ready)

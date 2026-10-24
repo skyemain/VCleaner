@@ -18,7 +18,7 @@ enum SafariCleaner {
         return ModuleEstimate(id: "safari", title: "SAFARI", status: .ready, fileCount: stats.fileCount, byteCount: stats.byteCount, samplePaths: stats.samplePaths)
     }
 
-    static func clean(_ context: ScanContext, cancel: () -> Bool) -> ModuleCleanup {
+    static func clean(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
         let root = context.locations.url("Library/Caches/com.apple.Safari/fsCachedData")
         if DirectoryWalker.isUnreadable(root) {
             return ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .unavailable(unavailableMessage))

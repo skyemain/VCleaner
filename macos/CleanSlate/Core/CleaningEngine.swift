@@ -133,7 +133,7 @@ actor CleaningEngine {
         return estimate
     }
 
-    private func perform(estimate: ModuleEstimate, request: CleanRequest, cancel: () -> Bool) async -> ModuleCleanup {
+    private func perform(estimate: ModuleEstimate, request: CleanRequest, cancel: @escaping () -> Bool) async -> ModuleCleanup {
         switch estimate.status {
         case .unsupported(let reason):
             return ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .unsupported(reason))
@@ -179,8 +179,8 @@ actor CleaningEngine {
         _ browser: BrowserDefinition,
         context: ScanContext,
         request: CleanRequest,
-        cancel: () -> Bool,
-        cleaner: (ScanContext, () -> Bool) -> ModuleCleanup
+        cancel: @escaping () -> Bool,
+        cleaner: (ScanContext, @escaping () -> Bool) -> ModuleCleanup
     ) async -> ModuleCleanup {
         if await applications.isRunning(bundleIdentifier: browser.bundleIdentifier) {
             let mayQuit = request.allowBrowserQuit && request.mode == .manual
