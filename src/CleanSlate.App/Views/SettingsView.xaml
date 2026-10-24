@@ -10,7 +10,7 @@
             </Border>
 
             <StackPanel Visibility="{Binding InstallerAvailable, Converter={StaticResource BoolToVisibility}}">
-                <TextBlock Text="// INSTALLATION" Style="{StaticResource SectionTitle}" />
+                <TextBlock Text="[ INSTALLATION ]" Style="{StaticResource SectionTitle}" />
                 <Border Style="{StaticResource Card}">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -38,7 +38,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:SettingsSectionViewModel}">
                         <StackPanel>
-                            <TextBlock Text="{Binding Title}" Style="{StaticResource SectionTitle}" />
+                            <TextBlock Text="{Binding Title, StringFormat='[ {0} ]'}" Style="{StaticResource SectionTitle}" />
                             <TextBlock Text="{Binding Description}" Style="{StaticResource SecondaryText}" Margin="4,-4,0,8"
                                        Visibility="{Binding Description, Converter={StaticResource NotEmptyToVisibility}}" />
                             <ItemsControl ItemsSource="{Binding Toggles}" Focusable="False" IsTabStop="False">
@@ -68,7 +68,7 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <TextBlock Text="// NOT SUPPORTED" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="[ NOT SUPPORTED ]" Style="{StaticResource SectionTitle}" />
             <ItemsControl ItemsSource="{Binding UnsupportedFeatures}" Focusable="False" IsTabStop="False">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
@@ -83,7 +83,7 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <TextBlock Text="// NEVER CLEAN THESE" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="[ NEVER CLEAN THESE ]" Style="{StaticResource SectionTitle}" />
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="Folders and files listed here are skipped by every cleaner, even inside approved locations." Style="{StaticResource SecondaryText}" />
@@ -128,7 +128,7 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="// REGISTRY BACKUPS" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="[ REGISTRY BACKUPS ]" Style="{StaticResource SectionTitle}" />
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="Every registry repair saves a verified backup first. Open the list to restore one." Style="{StaticResource SecondaryText}" />
@@ -136,7 +136,7 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="// HISTORY AND LOGS" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="[ HISTORY AND LOGS ]" Style="{StaticResource SectionTitle}" />
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="No sessions recorded yet.">
@@ -169,7 +169,7 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="// ABOUT" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="[ ABOUT ]" Style="{StaticResource SectionTitle}" />
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="{Binding VersionText}" FontWeight="SemiBold" />

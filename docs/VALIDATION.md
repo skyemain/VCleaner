@@ -124,4 +124,7 @@ Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Clea
 - [ ] Signed build on a PC that does not trust the certificate: signature is reported untrusted and the publisher is unknown (expected). Record whether SmartScreen warned.
 - [ ] Install a freshly downloaded exe: the installed `%LOCALAPPDATA%\Programs\CleanSlate\CleanSlate.exe` has no `Zone.Identifier` stream (`Get-Item -Stream *` in PowerShell), its Properties dialog shows no "Unblock" checkbox, and launching it from the Start menu shows no SmartScreen screen.
 - [ ] With "Clean automatically when I sign in" on, delete `HKCU\...\Run\CleanSlate` by hand and start the installed copy: the entry is back (healed) and the next sign-in cleans automatically.
+- [ ] On Windows 11 22621+: the window shows the acrylic/Mica glass backdrop (desktop shimmer behind the dark console theme); on Windows 10 the same theme appears on a solid background, with no black or transparent window.
+- [ ] Automatic sign-in clean ends with "Freed ... RAM" on the MEMORY row before the close countdown; turning off "Free up RAM after an automatic clean" skips it.
+- [ ] With automatic cleaning on and "Start with administrator rights" off, run the installed copy as administrator once: the "CleanSlate" scheduled task appears, the `Run` entry is gone, the Settings toggle shows on, and the next sign-in cleans elevated (Windows Temp and Prefetch included) with no UAC prompt.
 - [ ] Runs on a machine with no .NET installed.

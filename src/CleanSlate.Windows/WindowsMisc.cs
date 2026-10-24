@@ -129,24 +129,26 @@ public static class DwmInterop
         NativeMethods.DwmSetWindowAttribute(hwnd, attribute, ref value, sizeof(int));
 
     /// <summary>
-    /// Applies the Mica backdrop (Windows 11 build 22621 or newer). Returns false, changing nothing, on other systems so the caller
-    /// keeps its solid background.
+    /// Applies the acrylic "liquid glass" backdrop, falling back to Mica, on Windows 11 build 22621 or newer. Returns false,
+    /// changing nothing, elsewhere. When it returns true the window must paint a translucent background so the glass shows.
     /// </summary>
-    public static bool TryEnableMica(IntPtr hwnd)
+    public static bool TryEnableGlassBackdrop(IntPtr hwnd)
     {
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621))
         {
             return false;
         }
 
-        const int SystemBackdropType = 38;
-        const int MicaBackdrop = 2;
-        if (SetAttribute(hwnd, SystemBackdropType, MicaBackdrop) != 0)
+        var margins = new NativeMethods.Margins { Left = -1, Right = -1, Top = -1, Bottom = -1 };
+        if (NativeMethods.DwmExtendFrameIntoClientArea(hwnd, ref margins) != 0)
         {
             return false;
         }
 
-        var margins = new NativeMethods.Margins { Left = -1, Right = -1, Top = -1, Bottom = -1 };
-        return NativeMethods.DwmExtendFrameIntoClientArea(hwnd, ref margins) == 0;
+        const int SystemBackdropType = 38;
+        const int AcrylicBackdrop = 3;
+        const int MicaBackdrop = 2;
+        return SetAttribute(hwnd, SystemBackdropType, AcrylicBackdrop) == 0 ||
+               SetAttribute(hwnd, SystemBackdropType, MicaBackdrop) == 0;
     }
 }

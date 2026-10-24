@@ -20,6 +20,9 @@ public sealed class CleanSlateSettings
     /// <summary>Close the app after an automatic clean once the result has been shown.</summary>
     public bool CloseAfterAutoClean { get; set; } = true;
 
+    /// <summary>After an automatic clean, release RAM held by idle programs (same as the Free up RAM button).</summary>
+    public bool FreeRamAfterAutoClean { get; set; } = true;
+
     /// <summary>Start through an elevated scheduled task (no UAC prompt at sign-in) instead of the normal startup entry.</summary>
     public bool ElevatedStartup { get; set; }
     public bool ShowCompletionNotifications { get; set; } = true;
@@ -89,6 +92,7 @@ public sealed class CleanSlateSettings
         MinimizeToTray = MinimizeToTray,
         AutoCleanOnStartup = AutoCleanOnStartup,
         CloseAfterAutoClean = CloseAfterAutoClean,
+        FreeRamAfterAutoClean = FreeRamAfterAutoClean,
         ElevatedStartup = ElevatedStartup,
         ShowCompletionNotifications = ShowCompletionNotifications,
         CleanUserTemp = CleanUserTemp,

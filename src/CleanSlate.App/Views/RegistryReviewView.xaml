@@ -50,7 +50,7 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <TextBlock Text="// BACKUPS" Style="{StaticResource SectionTitle}" />
+                <TextBlock Text="[ BACKUPS ]" Style="{StaticResource SectionTitle}" />
                 <TextBlock Text="Backups are kept in CleanSlate's data folder. Restoring never overwrites an entry that now has different data."
                            Style="{StaticResource SecondaryText}" Margin="4,0,0,8" />
                 <TextBlock Text="No backups yet." Margin="4,0,0,0">

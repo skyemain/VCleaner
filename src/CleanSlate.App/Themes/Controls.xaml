@@ -40,8 +40,8 @@
     </Style>
 
     <Style x:Key="StatusDot" TargetType="Ellipse">
-        <Setter Property="Width" Value="10" />
-        <Setter Property="Height" Value="8" />
+        <Setter Property="Width" Value="9" />
+        <Setter Property="Height" Value="9" />
         <Setter Property="HorizontalAlignment" Value="Left" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Margin" Value="3,0,0,0" />
@@ -51,14 +51,17 @@
             <DataTrigger Binding="{Binding Kind}" Value="Success">
                 <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
                 <Setter Property="Opacity" Value="1" />
+                <Setter Property="Effect" Value="{DynamicResource SuccessGlowEffect}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Kind}" Value="Warning">
                 <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
                 <Setter Property="Opacity" Value="1" />
+                <Setter Property="Effect" Value="{DynamicResource WarningGlowEffect}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Kind}" Value="Error">
                 <Setter Property="Fill" Value="{DynamicResource ErrorBrush}" />
                 <Setter Property="Opacity" Value="1" />
+                <Setter Property="Effect" Value="{DynamicResource ErrorGlowEffect}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Kind}" Value="Active">
                 <Setter Property="Visibility" Value="Collapsed" />
@@ -139,6 +142,7 @@
         <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Effect" Value="{DynamicResource AccentGlowEffect}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -219,9 +223,9 @@
     <Style x:Key="HeroButton" TargetType="Button">
         <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}" />
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-        <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
-        <Setter Property="FontSize" Value="19" />
-        <Setter Property="FontWeight" Value="Light" />
+        <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Width" Value="216" />
         <Setter Property="Height" Value="216" />
         <Setter Property="Cursor" Value="Hand" />
@@ -232,7 +236,7 @@
                         <Grid.RenderTransform>
                             <ScaleTransform x:Name="Scale" ScaleX="1" ScaleY="1" />
                         </Grid.RenderTransform>
-                        <Ellipse x:Name="Halo" Margin="-34" Opacity="0.35">
+                        <Ellipse x:Name="Halo" Margin="-34" Opacity="0.4">
                             <Ellipse.Fill>
                                 <RadialGradientBrush>
                                     <GradientStop Offset="0.55" Color="{DynamicResource HeroGlowColor}" />
@@ -240,6 +244,8 @@
                                 </RadialGradientBrush>
                             </Ellipse.Fill>
                         </Ellipse>
+                        <Ellipse x:Name="Ticks" Stroke="{DynamicResource RingTrackBrush}" StrokeThickness="1.5"
+                                 StrokeDashArray="0.8 4.4" StrokeDashCap="Round" Margin="-10" Opacity="0.9" />
                         <Ellipse x:Name="Track" Stroke="{DynamicResource RingTrackBrush}" StrokeThickness="1" Margin="10" />
                         <Ellipse x:Name="Ring" Stroke="{DynamicResource HeroBrush}" StrokeThickness="2" Margin="2" Opacity="0.9" />
                         <Ellipse x:Name="Spin" Stroke="{DynamicResource HeroBrush}" StrokeThickness="4" StrokeDashArray="40 126"
@@ -515,8 +521,9 @@
         <Setter Property="Background" Value="{DynamicResource CardBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="16" />
         <Setter Property="Padding" Value="18,12" />
+        <Setter Property="Effect" Value="{DynamicResource CardShadowEffect}" />
     </Style>
 
     <Style TargetType="ScrollViewer">

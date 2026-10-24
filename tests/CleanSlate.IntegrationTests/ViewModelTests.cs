@@ -452,6 +452,30 @@ public sealed class AutomationTests
     }
 
     [Fact]
+    public async Task Automatic_run_frees_ram_after_the_clean()
+    {
+        using var h = new PresentationHarness(s => s.CleanUserTemp = true);
+        h.UserTempFile("a.tmp", 1000);
+
+        await h.Main.RunAutomaticAsync();
+
+        Assert.Equal(1, h.Memory.CleanCalls);
+        Assert.Contains("Freed", h.Main.RamText);
+        Assert.Equal(1, h.Lifecycle.ShutdownCalls);
+    }
+
+    [Fact]
+    public async Task Automatic_run_skips_the_ram_step_when_turned_off()
+    {
+        using var h = new PresentationHarness(s => { s.CleanUserTemp = true; s.FreeRamAfterAutoClean = false; });
+        h.UserTempFile("a.tmp", 1000);
+
+        await h.Main.RunAutomaticAsync();
+
+        Assert.Equal(0, h.Memory.CleanCalls);
+    }
+
+    [Fact]
     public async Task Canceling_the_countdown_changes_nothing_and_keeps_the_app_open()
     {
         using var h = new PresentationHarness(s => s.CleanUserTemp = true, autoStartDelay: TimeSpan.FromSeconds(30));

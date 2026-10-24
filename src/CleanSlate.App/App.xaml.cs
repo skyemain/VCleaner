@@ -159,7 +159,9 @@ public partial class App : Application
     /// <summary>
     /// Re-creates the sign-in startup entries at launch when the settings say they should exist. This heals an entry that was
     /// lost or left pointing at a removed copy, which otherwise silently breaks "clean automatically when I sign in".
-    /// Only the installed copy does this, so a portable run never registers itself.
+    /// The first elevated run also upgrades automatic sign-in cleaning to start with administrator rights, so cleaning can
+    /// include Windows Temp, Prefetch and Windows logs without any prompt. Only the installed copy does any of this,
+    /// so a portable run never registers itself.
     /// </summary>
     private void HealStartupEntries(SettingsService settings)
     {
@@ -169,6 +171,25 @@ public partial class App : Application
             !_services.GetRequiredService<InstallService>().IsRunningFromInstallFolder(path))
         {
             return;
+        }
+
+        var elevated = _services.GetRequiredService<IPrivilegeInfo>().IsElevated;
+
+        if (current.AutoCleanOnStartup && elevated && !current.ElevatedStartup)
+        {
+            try
+            {
+                _services.GetRequiredService<IStartupTask>().Register(path);
+                _services.GetRequiredService<IStartupRegistration>().Unregister();
+                current.ElevatedStartup = true;
+                settings.Save();
+                _logger?.Info("Automatic sign-in cleaning now starts with administrator rights (the \"CleanSlate\" task was created).");
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+            {
+                _logger?.Warning("Could not upgrade the sign-in start to administrator rights: " + ex.Message);
+            }
         }
 
         if (!current.ElevatedStartup)
@@ -182,7 +203,7 @@ public partial class App : Application
                 _logger?.Warning("The sign-in startup entry could not be refreshed: " + ex.Message);
             }
         }
-        else if (_services.GetRequiredService<IPrivilegeInfo>().IsElevated)
+        else if (elevated)
         {
             try
             {

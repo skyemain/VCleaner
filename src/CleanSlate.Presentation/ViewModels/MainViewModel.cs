@@ -352,6 +352,11 @@ public sealed class MainViewModel : ObservableObject
 
             await RunAsync(automatic: true).ConfigureAwait(true);
 
+            if (State == AppState.Completed && _ctx.Settings.Current.FreeRamAfterAutoClean && !cts.IsCancellationRequested)
+            {
+                await FreeRamAsync().ConfigureAwait(true);
+            }
+
             if (State == AppState.Completed && _ctx.Settings.Current.CloseAfterAutoClean && !cts.IsCancellationRequested)
             {
                 if (await CountdownAsync("Closing in", "Keep open", _ctx.AutoCloseDelay, cts.Token).ConfigureAwait(true))

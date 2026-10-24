@@ -21,6 +21,7 @@ public partial class MainWindow : Window
         SourceInitialized += (_, _) =>
         {
             ApplyTitleBarTheme(ThemeManager.IsDark);
+            EnableGlassBackdrop();
         };
         ThemeManager.ThemeChanged += (_, dark) => ApplyTitleBarTheme(dark);
         PreviewKeyDown += OnPreviewKeyDown;
@@ -75,6 +76,26 @@ public partial class MainWindow : Window
         e.Cancel = true;
         MessageBox.Show(this, "CleanSlate is still working. Press Cancel first, wait for it to stop, then close the window.",
             "CleanSlate", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    /// <summary>
+    /// Turns on the system acrylic (or Mica) behind the window, the "liquid glass" look. Only when Windows accepts it does the
+    /// window background become transparent; otherwise the solid theme background stays, so older systems look as before.
+    /// </summary>
+    private void EnableGlassBackdrop()
+    {
+        try
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+            if (handle != IntPtr.Zero && CleanSlate.Windows.DwmInterop.TryEnableGlassBackdrop(handle))
+            {
+                Background = System.Windows.Media.Brushes.Transparent;
+            }
+        }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
+        {
+            // Glass is cosmetic; the solid background stays.
+        }
     }
 
     private void ApplyTitleBarTheme(bool dark)

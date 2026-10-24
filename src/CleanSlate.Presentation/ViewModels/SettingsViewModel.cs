@@ -383,27 +383,28 @@ public sealed class SettingsViewModel : PageViewModel
 
         return new List<SettingsSectionViewModel>
         {
-            new("General", null, new[]
+            new("GENERAL", null, new[]
             {
                 T("follow-theme", "Follow the Windows light/dark theme", "Turn off to always use the light theme.", s => s.FollowSystemTheme, (s, v) => s.FollowSystemTheme = v),
                 T("startup", "Start CleanSlate when I sign in", "Adds a per-user startup entry. CleanSlate never cleans automatically at startup.", s => s.LaunchOnStartup, (s, v) => s.LaunchOnStartup = v),
                 T("tray", "Minimize to the notification area", "Keeps CleanSlate in the tray when the window is minimized.", s => s.MinimizeToTray, (s, v) => s.MinimizeToTray = v),
                 T("notify", "Show a notification when cleaning finishes", "Only shown when the window is not in front.", s => s.ShowCompletionNotifications, (s, v) => s.ShowCompletionNotifications = v)
             }),
-            new("Automation", "Sign in, and CleanSlate opens, cleans on its own, shows what it recovered and closes. Only categories that are safe to run unattended are cleaned.", new[]
+            new("AUTOMATION", "Sign in, and CleanSlate opens, cleans on its own, shows what it recovered and closes. Only categories that are safe to run unattended are cleaned.", new[]
             {
                 T("auto-clean", "Clean automatically when I sign in", "Opens a window, waits 5 seconds (you can cancel), scans, cleans and then closes itself. Also turns on starting with Windows.",
                     s => s.AutoCleanOnStartup, (s, v) => s.AutoCleanOnStartup = v,
                     "Clean automatically at sign-in?", "Every time you sign in, CleanSlate will open, wait 5 seconds, then permanently delete the categories you have enabled that are safe to run unattended (temp files, Prefetch, caches, and Chrome and Edge caches, closing those browsers if they are open). Your sign-ins, passwords and bookmarks are not touched. The Recycle Bin, privacy items, website storage and registry fixes are never done automatically. You can cancel during the countdown.", "Permanent"),
+                T("auto-ram", "Free up RAM after an automatic clean", "Once the clean finishes, memory held by idle programs is released. Nothing is closed.", s => s.FreeRamAfterAutoClean, (s, v) => s.FreeRamAfterAutoClean = v),
                 T("auto-close", "Close CleanSlate after an automatic clean", "Shows the result for about 12 seconds, then closes. Off keeps the window open.", s => s.CloseAfterAutoClean, (s, v) => s.CloseAfterAutoClean = v),
-                T("admin-start", "Start with administrator rights (no prompt)", "Uses a Windows scheduled task so Windows Temp, Prefetch and Windows logs are cleaned at sign-in too. Turn it on or off while CleanSlate is running as administrator.", s => s.ElevatedStartup, (s, v) => s.ElevatedStartup = v,
+                T("admin-start", "Start with administrator rights (no prompt)", "Uses a Windows scheduled task so Windows Temp, Prefetch and Windows logs are cleaned at sign-in too. Turned on by itself the next time CleanSlate runs as administrator while automatic cleaning is on.", s => s.ElevatedStartup, (s, v) => s.ElevatedStartup = v,
                     "Start with administrator rights?", "CleanSlate will be started by a Windows scheduled task named \"CleanSlate\" that runs with administrator rights at every sign-in, without a UAC prompt. Anything that runs CleanSlate.exe from the install folder then runs elevated, so keep that folder protected. You can turn this off here at any time.", "Administrator")
             }),
-            new("Cleaning behavior", "One-click cleaning only runs categories that are safe to run unattended.", new[]
+            new("CLEANING BEHAVIOR", "One-click cleaning only runs categories that are safe to run unattended.", new[]
             {
                 T("review", "Always review before cleaning", "Shows every category and lets you deselect items before anything is deleted.", s => s.ReviewBeforeCleaning, (s, v) => s.ReviewBeforeCleaning = v)
             }),
-            new("System junk", "Every item is permanently deleted. Only files older than a minimum age and inside approved folders are touched.", new[]
+            new("SYSTEM JUNK", "Every item is permanently deleted. Only files older than a minimum age and inside approved folders are touched.", new[]
             {
                 T("user-temp", "User temp folder (%TEMP%)", "Files in your temp folder that are not in use.", s => s.CleanUserTemp, (s, v) => s.CleanUserTemp = v),
                 T("win-temp", "Windows temp folder", "C:\\Windows\\Temp. Files in use are skipped. Requires administrator.", s => s.CleanWindowsTemp, (s, v) => s.CleanWindowsTemp = v, badge: "Administrator"),
@@ -421,7 +422,7 @@ public sealed class SettingsViewModel : PageViewModel
                 T("do", "Delivery Optimization cache", "Clears downloaded update content shared with other PCs. Requires administrator.", s => s.CleanDeliveryOptimization, (s, v) => s.CleanDeliveryOptimization = v,
                     "Enable Delivery Optimization cleanup?", "CleanSlate will ask Windows to delete its Delivery Optimization cache after you confirm in the review screen.", "Administrator")
             }),
-            new("Browsers", "Chrome and Edge are closed first, then only their cache is cleaned. Passwords, bookmarks, history and cookies are never touched, so you stay signed in.", new[]
+            new("BROWSERS", "Chrome and Edge are closed first, then only their cache is cleaned. Passwords, bookmarks, history and cookies are never touched, so you stay signed in.", new[]
             {
                 T("close-browsers", "Close running browsers before cleaning", "Closes the window politely and ends leftovers after a few seconds. Off skips any browser that is open.", s => s.CloseBrowsersBeforeCleaning, (s, v) => s.CloseBrowsersBeforeCleaning = v),
                 T("ask-browsers", "Ask before closing a browser", "Shows a confirmation naming the browser. Off closes it without asking.", s => s.AskBeforeClosingBrowsers, (s, v) => s.AskBeforeClosingBrowsers = v),
@@ -430,7 +431,7 @@ public sealed class SettingsViewModel : PageViewModel
                 T("site-storage", "Website storage (Local Storage, IndexedDB, Cache Storage)", "Can sign you out of some sites and removes offline site data. Off by default.", s => s.ClearBrowserSiteStorage, (s, v) => s.ClearBrowserSiteStorage = v,
                     "Clear website storage?", "Website storage includes Local Storage, IndexedDB, Session Storage and Cache Storage. Some sites may sign you out or lose offline data. Cookies are not removed. This is confirmed again in the review screen.", "Confirmation")
             }),
-            new("Privacy", "Privacy cleanup is off by default and always shown in the review screen. Privacy entries are not backed up.", new[]
+            new("PRIVACY", "Privacy cleanup is off by default and always shown in the review screen. Privacy entries are not backed up.", new[]
             {
                 T("privacy", "Enable privacy cleanup", "Turns on the options below.", s => s.ClearActivityHistory, (s, v) => s.ClearActivityHistory = v,
                     "Enable privacy cleanup?", "This clears Run history, typed Explorer paths and the Recent items list. These entries are not backed up and cannot be restored.", "Permanent"),
@@ -438,7 +439,7 @@ public sealed class SettingsViewModel : PageViewModel
                 T("recent", "Recent items", "Removes shortcuts from the Recent folder and the recent documents list.", s => s.ClearRecentItems, (s, v) => s.ClearRecentItems = v),
                 T("explorer", "Explorer address bar history", "Clears typed paths.", s => s.ClearExplorerAddressHistory, (s, v) => s.ClearExplorerAddressHistory = v)
             }),
-            new("Registry", "The registry is never changed during one-click cleaning.", new[]
+            new("REGISTRY", "The registry is never changed during one-click cleaning.", new[]
             {
                 T("registry-scan", "Scan the registry for broken entries", "Read-only. Repairs always need your approval on the registry review page.", s => s.ScanRegistry, (s, v) => s.ScanRegistry = v),
                 T("restore-point", "Create a restore point before repairs", "Skipped automatically when System Protection is off or Windows declines.", s => s.CreateRestorePoint, (s, v) => s.CreateRestorePoint = v)

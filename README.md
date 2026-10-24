@@ -5,7 +5,7 @@ Chrome / Edge caches, reports registry entries that point to programs that are v
 after you approve each one. It is built around one rule: **never delete anything it cannot prove is safe to delete.**
 
 > **Verification status (read this first).** This repository was developed and built on Linux. The application compiles
-> and cross-publishes to a `win-x64` executable, and 179 automated tests of the safety-critical logic pass on Linux.
+> and cross-publishes to a `win-x64` executable, and 182 automated tests of the safety-critical logic pass on Linux.
 > **It has not been run on Windows.** The WPF user interface, the Windows registry / Recycle Bin / restore point /
 > elevation code paths, DISM and the tray icon are compiled but unexercised. Work through
 > [docs/VALIDATION.md](docs/VALIDATION.md) on a real Windows 10 and Windows 11 machine before relying on it. See
@@ -14,6 +14,11 @@ after you approve each one. It is built around one rule: **never delete anything
 ## What it does
 
 The home screen is a wide, minimal layout: one ring-shaped **Clean Now** button on the left and the five targets (System Junk, Chrome, Edge, Registry, Privacy) on the right. It fits without scrolling.
+
+The design is an "Ops Console" in liquid glass: near-black with phosphor-mint accents, translucent glass cards, glowing
+status dots, a radar-style ring with tick marks and `[ BRACKETED ]` monospace section labels. On Windows 11 (build 22621+)
+the window sits on the system acrylic backdrop, so the desktop glows through like frosted glass; older systems get the same
+theme on a solid background. The light theme is a matching frosted-mint variant.
 
 | Area | Cleaned by default | Opt-in (Settings) |
 | --- | --- | --- |
@@ -35,13 +40,15 @@ running browser is skipped. Settings has *Close running browsers before cleaning
 
 Turn on **Settings > Automation > Clean automatically when I sign in** (after a confirmation it also turns on *start with
 Windows*). At every sign-in CleanSlate then opens a window, counts down 5 seconds (with a **Cancel** button), scans, cleans,
-shows how much it recovered, and closes itself about 12 seconds later (*Keep open* stops the close; the close can be switched off
-in Settings). It never asks anything, so it only runs categories that are safe unattended: temp, Prefetch, caches, and the
-Chrome/Edge caches (closing those browsers if open, sign-ins untouched). The Recycle Bin, privacy items, website storage,
-DISM and registry repairs are skipped automatically and the result says so. It does not remove itself or ask for UAC: Windows
-Temp, Prefetch and Windows logs need administrator rights. To include them without a prompt, run CleanSlate as administrator
-once and turn on **Start with administrator rights**: that creates a scheduled task named `CleanSlate` (highest privileges,
-at your logon) and replaces the normal startup entry. Turning it off, or uninstalling as administrator, removes the task; if
+shows how much it recovered, frees RAM held by idle programs (*Free up RAM after an automatic clean*, on by default), and
+closes itself about 12 seconds later (*Keep open* stops the close; the close can be switched off in Settings). It never asks
+anything, so it only runs categories that are safe unattended: temp, Prefetch, caches, and the Chrome/Edge caches (closing
+those browsers if open, sign-ins untouched). The Recycle Bin, privacy items, website storage, DISM and registry repairs are
+skipped automatically and the result says so. Windows Temp, Prefetch and Windows logs need administrator rights: the first
+time CleanSlate runs as administrator while automatic cleaning is on, it upgrades the sign-in start by itself to a scheduled
+task named `CleanSlate` (highest privileges, at your logon, no UAC prompt) and replaces the normal startup entry — so run it
+as administrator once (the home screen offers it) and sign-in cleaning is elevated from then on. **Start with administrator
+rights** in Settings shows and controls this. Turning it off, or uninstalling as administrator, removes the task; if
 uninstalling without administrator rights, delete the task in Task Scheduler.
 
 ### Signing certificate and Smart App Control

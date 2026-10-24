@@ -6,7 +6,7 @@
         <StackPanel Margin="40,8,40,24" MaxWidth="1100">
             <TextBlock Text="{Binding Summary}" FontSize="13" Margin="0,4,0,0" />
 
-            <TextBlock Text="// BY CATEGORY" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="[ BY CATEGORY ]" Style="{StaticResource SectionTitle}" />
             <ItemsControl ItemsSource="{Binding Rows}" Focusable="False" IsTabStop="False">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
@@ -40,7 +40,7 @@
             </ItemsControl>
 
             <StackPanel Visibility="{Binding HasProblems, Converter={StaticResource BoolToVisibility}}">
-                <TextBlock Text="// SKIPPED AND ERRORS" Style="{StaticResource SectionTitle}" />
+                <TextBlock Text="[ SKIPPED AND ERRORS ]" Style="{StaticResource SectionTitle}" />
                 <TextBlock Text="{Binding ProblemsNote}" Style="{StaticResource SecondaryText}" Margin="4,0,0,6"
                            Visibility="{Binding ProblemsNote, Converter={StaticResource NotEmptyToVisibility}}" />
                 <ItemsControl ItemsSource="{Binding Problems}" Focusable="False" IsTabStop="False">

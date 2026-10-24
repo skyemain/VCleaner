@@ -5,6 +5,19 @@ see "Versioning" in the README.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-24
+
+### Changed
+- New "Ops Console" liquid-glass design: near-black mint-green console look, translucent glass cards with depth and glow,
+  a radar-style clean ring with tick marks, `[ BRACKETED ]` section labels, and the system acrylic (or Mica) backdrop behind
+  the window on Windows 11 22621+, falling back to the solid theme elsewhere. The light theme is a matching frosted variant.
+
+### Added
+- Automatic sign-in cleaning now frees RAM after the clean (same as the Free up RAM button). New Automation toggle,
+  on by default.
+- The first time CleanSlate runs as administrator while automatic sign-in cleaning is on, it upgrades the sign-in start to
+  the elevated scheduled task by itself, so sign-in cleaning includes Windows Temp, Prefetch and Windows logs with no prompt.
+
 ## [1.3.2] - 2026-10-24
 
 ### Fixed
