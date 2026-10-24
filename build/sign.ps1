@@ -1,24 +1,16 @@
 <#
 .SYNOPSIS
-    Authenticode-signs a Windows executable with SHA-256 and an RFC 3161 timestamp, then verifies the signature.
+    Signs a Windows executable with the self-signed CleanSlate certificate (SHA-256, RFC 3161 timestamp) and verifies it.
 
 .DESCRIPTION
-    The certificate source is chosen from environment variables (first match wins), so no secret is ever passed on the command line
-    or stored in the repository:
+    Uses a PFX file. By default artifacts\dev-cert\CleanSlate-dev.pfx, created by build\new-dev-certificate.ps1.
+    Override with environment variables (secrets never go on the command line):
+        CLEANSLATE_SIGN_PFX            path to the .pfx
+        CLEANSLATE_SIGN_PFX_PASSWORD   its password (default for the generated certificate: cleanslate-dev)
+        CLEANSLATE_SIGN_TIMESTAMP_URL  timestamp server (default http://timestamp.digicert.com)
+        CLEANSLATE_SIGN_NO_TIMESTAMP=1 skip the timestamp (offline builds)
 
-    1. Azure Artifact Signing (formerly Trusted Signing), the Microsoft-run service with short-lived certificates:
-         CLEANSLATE_SIGN_AZURE_ENDPOINT   e.g. https://eus.codesigning.azure.net
-         CLEANSLATE_SIGN_AZURE_ACCOUNT    code signing account name
-         CLEANSLATE_SIGN_AZURE_PROFILE    certificate profile name
-         CLEANSLATE_SIGN_AZURE_DLIB       path to Azure.CodeSigning.Dlib.dll (NuGet package Microsoft.Trusted.Signing.Client)
-       Authentication uses the standard Azure variables (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET) or `az login`.
-    2. A certificate in the Windows certificate store, including hardware tokens and cloud HSM providers:
-         CLEANSLATE_SIGN_THUMBPRINT       SHA-1 thumbprint of the certificate
-    3. A PFX file (self-signed test certificates or a private CA; public CAs no longer issue exportable keys):
-         CLEANSLATE_SIGN_PFX, CLEANSLATE_SIGN_PFX_PASSWORD
-
-    CLEANSLATE_SIGN_TIMESTAMP_URL overrides the timestamp server (default http://timestamp.acs.microsoft.com for Azure,
-    http://timestamp.digicert.com otherwise). See docs\SIGNING.md.
+    A self-signed signature is valid only on PCs that trust the certificate; see docs\SIGNING.md.
 
 .PARAMETER Path
     The .exe (or .dll/.msi) to sign.
@@ -31,8 +23,19 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+function Get-Env([string]$name) { [Environment]::GetEnvironmentVariable($name) }
+
 if (-not (Test-Path $Path)) { throw "File not found: $Path" }
 $Path = (Resolve-Path $Path).Path
+
+$pfx = Get-Env 'CLEANSLATE_SIGN_PFX'
+if (-not $pfx) { $pfx = Join-Path $PSScriptRoot '..\artifacts\dev-cert\CleanSlate-dev.pfx' }
+if (-not (Test-Path $pfx)) {
+    throw "Signing certificate not found: $pfx. Run build\new-dev-certificate.ps1 first (see docs\SIGNING.md)."
+}
+$pfx = (Resolve-Path $pfx).Path
+$password = Get-Env 'CLEANSLATE_SIGN_PFX_PASSWORD'
+if (-not $password) { $password = 'cleanslate-dev' }
 
 function Find-SignTool {
     $cmd = Get-Command signtool.exe -ErrorAction SilentlyContinue
@@ -46,55 +49,21 @@ function Find-SignTool {
     throw 'signtool.exe was not found. Install the Windows SDK (signing tools) or add signtool.exe to PATH.'
 }
 
-function Get-Env([string]$name) { [Environment]::GetEnvironmentVariable($name) }
-
 $signtool = Find-SignTool
-$signArgs = @('sign', '/fd', 'SHA256', '/td', 'SHA256', '/d', 'CleanSlate')
-$timestamp = Get-Env 'CLEANSLATE_SIGN_TIMESTAMP_URL'
-$metadataFile = $null
-
-if ((Get-Env 'CLEANSLATE_SIGN_AZURE_ENDPOINT') -and (Get-Env 'CLEANSLATE_SIGN_AZURE_ACCOUNT') -and
-    (Get-Env 'CLEANSLATE_SIGN_AZURE_PROFILE') -and (Get-Env 'CLEANSLATE_SIGN_AZURE_DLIB')) {
-    $metadataFile = Join-Path ([IO.Path]::GetTempPath()) "cleanslate-sign-$([guid]::NewGuid().ToString('N')).json"
-    @{
-        Endpoint               = (Get-Env 'CLEANSLATE_SIGN_AZURE_ENDPOINT')
-        CodeSigningAccountName = (Get-Env 'CLEANSLATE_SIGN_AZURE_ACCOUNT')
-        CertificateProfileName = (Get-Env 'CLEANSLATE_SIGN_AZURE_PROFILE')
-    } | ConvertTo-Json | Set-Content $metadataFile -Encoding utf8
-    if (-not $timestamp) { $timestamp = 'http://timestamp.acs.microsoft.com' }
-    $signArgs += @('/tr', $timestamp, '/dlib', (Get-Env 'CLEANSLATE_SIGN_AZURE_DLIB'), '/dmdf', $metadataFile)
-    Write-Host 'Signing with Azure Artifact Signing.'
-}
-elseif (Get-Env 'CLEANSLATE_SIGN_THUMBPRINT') {
+$signArgs = @('sign', '/fd', 'SHA256', '/d', 'CleanSlate', '/f', $pfx, '/p', $password)
+if ((Get-Env 'CLEANSLATE_SIGN_NO_TIMESTAMP') -ne '1') {
+    $timestamp = Get-Env 'CLEANSLATE_SIGN_TIMESTAMP_URL'
     if (-not $timestamp) { $timestamp = 'http://timestamp.digicert.com' }
-    $signArgs += @('/tr', $timestamp, '/sha1', (Get-Env 'CLEANSLATE_SIGN_THUMBPRINT'))
-    Write-Host 'Signing with a certificate from the Windows certificate store.'
-}
-elseif (Get-Env 'CLEANSLATE_SIGN_PFX') {
-    if (-not $timestamp) { $timestamp = 'http://timestamp.digicert.com' }
-    $signArgs += @('/tr', $timestamp, '/f', (Get-Env 'CLEANSLATE_SIGN_PFX'))
-    if (Get-Env 'CLEANSLATE_SIGN_PFX_PASSWORD') { $signArgs += @('/p', (Get-Env 'CLEANSLATE_SIGN_PFX_PASSWORD')) }
-    Write-Host 'Signing with a PFX file.'
-}
-else {
-    throw 'No signing configuration found. Set the CLEANSLATE_SIGN_* variables described in docs\SIGNING.md.'
+    $signArgs += @('/tr', $timestamp, '/td', 'SHA256')
 }
 
-try {
-    Write-Host "> signtool sign ... $Path"
-    & $signtool @signArgs $Path
-    if ($LASTEXITCODE -ne 0) { throw "signtool sign failed with exit code $LASTEXITCODE" }
+Write-Host "> signtool sign ... $Path"
+& $signtool @signArgs $Path
+if ($LASTEXITCODE -ne 0) { throw "signtool sign failed with exit code $LASTEXITCODE" }
 
-    # /pa validates against the Authenticode policy and the machine's trust store, so a self-signed test certificate
-    # reports a trust error here until it is installed as a trusted root and publisher.
-    & $signtool verify /pa /v $Path
-    if ($LASTEXITCODE -ne 0) {
-        $selfSigned = Get-Env 'CLEANSLATE_SIGN_PFX'
-        if ($selfSigned) { Write-Warning 'Signature verification failed. For a self-signed test certificate, trust it first (docs\SIGNING.md).' }
-        else { throw "signtool verify failed with exit code $LASTEXITCODE" }
-    }
-    Write-Host "Signed $Path" -ForegroundColor Green
+# /pa checks the machine's trust store, so this reports an untrusted root until the certificate is trusted on this PC.
+& $signtool verify /pa /v $Path
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning 'The file is signed, but this PC does not trust the certificate yet. Run build\new-dev-certificate.ps1 -Trust or import the .cer (docs\SIGNING.md).'
 }
-finally {
-    if ($metadataFile -and (Test-Path $metadataFile)) { Remove-Item $metadataFile -Force }
-}
+Write-Host "Signed $Path" -ForegroundColor Green

@@ -10,7 +10,7 @@ see "Versioning" in the README.
 ### Added
 - Single-file `CleanSlate-<version>-win-x64.exe` as the primary distributable.
 - Version stamping: every build carries `MAJOR.MINOR.PATCH`, a `-dev.N` suffix for development builds and the git commit.
-- Code-signing pipeline (`build/sign.ps1`, `build/sign.sh`) for Azure Artifact Signing, a certificate in the Windows store or a hardware token, or a PFX file.
+- Self-signed code signing (`build/new-dev-certificate.*`, `build/sign.*`, `build/trust-certificate.ps1`).
 - `build/bump-version.ps1` / `build/bump-version.sh` to cut a release.
 
 ## [1.0.0] - 2026-10-23

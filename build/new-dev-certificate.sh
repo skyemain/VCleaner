@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Creates a SELF-SIGNED code-signing certificate for testing the signing pipeline.
-# It does NOT make SmartScreen trust the app. Only machines where you import the .cer as a trusted root and publisher see a valid
-# signature. Real distribution needs a certificate from a public CA or Azure Artifact Signing (docs/SIGNING.md).
+# Creates the SELF-SIGNED code-signing certificate used by build/sign.sh. An existing certificate is kept so every build is
+# signed by the same one (set FORCE=1 to replace it). Only PCs that trust the .cer see a valid signature (docs/SIGNING.md).
 #
 #   build/new-dev-certificate.sh [output-dir] [password]
 set -euo pipefail
 out="${1:-artifacts/dev-cert}"
 password="${2:-cleanslate-dev}"
 mkdir -p "$out"
+if [ -f "$out/CleanSlate-dev.pfx" ] && [ "${FORCE:-0}" != 1 ]; then
+  echo "A certificate already exists at $out/CleanSlate-dev.pfx; keeping it (FORCE=1 replaces it)."
+  exit 0
+fi
 
 cat > "$out/openssl.cnf" <<'EOF'
 [req]

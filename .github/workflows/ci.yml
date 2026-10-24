@@ -10,14 +10,6 @@ on:
 jobs:
   windows:
     runs-on: windows-latest
-    permissions:
-      contents: read
-      id-token: write
-    env:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      SIGN_ENDPOINT: ${{ secrets.SIGN_ENDPOINT }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,31 +31,6 @@ jobs:
           $fileVersion = (Get-Content VERSION -Raw).Trim()
           if ($tagVersion -ne $fileVersion) { throw "Tag $tagVersion does not match VERSION $fileVersion" }
           ./build/publish.ps1 -Release
-
-      # Signing runs only when the repository provides Azure Artifact Signing configuration. Create the account and
-      # identity validation first (docs/SIGNING.md), then add these as repository secrets.
-      - name: Sign with Azure Artifact Signing
-        if: ${{ env.AZURE_CLIENT_ID != '' && env.AZURE_CLIENT_SECRET != '' && env.AZURE_TENANT_ID != '' && env.SIGN_ENDPOINT != '' }}
-        uses: azure/trusted-signing-action@v0.5.1
-        with:
-          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          endpoint: ${{ secrets.SIGN_ENDPOINT }}
-          trusted-signing-account-name: ${{ secrets.SIGN_ACCOUNT }}
-          certificate-profile-name: ${{ secrets.SIGN_PROFILE }}
-          files-folder: artifacts/release
-          files-folder-filter: exe
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-
-      - name: Refresh checksums after signing
-        shell: pwsh
-        run: |
-          Set-Location artifacts/release
-          Get-ChildItem *.exe | ForEach-Object { "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } |
-            Set-Content SHA256SUMS.txt -Encoding ascii
 
       - uses: actions/upload-artifact@v4
         with:

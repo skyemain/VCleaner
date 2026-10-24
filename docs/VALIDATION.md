@@ -95,5 +95,6 @@ Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Clea
 - [ ] File properties of the `.exe`: product name, file version `MAJOR.MINOR.PATCH.N`, product version (`-dev.N+commit` for development builds), copyright and icon are present.
 - [ ] Settings shows the same version string as the file properties, and the log's first line matches.
 - [ ] First launch of the single file works from a read-only location and from `%USERPROFILE%\Downloads`; the second launch is noticeably faster.
-- [ ] Unsigned build: expect SmartScreen. Signed build: Properties > Digital Signatures lists the signer and a timestamp, and `signtool verify /pa` succeeds. Record whether SmartScreen still warned.
+- [ ] Signed build on a PC that trusts `CleanSlate-dev.cer`: Properties > Digital Signatures lists the signer and a timestamp, and `signtool verify /pa` succeeds.
+- [ ] Signed build on a PC that does not trust the certificate: signature is reported untrusted and the publisher is unknown (expected). Record whether SmartScreen warned.
 - [ ] Runs on a machine with no .NET installed.

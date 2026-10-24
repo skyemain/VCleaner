@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# Authenticode-signs a Windows executable from Linux/macOS using osslsigncode and a PFX/PKCS#12 file.
+# Signs a Windows executable from Linux/macOS with the self-signed CleanSlate certificate (osslsigncode).
+# Default certificate: artifacts/dev-cert/CleanSlate-dev.pfx (create it with build/new-dev-certificate.sh).
 #
-#   CLEANSLATE_SIGN_PFX=/path/cert.pfx CLEANSLATE_SIGN_PFX_PASSWORD=... build/sign.sh artifacts/release/CleanSlate-1.1.0-win-x64.exe
+#   build/sign.sh artifacts/release/CleanSlate-1.1.0-win-x64.exe
 #
 # Optional: CLEANSLATE_SIGN_TIMESTAMP_URL (default http://timestamp.digicert.com), CLEANSLATE_SIGN_URL (publisher web page).
 #
-# Certificates from public CAs are issued on hardware tokens or in cloud HSMs and cannot be exported to a PFX; for those, or for
-# Azure Artifact Signing, sign on Windows with build/sign.ps1 or in CI. A PFX here is for self-signed test certificates
-# (build/new-dev-certificate.sh) and for private CAs.
 set -euo pipefail
 
 file="${1:?usage: sign.sh <file.exe>}"
-pfx="${CLEANSLATE_SIGN_PFX:-}"
-if [ -z "$pfx" ]; then
-  echo "CLEANSLATE_SIGN_PFX is not set; cannot sign. See docs/SIGNING.md." >&2
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+pfx="${CLEANSLATE_SIGN_PFX:-$root/artifacts/dev-cert/CleanSlate-dev.pfx}"
+password="${CLEANSLATE_SIGN_PFX_PASSWORD:-cleanslate-dev}"
+if [ ! -f "$pfx" ]; then
+  echo "Signing certificate not found: $pfx. Run build/new-dev-certificate.sh first (see docs/SIGNING.md)." >&2
   exit 1
 fi
 command -v osslsigncode >/dev/null || { echo "osslsigncode is required (apt install osslsigncode)." >&2; exit 1; }
@@ -27,7 +27,7 @@ trap 'rm -f "$tmp"' EXIT
 timestamp_args=(-ts "$timestamp")
 [ "${CLEANSLATE_SIGN_NO_TIMESTAMP:-0}" = 1 ] && timestamp_args=()
 
-osslsigncode sign -pkcs12 "$pfx" -pass "${CLEANSLATE_SIGN_PFX_PASSWORD:-}" -h sha256 \
+osslsigncode sign -pkcs12 "$pfx" -pass "$password" -h sha256 \
   -n "CleanSlate" "${url_args[@]}" "${timestamp_args[@]}" -in "$file" -out "$tmp"
 mv "$tmp" "$file"
 trap - EXIT

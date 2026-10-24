@@ -1,89 +1,65 @@
-# Code signing CleanSlate
+# Signing CleanSlate with a self-signed certificate
 
-Code signing is what lets Windows show "Verified publisher: <your name>" instead of "Unknown publisher", and it is a
-requirement for SmartScreen to stop warning. **A signature only works if the certificate is issued to you by a certificate
-authority Windows trusts. That needs a paid identity validation, which no script or tool in this repository can do for you.**
-Everything else is set up and ready: the build produces one `.exe`, and signing is one switch.
+CleanSlate builds are signed with a **self-signed** certificate that you create once. This fits installing by hand on your own
+PCs: each PC is told to trust the certificate, after which the `.exe` shows a valid signature and your name as publisher.
 
-## What to expect from SmartScreen
+What it does not do: it does **not** make Windows SmartScreen trust the file on PCs that have not trusted your certificate.
+Those PCs show "Unknown publisher" and may show the SmartScreen warning. If you later distribute to people you cannot
+visit, you will need a certificate from a public certificate authority.
 
-- **Unsigned:** SmartScreen shows "Windows protected your PC" for every new download.
-- **Signed with a trusted certificate:** the publisher name appears and the warning is much less alarming. SmartScreen reputation
-  is tied to the signing certificate and the file's download history, so a new publisher can still see a warning for a short
-  time until reputation builds. Microsoft does not publish exact thresholds and EV certificates no longer bypass this
-  automatically, so plan for it rather than promising your testers it never appears.
-- **Signed with a self-signed certificate:** no improvement for anyone but machines where you installed that certificate by hand.
+## One-time setup
 
-## Choose a certificate source
+On the Windows build machine:
 
-| Option | Good for | Notes |
-| --- | --- | --- |
-| **Azure Artifact Signing** (formerly Trusted Signing) | Most teams | Microsoft-run, about US$10/month, short-lived certificates, works from CI, no hardware token. Requires identity validation (individual developers and organizations in supported regions). |
-| **OV or EV certificate from a public CA** (DigiCert, Sectigo, SSL.com, ...) | Teams that already have one | Since 2023 the private key must live on a hardware token or in a cloud HSM, so it cannot be exported to a `.pfx`. Sign with `CLEANSLATE_SIGN_THUMBPRINT` on a machine that has the token, or use the CA's cloud-signing tool. |
-| **PFX file** | Private CA, internal distribution, tests | `CLEANSLATE_SIGN_PFX` and `CLEANSLATE_SIGN_PFX_PASSWORD`. |
-| **Self-signed test certificate** | Testing the pipeline only | `build/new-dev-certificate.ps1` or `.sh`. |
+```powershell
+pwsh build\new-dev-certificate.ps1 -Trust
+```
+
+This creates `artifacts\dev-cert\CleanSlate-dev.pfx` (private key, password `cleanslate-dev`, keep it private) and
+`CleanSlate-dev.cer` (public certificate, safe to copy around), and trusts the certificate for your user on this PC.
+An existing certificate is kept, so every build is signed by the same one. It expires after a year; replace it with `-Force`.
+
+On Linux or macOS: `build/new-dev-certificate.sh` (needs `openssl`).
 
 ## Signing a build
 
-Set the variables for your option, then add `-Sign`:
-
 ```powershell
-# Azure Artifact Signing (authenticate with `az login` or AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET)
-$env:CLEANSLATE_SIGN_AZURE_ENDPOINT = 'https://eus.codesigning.azure.net'
-$env:CLEANSLATE_SIGN_AZURE_ACCOUNT  = 'my-signing-account'
-$env:CLEANSLATE_SIGN_AZURE_PROFILE  = 'my-certificate-profile'
-$env:CLEANSLATE_SIGN_AZURE_DLIB     = 'C:\tools\Azure.CodeSigning.Dlib.dll'
-
-# or a certificate in the Windows store / on a token
-$env:CLEANSLATE_SIGN_THUMBPRINT = '0123456789ABCDEF0123456789ABCDEF01234567'
-
-# or a PFX
-$env:CLEANSLATE_SIGN_PFX = 'C:\secure\cert.pfx'
-$env:CLEANSLATE_SIGN_PFX_PASSWORD = '...'
-
-pwsh build\publish.ps1 -Release -Sign
+pwsh build\publish.ps1 -Sign              # development build
+pwsh build\publish.ps1 -Release -Sign     # release build
 ```
 
-On Linux or macOS, only the PFX path is supported (`osslsigncode`): `CLEANSLATE_SIGN_PFX=... build/publish.sh --release --sign`.
+Linux or macOS: `build/publish.sh --sign` (needs `osslsigncode`). Signing adds an SHA-256 signature and an RFC 3161 timestamp,
+then `SHA256SUMS.txt` is computed from the signed file. Use `CLEANSLATE_SIGN_PFX` and `CLEANSLATE_SIGN_PFX_PASSWORD` to point at a
+different certificate, or `CLEANSLATE_SIGN_NO_TIMESTAMP=1` when offline.
 
-`build/sign.ps1` signs with SHA-256, adds an RFC 3161 timestamp (so the signature stays valid after the certificate expires)
-and runs `signtool verify /pa`. Secrets are read from environment variables, never from the command line or the repository.
-`SHA256SUMS.txt` is computed after signing, so it matches the file you distribute.
+## Installing on another PC
 
-In CI, `.github/workflows/ci.yml` signs automatically with Azure Artifact Signing when these repository secrets exist:
-`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `SIGN_ENDPOINT`, `SIGN_ACCOUNT`, `SIGN_PROFILE`.
-
-## Setting up Azure Artifact Signing (one-time)
-
-1. Create an Azure subscription and a *Trusted Signing / Artifact Signing* account in a supported region.
-2. Complete **identity validation** (a business or individual identity check; this takes days).
-3. Create a **certificate profile** (Public Trust).
-4. Create a service principal, grant it the *Artifact Signing Certificate Profile Signer* role on the account, and store its
-   credentials as the repository secrets above.
-
-## Testing the signing pipeline with a self-signed certificate
+Copy two files: the signed `CleanSlate-<version>-win-x64.exe` and `CleanSlate-dev.cer`. Then on that PC:
 
 ```powershell
-pwsh build\new-dev-certificate.ps1 -Trust      # trusts it for your user on this PC only
-$env:CLEANSLATE_SIGN_PFX = (Resolve-Path artifacts\dev-cert\CleanSlate-dev.pfx)
-$env:CLEANSLATE_SIGN_PFX_PASSWORD = 'cleanslate-dev'
-pwsh build\publish.ps1 -Sign
+pwsh build\trust-certificate.ps1 -CertificatePath .\CleanSlate-dev.cer
 ```
 
-To make another test PC show the signature as valid, import `artifacts\dev-cert\CleanSlate-dev.cer` into that user's
-*Trusted Root Certification Authorities* and *Trusted Publishers*. Remove it when testing ends. SmartScreen still treats the
-file as unrecognised on machines that do not have the certificate.
+(or double-click the `.cer`, choose **Install Certificate > Current User**, and place it in **Trusted Root Certification
+Authorities**, then repeat for **Trusted Publishers**). Windows asks you to confirm the root certificate; accept. Remove it
+later with `-Remove`.
 
-## Verifying a signed file
+Trust the certificate only on PCs you control: anyone holding the matching `.pfx` could sign software those PCs would accept.
+
+## Verifying
 
 ```powershell
-signtool verify /pa /v CleanSlate-1.1.0-win-x64.exe
 Get-AuthenticodeSignature .\CleanSlate-1.1.0-win-x64.exe | Format-List
+signtool verify /pa /v .\CleanSlate-1.1.0-win-x64.exe
 ```
 
-Right-click the file, open **Properties > Digital Signatures**, and confirm the signer name and a timestamp are present.
+`Status : Valid` appears only on PCs that trust the certificate; elsewhere it shows `UnknownError` / an untrusted root, which
+is expected. In Explorer, **Properties > Digital Signatures** shows the signer and timestamp.
 
-## Keeping keys safe
+A file downloaded through a browser or copied from a network share may still carry a "downloaded from the Internet" mark. Copy it
+over USB, or right-click > Properties > **Unblock** to remove the prompt.
 
-Never commit a `.pfx`, `.p12` or `.key` (they are git-ignored), never put a password on a command line, and prefer a hardware
-token or Azure Artifact Signing so there is no key file to leak.
+## Keeping the key safe
+
+Never commit the `.pfx` (`*.pfx`, `*.p12` and `*.key` are git-ignored), and keep it only on the build machine. Copy the `.cer`,
+not the `.pfx`, to other PCs.
