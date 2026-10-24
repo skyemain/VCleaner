@@ -42,6 +42,8 @@ final class MainViewModel: ObservableObject {
     @Published var showHealth = false
     @Published var browserPrompt: String?
     @Published var trashPrompt = false
+    @Published var freeingMemory = false
+    @Published var memoryNote = ""
     private var pendingBrowserQuit = false
 
     let settings: SettingsViewModel
@@ -80,11 +82,24 @@ final class MainViewModel: ObservableObject {
         runTask = Task { await runLoginClean() }
     }
 
+    func freeMemory() {
+        guard !freeingMemory, phase != .working, phase != .countingDown else { return }
+        freeingMemory = true
+        memoryNote = "Releasing cached memory"
+        Task {
+            let outcome = await Task.detached(priority: .utility) {
+                MemoryPurgeService.purge()
+            }.value
+            freeingMemory = false
+            memoryNote = outcome.message
+        }
+    }
+
     func cleanNow() {
         guard phase == .idle || phase == .completed || phase == .failed else { return }
         runTask = Task {
             if await browsersNeedQuitPrompt() {
-                browserPrompt = "Chrome or Edge is open. Quit it normally so the cache can be cleaned? CleanSlate will not force the browser to quit."
+                browserPrompt = "Safari or Chrome is open. Quit it normally so the cache can be cleaned? CleanSlate will not force the browser to quit."
                 return
             }
             await run(mode: .manual, fromReview: false)
@@ -297,7 +312,6 @@ final class MainViewModel: ObservableObject {
             HomeRow(id: "junk", title: "SYSTEM JUNK", detail: detail(["temp", "user-cache", "loose-cache", "diagnostics"], idle: "Ready")),
             HomeRow(id: "safari", title: "SAFARI", detail: detail(["safari"], idle: "Ready")),
             HomeRow(id: "chrome", title: "CHROME", detail: detail(["chrome"], idle: "Ready")),
-            HomeRow(id: "edge", title: "EDGE", detail: detail(["edge"], idle: "Ready")),
             HomeRow(id: "health", title: "SYSTEM HEALTH", detail: "Ready")
         ]
     }
@@ -319,7 +333,6 @@ final class MainViewModel: ObservableObject {
         HomeRow(id: "junk", title: "SYSTEM JUNK", detail: "Ready"),
         HomeRow(id: "safari", title: "SAFARI", detail: "Ready"),
         HomeRow(id: "chrome", title: "CHROME", detail: "Ready"),
-        HomeRow(id: "edge", title: "EDGE", detail: "Ready"),
         HomeRow(id: "health", title: "SYSTEM HEALTH", detail: "Ready")
     ]
 }

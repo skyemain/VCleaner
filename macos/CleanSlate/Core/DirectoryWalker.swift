@@ -69,6 +69,8 @@ enum DirectoryWalker {
     }
 
     static func isUnreadable(_ url: URL) -> Bool {
-        access(url.path, R_OK) != 0 && errno == EACCES
+        guard access(url.path, R_OK) != 0 else { return false }
+        // TCC often returns EPERM, and a mode-0 directory returns EACCES. A missing folder is ENOENT.
+        return errno == EACCES || errno == EPERM
     }
 }

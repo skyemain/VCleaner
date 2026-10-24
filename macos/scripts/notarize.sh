@@ -12,7 +12,7 @@ fi
 profile="${NOTARY_KEYCHAIN_PROFILE:-}"
 dmg="${1:-}"
 if [[ -z "${profile}" || -z "${dmg}" ]]; then
-  echo "error: usage: NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.1-mac-universal.dmg" >&2
+  echo "error: usage: NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.2-mac-universal.dmg" >&2
   echo "Store the profile once with:" >&2
   echo "  xcrun notarytool store-credentials cleanslate --apple-id you@example.com --team-id TEAMID" >&2
   echo "Notarization was not submitted." >&2

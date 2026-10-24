@@ -90,7 +90,28 @@ struct MainView: View {
             RadarButton(title: model.phase == .working ? "WAIT" : "CLEAN", spinning: model.phase == .working) {
                 model.cleanNow()
             }
-            .disabled(model.phase == .working || model.phase == .countingDown)
+            .disabled(model.phase == .working || model.phase == .countingDown || model.freeingMemory)
+            Button {
+                model.freeMemory()
+            } label: {
+                Text(model.freeingMemory ? "FREEING" : "FREE RAM")
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .tracking(2)
+                    .frame(width: 220)
+                    .padding(.vertical, 10)
+                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(OpsTheme.cardStroke, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .disabled(model.freeingMemory || model.phase == .working || model.phase == .countingDown)
+            .accessibilityLabel("Free RAM. Asks macOS to release inactive memory without quitting apps.")
+            if !model.memoryNote.isEmpty {
+                Text(model.memoryNote)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(OpsTheme.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 260)
+            }
             if !model.countdownText.isEmpty {
                 VStack(spacing: 8) {
                     Text(model.countdownText)

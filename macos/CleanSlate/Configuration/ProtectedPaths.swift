@@ -26,6 +26,15 @@ enum ProtectedPaths {
         "Platform Notifications", "Service Worker", "Storage"
     ]
 
+    /// Cache directories Safari and WebKit actually fill. The container itself, cookies, and the Safari profile stay refused.
+    static let safariCacheRelativeRoots: [String] = [
+        "Library/Caches/com.apple.Safari",
+        "Library/Containers/com.apple.Safari/Data/Library/Caches",
+        "Library/Containers/com.apple.WebKit.Networking/Data/Library/Caches",
+        "Library/Containers/com.apple.WebKit.WebContent/Data/Library/Caches",
+        "Library/Containers/com.apple.WebKit.GPU/Data/Library/Caches"
+    ]
+
     /// Relative to the home directory. These trees are refused as approved roots.
     static let forbiddenRelativeRoots: [String] = [
         "Documents", "Desktop", "Downloads", "Pictures", "Movies", "Music",
@@ -58,6 +67,9 @@ enum ProtectedPaths {
         guard path.hasPrefix(homePath + "/") else {
             return false
         }
+        if safariCacheRelativeRoots.contains(where: { isSpecificCache(path, home: home, prefix: $0) }) {
+            return true
+        }
         if isInside(path, home: home, relative: "Downloads")
             || isInside(path, home: home, relative: "Documents")
             || isInside(path, home: home, relative: "Desktop")
@@ -76,7 +88,6 @@ enum ProtectedPaths {
             return true
         }
         if isSpecificCache(path, home: home, prefix: "Library/Caches/com.apple.helpd") { return true }
-        if isSpecificCache(path, home: home, prefix: "Library/Caches/com.apple.Safari/fsCachedData") { return true }
         if isSpecificCache(path, home: home, prefix: "Library/Logs/DiagnosticReports") { return true }
         if chromiumCache(path, home: home, support: "Library/Application Support/Google/Chrome") { return true }
         if chromiumCache(path, home: home, support: "Library/Caches/Google/Chrome") { return true }

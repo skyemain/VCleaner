@@ -25,10 +25,10 @@ jobs:
 
       - name: Package drag-and-drop disk image
         working-directory: macos
-        run: scripts/package-dmg.sh 1.0.1
+        run: scripts/package-dmg.sh 1.0.2
 
       - uses: actions/upload-artifact@v4
         with:
-          name: CleanSlate-1.0.1-mac-universal
-          path: macos/release/CleanSlate-1.0.1-mac-universal.dmg
+          name: CleanSlate-1.0.2-mac-universal
+          path: macos/release/CleanSlate-1.0.2-mac-universal.dmg
           if-no-files-found: error

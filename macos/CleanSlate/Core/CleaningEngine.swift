@@ -99,13 +99,10 @@ actor CleaningEngine {
         }
         modules.append(SystemCleaners.thumbnails())
         if categories.safari {
-            modules.append(SafariCleaner.estimate(context))
+            modules.append(await safariEstimate(context, allowQuit: request.allowBrowserQuit && request.mode == .manual))
         }
         if categories.chrome {
             modules.append(await browserEstimate(KnownBrowsers.chrome, context: context, allowQuit: request.allowBrowserQuit && request.mode == .manual))
-        }
-        if categories.edge {
-            modules.append(await browserEstimate(KnownBrowsers.edge, context: context, allowQuit: request.allowBrowserQuit && request.mode == .manual))
         }
         if categories.xcodeDerivedData && request.mode == .manual {
             modules.append(XcodeCleaner.estimate(context))
@@ -114,6 +111,41 @@ actor CleaningEngine {
             modules.append(TrashInspector.estimate(context))
         }
         return modules
+    }
+
+    private func safariEstimate(_ context: ScanContext, allowQuit: Bool) async -> ModuleEstimate {
+        var estimate = SafariCleaner.estimate(context)
+        if await applications.isRunning(bundleIdentifier: SafariCleaner.bundleIdentifier), !allowQuit {
+            estimate = ModuleEstimate(
+                id: estimate.id,
+                title: estimate.title,
+                status: .skipped("Safari is running. Automatic cleaning does not quit browsers."),
+                fileCount: estimate.fileCount,
+                byteCount: estimate.byteCount,
+                samplePaths: estimate.samplePaths
+            )
+        }
+        return estimate
+    }
+
+    private func cleanSafari(context: ScanContext, request: CleanRequest, cancel: @escaping () -> Bool) async -> ModuleCleanup {
+        if await applications.isRunning(bundleIdentifier: SafariCleaner.bundleIdentifier) {
+            let mayQuit = request.allowBrowserQuit && request.mode == .manual
+            var didQuit = false
+            if mayQuit {
+                didQuit = await applications.requestQuit(bundleIdentifier: SafariCleaner.bundleIdentifier)
+            }
+            if !didQuit {
+                return ModuleCleanup(
+                    deletedCount: 0,
+                    deletedBytes: 0,
+                    skippedCount: 0,
+                    errors: [],
+                    status: .skipped("Safari is still running, so its cache was left alone.")
+                )
+            }
+        }
+        return SafariCleaner.clean(context, cancel: cancel)
     }
 
     private func browserEstimate(_ browser: BrowserDefinition, context: ScanContext, allowQuit: Bool) async -> ModuleEstimate {
@@ -155,11 +187,9 @@ actor CleaningEngine {
         case "diagnostics":
             return SystemCleaners.cleanDiagnostics(context, cancel: cancel)
         case "safari":
-            return SafariCleaner.clean(context, cancel: cancel)
+            return await cleanSafari(context: context, request: request, cancel: cancel)
         case "chrome":
             return await cleanBrowser(KnownBrowsers.chrome, context: context, request: request, cancel: cancel, cleaner: ChromeCleaner.clean)
-        case "edge":
-            return await cleanBrowser(KnownBrowsers.edge, context: context, request: request, cancel: cancel, cleaner: EdgeCleaner.clean)
         case "xcode":
             guard request.mode == .manual else {
                 return ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .skipped("Xcode cleanup does not run at login."))

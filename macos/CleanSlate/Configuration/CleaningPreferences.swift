@@ -20,7 +20,8 @@ struct CleaningPreferences: Codable, Equatable, Sendable {
     var cleanUserCaches: Bool = true
     var cleanDiagnosticReports: Bool = true
     var cleanChrome: Bool = true
-    var cleanEdge: Bool = true
+    /// Kept so older settings still decode. The Mac app does not offer Edge cleaning.
+    var cleanEdge: Bool = false
     var cleanSafari: Bool = true
     var emptyTrash: Bool = false
     var cleanXcodeDerivedData: Bool = false

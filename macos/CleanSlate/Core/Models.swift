@@ -99,7 +99,7 @@ struct CleanRequest: Sendable {
     var dryRun: Bool
     var categories: EnabledCategories
     var exclusions: [String]
-    /// Manual runs may ask Chrome or Edge to quit. Login runs must leave this false.
+    /// Manual runs may ask Safari or Chrome to quit. Login runs must leave this false.
     var allowBrowserQuit: Bool
     /// Set only after the person confirms an irreversible Trash empty.
     var emptyTrashConfirmed: Bool
@@ -110,7 +110,8 @@ struct EnabledCategories: Codable, Equatable, Sendable {
     var userCaches: Bool = true
     var diagnosticReports: Bool = true
     var chrome: Bool = true
-    var edge: Bool = true
+    /// Kept so older settings still decode. The Mac app does not clean Edge.
+    var edge: Bool = false
     var safari: Bool = true
     var emptyTrash: Bool = false
     var xcodeDerivedData: Bool = false

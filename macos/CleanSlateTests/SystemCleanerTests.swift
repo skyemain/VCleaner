@@ -53,3 +53,11 @@ final class SystemCleanerTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
     }
 }
+
+final class MemoryPurgeTests: XCTestCase {
+    func testBudgetNeverAsksForMoreThanAGigabyteOrHalfOfPhysicalMemory() {
+        XCTAssertEqual(MemoryPurgeService.budget(inactive: 50_000_000, purgeable: 50_000_000, physical: 16_000_000_000), 0)
+        XCTAssertEqual(MemoryPurgeService.budget(inactive: 300_000_000, purgeable: 0, physical: 400_000_000), 200_000_000)
+        XCTAssertEqual(MemoryPurgeService.budget(inactive: 2_000_000_000, purgeable: 2_000_000_000, physical: 16_000_000_000), 1024 * 1024 * 1024)
+    }
+}

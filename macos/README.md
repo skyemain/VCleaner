@@ -1,6 +1,6 @@
 # CleanSlate for macOS
 
-CleanSlate 1.0.1 is the native macOS counterpart of CleanSlate for Windows 1.4.0. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes only cache and temporary files it can prove are disposable, and it does not pretend to be a registry cleaner or a RAM booster.
+CleanSlate 1.0.2 is the native macOS counterpart of CleanSlate for Windows 1.4.0. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes only cache and temporary files it can prove are disposable. It does not clean a registry, and Free RAM does not quit apps.
 
 GitHub Actions builds the universal disk image when the `mac` branch is pushed. The copy in that image is ad-hoc signed so it can launch; it is not notarized, so the first open is a right-click → Open. Xcode is required to build it locally.
 
@@ -12,8 +12,7 @@ GitHub Actions builds the universal disk image when the `mac` branch is pushed. 
 | User caches | On | `~/Library/Caches/com.apple.helpd`, files older than 7 days, plus loose files sitting directly in `~/Library/Caches`. Other application cache folders are left alone. |
 | Diagnostic reports | On | `.ips`, `.crash`, `.spin`, `.diag`, and `.hang` files in `~/Library/Logs/DiagnosticReports` older than 30 days. Unified logs are not touched. |
 | Chrome | On | `Cache`, `Code Cache`, `GPUCache`, and the known shader caches in every Chrome profile. Cookies, history, passwords, bookmarks, and extensions are not candidates. |
-| Edge | On | The same rules, separately, for Microsoft Edge. |
-| Safari | On when readable | Only `~/Library/Caches/com.apple.Safari/fsCachedData`. If macOS denies access, the result is “Safari cache unavailable: macOS access restrictions.” Bookmarks, history, cookies, passwords, and iCloud data are never opened. |
+| Safari | On when readable | Safari’s own cache plus the WebKit network, web content, and GPU caches. These are the folders that actually grow. History, bookmarks, cookies, passwords, and website data are never opened. If macOS hides a cache, the Safari row says to turn on Full Disk Access instead of reporting that there was nothing to remove. |
 | Trash | Off | Counted only until you press **Empty Trash** and confirm. One-click cleaning never empties it. |
 | Xcode DerivedData | Off | Opt-in. Archives and simulators are measured and never deleted. |
 | Quick Look thumbnails | Shown as unsupported | Undocumented system thumbnail databases are not deleted. |
@@ -21,11 +20,11 @@ GitHub Actions builds the universal disk image when the `mac` branch is pushed. 
 | Browsing history | Unsupported | No safe public API. The setting stays off. |
 | App leftovers | Report only | A folder under Application Support is not treated as abandoned just because no matching app is in `/Applications`. |
 
-Login cleaning runs the low-risk set only. It does not quit browsers, empty the Trash, or touch Xcode. If Chrome or Edge is open, that browser’s cache is skipped and the result says so. A manual clean can ask the browser to quit normally and waits; it never force-quits.
+Login cleaning runs the low-risk set only. It does not quit browsers, empty the Trash, or touch Xcode. If Safari or Chrome is open, that browser’s cache is skipped and the result says so. A manual clean can ask the browser to quit normally and waits; it never force-quits. Edge is not a target.
 
 ## System health
 
-There is no Windows Registry, so there is no registry cleaner. System Health shows memory pressure, swap, disk capacity, and the filesystem name, using system APIs. It explains that macOS manages memory and does not purge it. User LaunchAgents whose plist points at a missing absolute executable can be backed up and disabled after you confirm that one item. Shell-script agents are not flagged.
+There is no Windows Registry, so there is no registry cleaner. System Health shows memory pressure, swap, disk capacity, and the filesystem name, using system APIs. **Free RAM** briefly claims inactive and purgeable memory, up to 1 GB, then gives it back so macOS can drop cached pages. Open apps stay open. User LaunchAgents whose plist points at a missing absolute executable can be backed up and disabled after you confirm that one item. Shell-script agents are not flagged.
 
 ## Automatic cleaning at login
 
@@ -53,9 +52,9 @@ To sign, package, and notarize, using credentials that stay outside the reposito
 ```bash
 export DEVELOPER_ID_APPLICATION="Developer ID Application: Your Name (TEAMID)"
 scripts/sign.sh
-scripts/package-dmg.sh 1.0.1
+scripts/package-dmg.sh 1.0.2
 xcrun notarytool store-credentials cleanslate --apple-id you@example.com --team-id TEAMID
-NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.1-mac-universal.dmg
+NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.2-mac-universal.dmg
 scripts/verify-release.sh
 ```
 
