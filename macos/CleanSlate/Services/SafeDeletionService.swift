@@ -14,7 +14,6 @@ struct DeletionOutcome: Equatable, Sendable {
 /// Nothing under a path that fails `ProtectedPaths` is touched, so a replaced directory or a link that
 /// escapes the cache cannot widen the delete.
 struct SafeDeletionService: Sendable {
-    var fileManager: FileManager = FileManager()
     var allowXcodeDerivedData = false
     var allowTrash = false
 
@@ -43,7 +42,7 @@ struct SafeDeletionService: Sendable {
                 root: resolvedRoot,
                 minimumAge: minimumAge,
                 exclusions: context.exclusions,
-                fileManager: fileManager
+                fileManager: FileManager()
             )
             outcome.deletedCount = stats.fileCount
             outcome.deletedBytes = stats.byteCount
@@ -55,7 +54,7 @@ struct SafeDeletionService: Sendable {
             root: resolvedRoot,
             minimumAge: minimumAge,
             exclusions: context.exclusions,
-            fileManager: fileManager
+            fileManager: FileManager()
         )
         outcome.skippedCount += files.skippedCount
         for file in files.urls {
@@ -130,7 +129,7 @@ struct SafeDeletionService: Sendable {
         if context.isExcluded(path) || ProtectedPaths.isReserved(url) {
             return .skipped
         }
-        var info = stat()
+        var info = Darwin.stat()
         guard lstat(path, &info) == 0 else {
             return .skipped
         }
@@ -163,7 +162,7 @@ struct SafeDeletionService: Sendable {
             return .failed("Could not open \(url.lastPathComponent).")
         }
         defer { close(descriptor) }
-        var opened = stat()
+        var opened = Darwin.stat()
         guard fstat(descriptor, &opened) == 0 else {
             return .failed("Could not confirm \(url.lastPathComponent).")
         }

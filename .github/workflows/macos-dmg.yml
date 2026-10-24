@@ -1,0 +1,34 @@
+name: macOS DMG
+
+on:
+  push:
+    branches: [mac]
+  workflow_dispatch:
+
+jobs:
+  dmg:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build unsigned universal app
+        working-directory: macos
+        run: scripts/build.sh
+
+      - name: Ad-hoc sign so the app can launch locally
+        working-directory: macos
+        run: |
+          codesign --force --deep --sign - build/CleanSlate.app
+          codesign --verify --verbose=2 build/CleanSlate.app
+          lipo -archs build/CleanSlate.app/Contents/MacOS/CleanSlate
+
+      - name: Package drag-and-drop disk image
+        working-directory: macos
+        run: scripts/package-dmg.sh 1.0.0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CleanSlate-1.0.0-mac-universal
+          path: macos/release/CleanSlate-1.0.0-mac-universal.dmg
+          if-no-files-found: error

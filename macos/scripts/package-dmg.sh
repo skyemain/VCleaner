@@ -27,6 +27,16 @@ raw="build/CleanSlate-raw.dmg"
 final="release/CleanSlate-${version}-mac-universal.dmg"
 rm -f "${raw}" "${final}"
 mkdir -p release
+
+# GitHub-hosted Macs have no Finder session, so icon positions cannot be set there.
+# The image still contains the app and the Applications shortcut.
+if [[ "${CI:-}" == "true" ]]; then
+  hdiutil create -volname CleanSlate -srcfolder "${stage}" -ov -format UDZO "${final}"
+  echo "Wrote ${final}"
+  echo "This disk image is not notarized. macOS will ask before the first launch."
+  exit 0
+fi
+
 hdiutil create -volname CleanSlate -srcfolder "${stage}" -ov -format UDRW "${raw}"
 hdiutil attach "${raw}" -mountpoint /Volumes/CleanSlate
 

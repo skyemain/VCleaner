@@ -109,7 +109,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.CleanSlate;
 				PRODUCT_NAME = CleanSlate;
-				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_STRICT_CONCURRENCY = minimal;
 				SWIFT_VERSION = 6.0;
 				CODE_SIGN_IDENTITY = "-";
 			}; name = Debug; };
@@ -126,7 +126,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.CleanSlate;
 				PRODUCT_NAME = CleanSlate;
-				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_STRICT_CONCURRENCY = minimal;
 				SWIFT_VERSION = 6.0;
 			}; name = Release; };
 		E8A7D59B347239969BCF4442 = { isa = XCBuildConfiguration; buildSettings = { 
@@ -136,7 +136,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.CleanSlateTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_STRICT_CONCURRENCY = minimal;
 				SWIFT_VERSION = 6.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CleanSlate.app/Contents/MacOS/CleanSlate";
 			}; name = Debug; };
@@ -147,7 +147,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.CleanSlateTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_STRICT_CONCURRENCY = minimal;
 				SWIFT_VERSION = 6.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CleanSlate.app/Contents/MacOS/CleanSlate";
 			}; name = Release; };

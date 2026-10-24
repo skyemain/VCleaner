@@ -92,7 +92,7 @@ def main() -> None:
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.CleanSlate;
 				PRODUCT_NAME = CleanSlate;
-				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_STRICT_CONCURRENCY = minimal;
 				SWIFT_VERSION = 6.0;"""
     test_settings = """
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -101,7 +101,7 @@ def main() -> None:
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.CleanSlateTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_STRICT_CONCURRENCY = minimal;
 				SWIFT_VERSION = 6.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CleanSlate.app/Contents/MacOS/CleanSlate";"""
     project_settings = """

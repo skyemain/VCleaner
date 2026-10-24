@@ -185,12 +185,12 @@ enum SystemCleaners {
         let caches = context.locations.url("Library/Caches").standardizedFileURL.resolvingSymlinksInPath().path
         guard parent == caches else { return .skipped }
         guard !ProtectedPaths.isReserved(url) else { return .skipped }
-        var info = stat()
+        var info = Darwin.stat()
         guard lstat(url.path, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG, info.st_uid == getuid() else { return .skipped }
         let descriptor = open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
         guard descriptor >= 0 else { return .failed("Could not open \(url.lastPathComponent).") }
         defer { close(descriptor) }
-        var opened = stat()
+        var opened = Darwin.stat()
         guard fstat(descriptor, &opened) == 0, opened.st_dev == info.st_dev, opened.st_ino == info.st_ino else {
             return .failed("Skipped \(url.lastPathComponent): it changed before it could be removed.")
         }
