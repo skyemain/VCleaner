@@ -1,0 +1,156 @@
+<UserControl x:Class="CleanSlate.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:CleanSlate.Presentation.ViewModels;assembly=CleanSlate.Presentation">
+    <ScrollViewer Style="{StaticResource PageScroll}">
+        <StackPanel Margin="24,0,24,28">
+            <Border Margin="0,4,0,0" Padding="14,10" CornerRadius="8" Background="{DynamicResource InfoBackgroundBrush}"
+                    Visibility="{Binding Message, Converter={StaticResource NotEmptyToVisibility}}">
+                <TextBlock Text="{Binding Message}" FontSize="12" />
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Sections}" Focusable="False" IsTabStop="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:SettingsSectionViewModel}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Title}" Style="{StaticResource SectionTitle}" />
+                            <TextBlock Text="{Binding Description}" Style="{StaticResource SecondaryText}" Margin="4,-4,0,8"
+                                       Visibility="{Binding Description, Converter={StaticResource NotEmptyToVisibility}}" />
+                            <ItemsControl ItemsSource="{Binding Toggles}" Focusable="False" IsTabStop="False">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:SettingToggleViewModel}">
+                                        <Border Style="{StaticResource Card}" Margin="0,0,0,6" Padding="16,10">
+                                            <CheckBox Style="{StaticResource SwitchCheckBox}" IsChecked="{Binding IsOn, Mode=TwoWay}"
+                                                      AutomationProperties.Name="{Binding Label}"
+                                                      AutomationProperties.HelpText="{Binding Description}">
+                                                <StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Description}" Style="{StaticResource SecondaryText}" />
+                                                    <TextBlock Text="{Binding Badge}" FontSize="11" FontWeight="SemiBold" Margin="0,3,0,0"
+                                                               Foreground="{DynamicResource WarningBrush}"
+                                                               Visibility="{Binding HasBadge, Converter={StaticResource BoolToVisibility}}" />
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="NOT SUPPORTED" Style="{StaticResource SectionTitle}" />
+            <ItemsControl ItemsSource="{Binding UnsupportedFeatures}" Focusable="False" IsTabStop="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:UnsupportedFeature}">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,6" Padding="16,10">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Reason}" Style="{StaticResource SecondaryText}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="NEVER CLEAN THESE" Style="{StaticResource SectionTitle}" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Folders and files listed here are skipped by every cleaner, even inside approved locations." Style="{StaticResource SecondaryText}" />
+                    <ItemsControl ItemsSource="{Binding ExcludedFolders}" Margin="0,8,0,0" Focusable="False" IsTabStop="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" Content="Remove" Padding="10,3" MinHeight="26"
+                                            Command="{Binding DataContext.RemoveExclusionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            AutomationProperties.Name="{Binding StringFormat=Remove exclusion {0}}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding ExcludedFiles}" Focusable="False" IsTabStop="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" Content="Remove" Padding="10,3" MinHeight="26"
+                                            Command="{Binding DataContext.RemoveExclusionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            AutomationProperties.Name="{Binding StringFormat=Remove exclusion {0}}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Content="Add folder..." Command="{Binding AddExcludedFolderCommand}" Margin="0,0,8,0" />
+                        <Button Content="Add file..." Command="{Binding AddExcludedFileCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="REGISTRY BACKUPS" Style="{StaticResource SectionTitle}" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Every registry repair saves a verified backup first. Open the list to restore one." Style="{StaticResource SecondaryText}" />
+                    <Button Content="View registry backups" Command="{Binding OpenBackupsCommand}" HorizontalAlignment="Left" Margin="0,10,0,0" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="HISTORY AND LOGS" Style="{StaticResource SectionTitle}" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="No sessions recorded yet.">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource SecondaryText}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding History.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ItemsControl ItemsSource="{Binding History}" Focusable="False" IsTabStop="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:HistoryItemViewModel}">
+                                <StackPanel Margin="0,0,0,8">
+                                    <TextBlock Text="{Binding When}" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="{Binding Summary}" Style="{StaticResource SecondaryText}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <WrapPanel Margin="0,6,0,0">
+                        <Button Content="Export report..." Command="{Binding ExportReportCommand}" Margin="0,0,8,6" />
+                        <Button Content="Open logs folder" Command="{Binding OpenLogsCommand}" Margin="0,0,8,6" />
+                        <Button Content="Clear history and logs" Command="{Binding ClearHistoryCommand}" Margin="0,0,8,6" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="ABOUT" Style="{StaticResource SectionTitle}" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding VersionText}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding PrivilegeText}" Style="{StaticResource SecondaryText}" />
+                    <TextBlock Text="CleanSlate never sends data anywhere and has no network access of its own." Style="{StaticResource SecondaryText}" Margin="0,4,0,0" />
+                    <Button Content="Reset all settings" Command="{Binding ResetCommand}" HorizontalAlignment="Left" Margin="0,12,0,0" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

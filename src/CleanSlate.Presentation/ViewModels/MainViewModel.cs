@@ -89,6 +89,7 @@ public sealed class MainViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsBusy));
                 OnPropertyChanged(nameof(ShowProgress));
                 OnPropertyChanged(nameof(ShowResults));
+                OnPropertyChanged(nameof(ShowNotice));
                 OnPropertyChanged(nameof(CanCancel));
                 OnPropertyChanged(nameof(ShowDone));
                 RaiseAllCommands();
@@ -153,8 +154,17 @@ public sealed class MainViewModel : ObservableObject
     public string Headline
     {
         get => _headline;
-        private set => SetProperty(ref _headline, value);
+        private set
+        {
+            if (SetProperty(ref _headline, value))
+            {
+                OnPropertyChanged(nameof(ShowNotice));
+            }
+        }
     }
+
+    /// <summary>A short message (for example "Canceled") shown when there is no completed result card.</summary>
+    public bool ShowNotice => !ShowResults && !string.IsNullOrEmpty(Headline);
 
     public string Detail
     {
