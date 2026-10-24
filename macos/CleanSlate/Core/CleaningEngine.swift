@@ -184,7 +184,11 @@ actor CleaningEngine {
     ) async -> ModuleCleanup {
         if await applications.isRunning(bundleIdentifier: browser.bundleIdentifier) {
             let mayQuit = request.allowBrowserQuit && request.mode == .manual
-            if !mayQuit || await applications.requestQuit(bundleIdentifier: browser.bundleIdentifier) == false {
+            var didQuit = false
+            if mayQuit {
+                didQuit = await applications.requestQuit(bundleIdentifier: browser.bundleIdentifier)
+            }
+            if !didQuit {
                 return ModuleCleanup(
                     deletedCount: 0,
                     deletedBytes: 0,
