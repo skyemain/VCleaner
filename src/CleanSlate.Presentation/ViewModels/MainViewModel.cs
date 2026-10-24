@@ -200,7 +200,7 @@ public sealed class MainViewModel : ObservableObject
     public bool HasRegistryIssues => _scan is not null && CanNavigate && RegistryIssueCount > 0;
 
     public int RegistryIssueCount =>
-        _scan is null ? 0 : Math.Max(0, _scan.AllFindings.Count(f => f.Action == ActionType.RepairRegistryEntry && f.IsEligible) - _registryRepaired);
+        _scan is null ? 0 : Math.Max(0, _scan.AllFindings.Count(f => f.Action == ActionType.RepairRegistryEntry) - _registryRepaired);
 
     public string ReviewRegistryText => $"Review {RegistryIssueCount} registry fix{(RegistryIssueCount == 1 ? string.Empty : "es")}";
 
@@ -529,7 +529,7 @@ public sealed class MainViewModel : ObservableObject
         }
 
         var issues = _scan.AllFindings
-            .Where(f => f.Action == ActionType.RepairRegistryEntry && f.IsEligible && f.Payload is RegistryIssue)
+            .Where(f => f.Action == ActionType.RepairRegistryEntry && f.Payload is RegistryIssue)
             .Select(f => (RegistryIssue)f.Payload!)
             .ToList();
         CurrentPage = new RegistryReviewViewModel(_ctx, issues, () => CurrentPage = null, OnRegistryRepaired);
