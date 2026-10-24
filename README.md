@@ -52,13 +52,20 @@ too if elevated). Windows shows its own confirmation for the root store. Result:
 "CleanSlate Development", and SmartScreen's "unknown publisher" goes away. *Delete everything* when uninstalling also removes it.
 Running a copy that is already installed from Downloads simply opens the installed copy, with no question.
 
+**"Blocked" from the Start menu but fine from Downloads (fixed in 1.3.2).** Copying the downloaded exe into the install folder
+used to carry the "downloaded from the internet" marker with it, so SmartScreen treated the installed copy as a brand-new
+unapproved download at every Start menu or sign-in launch, while the Downloads copy had already been approved once. Since 1.3.2
+the installer removes that marker, so only the *first* run of a downloaded build shows the SmartScreen screen (choose
+**More info > Run anyway**); the installed copy then starts cleanly from the Start menu and at sign-in.
+
 **Smart App Control is different and may still block it.** SAC is a Windows 11 allow-list: it runs only apps signed by a CA in
 Microsoft's trusted program or with good cloud reputation, and as far as documented it does not honour a certificate you added
-yourself. I could not test it. If the installed copy is still blocked, open Event Viewer > Applications and Services Logs >
-Microsoft > Windows > CodeIntegrity > Operational and look for event 3077 around the time of the block: it names the exact file
-that was refused. The options that actually work are a signature from a public CA (for example Azure Trusted Signing or a
-purchased code-signing certificate) or turning Smart App Control off (Windows Security > App & browser control > Smart App
-Control; it cannot be turned back on without resetting Windows).
+yourself. I could not test it. A real SAC block says "Smart App Control blocked an app that may be unsafe" and offers no way to
+run anyway — and it would block the Downloads copy and the installed copy alike, since they are identical files. If you see
+that, check Event Viewer > Applications and Services Logs > Microsoft > Windows > CodeIntegrity > Operational for event 3077
+around the time of the block: it names the exact file that was refused. The options that actually work are a signature from a
+public CA (for example Azure Trusted Signing or a purchased code-signing certificate) or turning Smart App Control off
+(Windows Security > App & browser control > Smart App Control; it cannot be turned back on without resetting Windows).
 
 ### Free up RAM
 

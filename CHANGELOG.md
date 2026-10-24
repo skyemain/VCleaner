@@ -5,6 +5,17 @@ see "Versioning" in the README.
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-10-24
+
+### Fixed
+- The installer now removes the "downloaded from the internet" marker from the installed exe. Windows carried that marker
+  over from the downloaded file, so SmartScreen treated every Start menu or sign-in launch of the installed copy as a new
+  unapproved download and blocked it, even after the download itself had been approved once.
+- The installed copy re-creates its sign-in startup entry (or, when enabled and elevated, the administrator task) at every
+  launch, so automatic cleaning at sign-in heals itself when the entry was lost or stale.
+- When opening the already-installed copy fails (for example it is blocked by policy), the downloaded copy now runs
+  instead of exiting silently.
+
 ## [1.3.1] - 2026-10-24
 
 ### Added

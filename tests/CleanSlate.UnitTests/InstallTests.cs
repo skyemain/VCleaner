@@ -74,6 +74,17 @@ public sealed class InstallTests : IDisposable
     }
 
     [Fact]
+    public void Installing_removes_the_download_marker_from_the_installed_exe()
+    {
+        var source = Build("CleanSlate-1.3.2-win-x64.exe", "build-1");
+
+        _service.Install(source, "1.3.2");
+
+        var installed = Path.Combine(_platform.InstallDirectory, "CleanSlate.exe");
+        Assert.Equal(new[] { installed }, _platform.RemovedDownloadMarkers);
+    }
+
+    [Fact]
     public void An_update_repoints_the_startup_entry_only_when_it_was_enabled()
     {
         _service.Install(Build("v1.exe", "build-1"), "1.2.0");

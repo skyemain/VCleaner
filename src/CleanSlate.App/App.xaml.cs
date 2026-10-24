@@ -95,6 +95,8 @@ public partial class App : Application
 
         _logger?.Info($"CleanSlate {VersionText()} started (elevated: {_services.GetRequiredService<IPrivilegeInfo>().IsElevated}).");
 
+        HealStartupEntries(settings);
+
         var autoClean = startup && settings.Current.AutoCleanOnStartup;
         if (startup && settings.Current.MinimizeToTray && !autoClean)
         {
@@ -155,6 +157,49 @@ public partial class App : Application
         new(new WindowsInstallPlatform(layout), new WindowsRegistryAccess(), new StartupRegistration(), NullAppLogger.Instance, new WindowsStartupTask());
 
     /// <summary>
+    /// Re-creates the sign-in startup entries at launch when the settings say they should exist. This heals an entry that was
+    /// lost or left pointing at a removed copy, which otherwise silently breaks "clean automatically when I sign in".
+    /// Only the installed copy does this, so a portable run never registers itself.
+    /// </summary>
+    private void HealStartupEntries(SettingsService settings)
+    {
+        var current = settings.Current;
+        var path = Environment.ProcessPath;
+        if (!current.LaunchOnStartup || string.IsNullOrEmpty(path) || _services is null ||
+            !_services.GetRequiredService<InstallService>().IsRunningFromInstallFolder(path))
+        {
+            return;
+        }
+
+        if (!current.ElevatedStartup)
+        {
+            try
+            {
+                _services.GetRequiredService<IStartupRegistration>().Register(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                _logger?.Warning("The sign-in startup entry could not be refreshed: " + ex.Message);
+            }
+        }
+        else if (_services.GetRequiredService<IPrivilegeInfo>().IsElevated)
+        {
+            try
+            {
+                var task = _services.GetRequiredService<IStartupTask>();
+                if (!task.IsRegistered)
+                {
+                    task.Register(path);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+            {
+                _logger?.Warning("The administrator sign-in task could not be refreshed: " + ex.Message);
+            }
+        }
+    }
+
+    /// <summary>
     /// Offers to install this copy (replacing an older installed version) before the app starts. Returns true when the installed copy
     /// was started instead and this process should exit. Nothing is asked when a <c>portable.txt</c> file sits next to the exe.
     /// </summary>
@@ -187,8 +232,16 @@ public partial class App : Application
 
             if (installed is not null && string.Equals(installed.Version, current, StringComparison.OrdinalIgnoreCase))
             {
-                InstallManager.Launch(installed.ExecutablePath);
-                return true;
+                try
+                {
+                    InstallManager.Launch(installed.ExecutablePath);
+                    return true;
+                }
+                catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+                {
+                    // The installed copy would not start (for example blocked by policy); run this copy instead.
+                    return false;
+                }
             }
 
             var message = installed is null

@@ -24,6 +24,12 @@ public interface IInstallPlatform
     /// <summary>Copies the file, replacing an existing one.</summary>
     void CopyFile(string source, string destination);
 
+    /// <summary>
+    /// Removes the "downloaded from the internet" marker from a file the installer wrote. Copying a downloaded exe carries the
+    /// marker along, and Windows then treats every launch of the installed copy as a brand-new unapproved download.
+    /// </summary>
+    void RemoveDownloadMarker(string path);
+
     void DeleteFile(string path);
 
     /// <summary>Deletes a folder and everything in it. Only called for the validated install and data folders.</summary>
@@ -144,6 +150,7 @@ public sealed class InstallService
             }
 
             _platform.CopyFile(sourceExecutable, target);
+            _platform.RemoveDownloadMarker(target);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

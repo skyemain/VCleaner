@@ -417,11 +417,13 @@ public sealed class DiskInstallPlatform : CleanSlate.Core.Install.IInstallPlatfo
     public int InstancesThatCannotBeStopped { get; set; }
     public List<string> StopRequests { get; } = new();
     public List<string> ScheduledDeletes { get; } = new();
+    public List<string> RemovedDownloadMarkers { get; } = new();
 
     public bool FileExists(string path) => File.Exists(path);
     public bool DirectoryExists(string path) => Directory.Exists(path);
     public void CreateDirectory(string path) => Directory.CreateDirectory(path);
     public void CopyFile(string source, string destination) => File.Copy(source, destination, overwrite: true);
+    public void RemoveDownloadMarker(string path) => RemovedDownloadMarkers.Add(path);
     public void DeleteFile(string path) => File.Delete(path);
     public void DeleteDirectory(string path) => Directory.Delete(path, recursive: true);
 

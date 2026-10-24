@@ -33,6 +33,23 @@ public sealed class WindowsInstallPlatform : IInstallPlatform
 
     public void CopyFile(string source, string destination) => File.Copy(source, destination, overwrite: true);
 
+    /// <summary>
+    /// Deletes the Zone.Identifier stream (Mark of the Web) that <see cref="File.Copy(string, string, bool)"/> carries over from a
+    /// downloaded exe. Without this, SmartScreen treats the installed copy as an unapproved download on every Start menu or
+    /// sign-in launch, even after the user already approved the download itself.
+    /// </summary>
+    public void RemoveDownloadMarker(string path)
+    {
+        try
+        {
+            File.Delete(path + ":Zone.Identifier");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            // The marker was absent or locked; the copied file itself is fine either way.
+        }
+    }
+
     public void DeleteFile(string path) => File.Delete(path);
 
     public void DeleteDirectory(string path) => Directory.Delete(path, recursive: true);

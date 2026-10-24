@@ -122,4 +122,6 @@ Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Clea
 - [ ] First launch of the single file works from a read-only location and from `%USERPROFILE%\Downloads`; the second launch is noticeably faster.
 - [ ] Signed build on a PC that trusts `CleanSlate-dev.cer`: Properties > Digital Signatures lists the signer and a timestamp, and `signtool verify /pa` succeeds.
 - [ ] Signed build on a PC that does not trust the certificate: signature is reported untrusted and the publisher is unknown (expected). Record whether SmartScreen warned.
+- [ ] Install a freshly downloaded exe: the installed `%LOCALAPPDATA%\Programs\CleanSlate\CleanSlate.exe` has no `Zone.Identifier` stream (`Get-Item -Stream *` in PowerShell), its Properties dialog shows no "Unblock" checkbox, and launching it from the Start menu shows no SmartScreen screen.
+- [ ] With "Clean automatically when I sign in" on, delete `HKCU\...\Run\CleanSlate` by hand and start the installed copy: the entry is back (healed) and the next sign-in cleans automatically.
 - [ ] Runs on a machine with no .NET installed.
