@@ -96,6 +96,35 @@ public interface IStartupRegistration
     void Unregister();
 }
 
+/// <summary>An elevated sign-in entry (a scheduled task with highest privileges) so automatic cleaning can include admin-only areas without a UAC prompt.</summary>
+public interface IStartupTask
+{
+    bool IsRegistered { get; }
+
+    /// <summary>Creates or replaces the task. Only works from an elevated process.</summary>
+    void Register(string executablePath);
+
+    void Unregister();
+}
+
+public sealed record MemoryStatus(long TotalBytes, long AvailableBytes)
+{
+    public long UsedBytes => Math.Max(0, TotalBytes - AvailableBytes);
+}
+
+public sealed record MemoryCleanResult(MemoryStatus Before, MemoryStatus After, int ProcessesTrimmed, int ProcessesSkipped)
+{
+    public long FreedBytes => Math.Max(0, After.AvailableBytes - Before.AvailableBytes);
+}
+
+/// <summary>Trims the working sets of running programs so Windows can reuse that RAM. Nothing is closed or deleted.</summary>
+public interface IMemoryCleaner
+{
+    MemoryStatus GetStatus();
+
+    MemoryCleanResult Clean(CancellationToken cancellationToken);
+}
+
 public interface IHistoryStore
 {
     void Save(SessionRecord session);

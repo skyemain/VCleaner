@@ -5,6 +5,13 @@ see "Versioning" in the README.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-24
+
+### Added
+- Automatic cleaning at sign-in: window opens, 5 s cancelable countdown, scan, clean (unattended-safe categories only), result shown, then the app closes itself. Settings > Automation.
+- Optional elevated start through a Windows scheduled task, so automatic cleaning can include Windows Temp, Prefetch and Windows logs without a UAC prompt.
+- **Free up RAM** button: trims idle programs' working sets and reports the RAM freed.
+
 ## [1.2.0] - 2026-10-24
 
 ### Added

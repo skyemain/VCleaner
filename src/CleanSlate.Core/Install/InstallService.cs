@@ -77,9 +77,11 @@ public sealed class InstallService
     private readonly IRegistryAccess _registry;
     private readonly IStartupRegistration _startup;
     private readonly IAppLogger _log;
+    private readonly IStartupTask? _startupTask;
 
-    public InstallService(IInstallPlatform platform, IRegistryAccess registry, IStartupRegistration startup, IAppLogger log)
+    public InstallService(IInstallPlatform platform, IRegistryAccess registry, IStartupRegistration startup, IAppLogger log, IStartupTask? startupTask = null)
     {
+        _startupTask = startupTask;
         _platform = platform;
         _registry = registry;
         _startup = startup;
@@ -197,6 +199,18 @@ public sealed class InstallService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _log.Warning("The startup entry could not be removed: " + ex.Message);
+        }
+
+        try
+        {
+            if (_startupTask is { IsRegistered: true })
+            {
+                _startupTask.Unregister();
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            _log.Warning("The elevated startup task could not be removed (administrator rights are needed). Delete the \"CleanSlate\" task in Task Scheduler: " + ex.Message);
         }
 
         TryDeleteFile(_platform.StartMenuShortcutPath);

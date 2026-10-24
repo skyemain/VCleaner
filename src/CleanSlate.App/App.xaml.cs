@@ -95,7 +95,8 @@ public partial class App : Application
 
         _logger?.Info($"CleanSlate {VersionText()} started (elevated: {_services.GetRequiredService<IPrivilegeInfo>().IsElevated}).");
 
-        if (startup && settings.Current.MinimizeToTray)
+        var autoClean = startup && settings.Current.AutoCleanOnStartup;
+        if (startup && settings.Current.MinimizeToTray && !autoClean)
         {
             _window.WindowState = WindowState.Minimized;
             _window.ShowActivated = false;
@@ -105,6 +106,22 @@ public partial class App : Application
         else
         {
             _window.Show();
+        }
+
+        if (autoClean)
+        {
+            _window.BringToFront();
+            Dispatcher.BeginInvoke(new Action(async () =>
+            {
+                try
+                {
+                    await viewModel.RunAutomaticAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger?.Error("The automatic clean failed", ex);
+                }
+            }), DispatcherPriority.Background);
         }
 
         StartActivationListener();
@@ -135,7 +152,7 @@ public partial class App : Application
     }
 
     private static InstallService CreateInstallService(AppDataLayout layout) =>
-        new(new WindowsInstallPlatform(layout), new WindowsRegistryAccess(), new StartupRegistration(), NullAppLogger.Instance);
+        new(new WindowsInstallPlatform(layout), new WindowsRegistryAccess(), new StartupRegistration(), NullAppLogger.Instance, new WindowsStartupTask());
 
     /// <summary>
     /// Offers to install this copy (replacing an older installed version) before the app starts. Returns true when the installed copy
@@ -323,12 +340,14 @@ public partial class App : Application
         services.AddSingleton<IRestorePointService>(sp => new WindowsRestorePointService(sp.GetRequiredService<IPrivilegeInfo>()));
         services.AddSingleton<IStartupRegistration, StartupRegistration>();
         services.AddSingleton<IBrowserRunningDetector, ProcessBrowserRunningDetector>();
+        services.AddSingleton<IStartupTask, WindowsStartupTask>();
+        services.AddSingleton<IMemoryCleaner, WindowsMemoryCleaner>();
         services.AddSingleton<IBrowserCloser, ProcessBrowserCloser>();
         services.AddSingleton<IBrowserInventory>(sp => new BrowserInventory(
             sp.GetRequiredService<CleanSlate.Core.Models.SystemPaths>(), sp.GetRequiredService<IBrowserRunningDetector>()));
         services.AddSingleton(sp => new InstallService(
             new WindowsInstallPlatform(sp.GetRequiredService<AppDataLayout>()), sp.GetRequiredService<IRegistryAccess>(),
-            sp.GetRequiredService<IStartupRegistration>(), sp.GetRequiredService<IAppLogger>()));
+            sp.GetRequiredService<IStartupRegistration>(), sp.GetRequiredService<IAppLogger>(), sp.GetRequiredService<IStartupTask>()));
         services.AddSingleton<IInstallManager>(sp => new InstallManager(sp.GetRequiredService<InstallService>(), VersionText()));
 
         services.AddSingleton<RunGate>();
@@ -374,6 +393,8 @@ public partial class App : Application
             Log = sp.GetRequiredService<IAppLogger>(),
             Browsers = sp.GetRequiredService<IBrowserInventory>(),
             Installer = sp.GetRequiredService<IInstallManager>(),
+            Memory = sp.GetRequiredService<IMemoryCleaner>(),
+            StartupTask = sp.GetRequiredService<IStartupTask>(),
             VersionText = VersionText()
         });
         services.AddSingleton<MainViewModel>();

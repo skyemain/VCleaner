@@ -94,6 +94,52 @@ public sealed class FakeInstaller : IInstallManager
     }
 }
 
+public sealed class FakeMemory : IMemoryCleaner
+{
+    public MemoryStatus Status { get; set; } = new(16L << 30, 6L << 30);
+    public long FreedOnClean { get; set; } = 1L << 30;
+    public int CleanCalls { get; private set; }
+
+    public MemoryStatus GetStatus() => Status;
+
+    public MemoryCleanResult Clean(CancellationToken cancellationToken)
+    {
+        CleanCalls++;
+        var after = Status with { AvailableBytes = Status.AvailableBytes + FreedOnClean };
+        var result = new MemoryCleanResult(Status, after, 40, 12);
+        Status = after;
+        return result;
+    }
+}
+
+public sealed class FakeStartupTask : IStartupTask
+{
+    public bool IsRegistered { get; private set; }
+    public string? Path { get; private set; }
+    public bool Fail { get; set; }
+
+    public void Register(string executablePath)
+    {
+        if (Fail)
+        {
+            throw new InvalidOperationException("access denied");
+        }
+
+        IsRegistered = true;
+        Path = executablePath;
+    }
+
+    public void Unregister()
+    {
+        if (Fail)
+        {
+            throw new InvalidOperationException("access denied");
+        }
+
+        IsRegistered = false;
+    }
+}
+
 public sealed class FakeLogs : ILogAccess
 {
     public string LogsDirectory { get; set; } = "logs";
@@ -141,7 +187,8 @@ public sealed class MemorySettingsStore : ISettingsStore
 /// <summary>Wires the real engine, real modules and the real view models to fakes for the Windows-only edges.</summary>
 public sealed class PresentationHarness : IDisposable
 {
-    public PresentationHarness(Action<CleanSlateSettings>? configure = null, ICleaningEngine? engineOverride = null, RegistryScanLocations? registryLocations = null)
+    public PresentationHarness(Action<CleanSlateSettings>? configure = null, ICleaningEngine? engineOverride = null, RegistryScanLocations? registryLocations = null,
+        TimeSpan? autoStartDelay = null)
     {
         Core = new Harness(registryLocations);
         Store = new MemorySettingsStore();
@@ -156,6 +203,8 @@ public sealed class PresentationHarness : IDisposable
         Logs = new FakeLogs();
         Startup = new FakeStartup();
         Installer = new FakeInstaller();
+        Memory = new FakeMemory();
+        StartupTask = new FakeStartupTask();
 
         Context = new PresentationContext
         {
@@ -172,7 +221,11 @@ public sealed class PresentationHarness : IDisposable
             Startup = Startup,
             Log = Core.Log,
             Browsers = new BrowserInventory(Core.Paths, Core.Browser),
-            Installer = Installer
+            Installer = Installer,
+            Memory = Memory,
+            StartupTask = StartupTask,
+            AutoStartDelay = autoStartDelay ?? TimeSpan.Zero,
+            AutoCloseDelay = TimeSpan.Zero
         };
         Main = new MainViewModel(Context);
     }
@@ -188,6 +241,8 @@ public sealed class PresentationHarness : IDisposable
     public FakeLogs Logs { get; }
     public FakeStartup Startup { get; }
     public FakeInstaller Installer { get; }
+    public FakeMemory Memory { get; }
+    public FakeStartupTask StartupTask { get; }
     public PresentationContext Context { get; }
     public MainViewModel Main { get; }
 

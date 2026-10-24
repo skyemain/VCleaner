@@ -385,6 +385,205 @@ public sealed class BrowserCloseFlowTests
     }
 }
 
+public sealed class AutomationTests
+{
+    private static string TempFile(PresentationHarness h, string name) => h.Core.Temp.Combine("Users/tester/AppData/Local/Temp/" + name);
+
+    [Fact]
+    public async Task Automatic_run_cleans_without_asking_and_closes_itself()
+    {
+        using var h = new PresentationHarness(s => { s.CleanUserTemp = true; s.CloseAfterAutoClean = true; });
+        h.UserTempFile("a.tmp", 1000);
+
+        await h.Main.RunAutomaticAsync();
+
+        Assert.Empty(h.Dialogs.Confirmations);
+        Assert.False(File.Exists(TempFile(h, "a.tmp")));
+        Assert.Equal(AppState.Completed, h.Main.State);
+        Assert.Contains("Recovered", h.Main.Headline);
+        Assert.Equal(1, h.Lifecycle.ShutdownCalls);
+    }
+
+    [Fact]
+    public async Task Automatic_run_stays_open_when_close_after_is_off()
+    {
+        using var h = new PresentationHarness(s => { s.CleanUserTemp = true; s.CloseAfterAutoClean = false; });
+        h.UserTempFile("a.tmp", 1000);
+
+        await h.Main.RunAutomaticAsync();
+
+        Assert.Equal(0, h.Lifecycle.ShutdownCalls);
+        Assert.Equal(AppState.Completed, h.Main.State);
+    }
+
+    [Fact]
+    public async Task Automatic_run_skips_items_that_need_confirmation_and_never_shows_the_review_page()
+    {
+        using var h = new PresentationHarness(s => { s.CleanUserTemp = true; s.EmptyRecycleBin = true; });
+        h.UserTempFile("a.tmp", 1000);
+        h.Core.Bin.Items = 3;
+        h.Core.Bin.Bytes = 5000;
+
+        await h.Main.RunAutomaticAsync();
+
+        Assert.Null(h.Main.CurrentPage);
+        Assert.Equal(0, h.Core.Bin.EmptyCalls);
+        Assert.False(File.Exists(TempFile(h, "a.tmp")));
+        Assert.Contains("need your confirmation", h.Main.Detail);
+    }
+
+    [Fact]
+    public async Task Automatic_run_closes_a_running_browser_without_asking_and_keeps_sign_in_data()
+    {
+        const string edge = "Users/tester/AppData/Local/Microsoft/Edge/User Data";
+        using var h = new PresentationHarness(s => { s.CleanEdgeCache = true; s.AskBeforeClosingBrowsers = true; s.CloseBrowsersBeforeCleaning = true; });
+        h.Core.Temp.CreateFile($"{edge}/Default/Cache/Cache_Data/data_0", 4096, Harness.OldUtc);
+        h.Core.Temp.CreateFile($"{edge}/Default/Preferences", 50, Harness.OldUtc);
+        h.Core.Temp.CreateFile($"{edge}/Default/Network/Cookies", 100, Harness.OldUtc);
+        File.WriteAllText(h.Core.Temp.Combine(edge, "Local State"), "{\"profile\":{\"info_cache\":{\"Default\":{\"name\":\"Me\"}}}}");
+        h.Core.Browser.Running = true;
+
+        await h.Main.RunAutomaticAsync();
+
+        Assert.Empty(h.Dialogs.Confirmations);
+        Assert.Equal(1, h.Core.Closer.CloseCalls);
+        Assert.False(File.Exists(h.Core.Temp.Combine(edge, "Default", "Cache", "Cache_Data", "data_0")));
+        Assert.True(File.Exists(h.Core.Temp.Combine(edge, "Default", "Network", "Cookies")));
+    }
+
+    [Fact]
+    public async Task Canceling_the_countdown_changes_nothing_and_keeps_the_app_open()
+    {
+        using var h = new PresentationHarness(s => s.CleanUserTemp = true, autoStartDelay: TimeSpan.FromSeconds(30));
+        h.UserTempFile("a.tmp", 1000);
+
+        var run = h.Main.RunAutomaticAsync();
+        var shown = await PresentationHarness.WaitFor(() => h.Main.ShowAuto ? h.Main.AutoText : null);
+        Assert.Contains("starts in", shown);
+        Assert.True(h.Main.CancelAutoCommand.CanExecute(null));
+        h.Main.CancelAutoCommand.Execute(null);
+        await run;
+
+        Assert.True(File.Exists(TempFile(h, "a.tmp")));
+        Assert.Equal(AppState.Ready, h.Main.State);
+        Assert.Equal(0, h.Lifecycle.ShutdownCalls);
+        Assert.False(h.Main.ShowAuto);
+    }
+
+    [Fact]
+    public async Task Auto_clean_toggle_asks_first_and_turns_on_startup()
+    {
+        using var h = new PresentationHarness();
+        h.Main.OpenSettingsCommand.Execute(null);
+        var settings = (SettingsViewModel)h.Main.CurrentPage!;
+
+        await settings.Toggle("auto-clean").SetAsync(true);
+
+        Assert.Contains(h.Dialogs.Confirmations, c => c.Title.Contains("automatically"));
+        Assert.True(h.Store.Stored.AutoCleanOnStartup);
+        Assert.True(h.Store.Stored.LaunchOnStartup);
+        Assert.True(h.Startup.IsRegistered);
+    }
+
+    [Fact]
+    public async Task Declining_the_auto_clean_consent_changes_nothing()
+    {
+        using var h = new PresentationHarness();
+        h.Main.OpenSettingsCommand.Execute(null);
+        var settings = (SettingsViewModel)h.Main.CurrentPage!;
+        h.Dialogs.Answer = false;
+
+        await settings.Toggle("auto-clean").SetAsync(true);
+
+        Assert.False(h.Store.Stored.AutoCleanOnStartup);
+        Assert.False(h.Startup.IsRegistered);
+    }
+
+    [Fact]
+    public async Task Turning_off_startup_also_turns_off_auto_clean()
+    {
+        using var h = new PresentationHarness();
+        h.Main.OpenSettingsCommand.Execute(null);
+        var settings = (SettingsViewModel)h.Main.CurrentPage!;
+        await settings.Toggle("auto-clean").SetAsync(true);
+
+        await settings.Toggle("startup").SetAsync(false);
+
+        Assert.False(h.Store.Stored.AutoCleanOnStartup);
+        Assert.False(h.Store.Stored.LaunchOnStartup);
+    }
+
+    [Fact]
+    public async Task Admin_startup_needs_elevation_then_swaps_the_run_key_for_the_task()
+    {
+        using var h = new PresentationHarness();
+        h.Main.OpenSettingsCommand.Execute(null);
+        var settings = (SettingsViewModel)h.Main.CurrentPage!;
+
+        await settings.Toggle("admin-start").SetAsync(true);
+        Assert.False(h.Store.Stored.ElevatedStartup);
+        Assert.False(h.StartupTask.IsRegistered);
+        Assert.Contains("administrator", settings.Message);
+
+        h.Elevation.IsElevated = true;
+        await settings.Toggle("startup").SetAsync(true);
+        await settings.Toggle("admin-start").SetAsync(true);
+
+        Assert.True(h.StartupTask.IsRegistered);
+        Assert.False(h.Startup.IsRegistered);
+        Assert.True(h.Store.Stored.ElevatedStartup);
+        Assert.True(h.Store.Stored.LaunchOnStartup);
+
+        await settings.Toggle("admin-start").SetAsync(false);
+
+        Assert.False(h.StartupTask.IsRegistered);
+        Assert.True(h.Startup.IsRegistered);
+    }
+
+    [Fact]
+    public async Task Free_ram_reports_what_was_freed()
+    {
+        using var h = new PresentationHarness();
+        Assert.Contains("in use of", h.Main.RamText);
+        Assert.True(h.Main.FreeRamCommand.CanExecute(null));
+
+        await h.Main.FreeRamCommand.ExecuteAsync();
+
+        Assert.Equal(1, h.Memory.CleanCalls);
+        Assert.StartsWith("Freed 1 GB", h.Main.RamText);
+    }
+
+    [Fact]
+    public async Task Free_ram_with_nothing_to_free_says_so()
+    {
+        using var h = new PresentationHarness();
+        h.Memory.FreedOnClean = 0;
+
+        await h.Main.FreeRamCommand.ExecuteAsync();
+
+        Assert.Contains("Already lean", h.Main.RamText);
+    }
+
+    [Fact]
+    public async Task Free_ram_is_unavailable_while_cleaning()
+    {
+        var engine = new ControllableEngine();
+        using var h = new PresentationHarness(engineOverride: engine);
+        engine.OnScan = async (_, token) =>
+        {
+            await Task.Delay(Timeout.Infinite, token);
+            return null!;
+        };
+
+        var run = h.Main.PrimaryCommand.ExecuteAsync();
+        await engine.Started.Task;
+
+        Assert.False(h.Main.FreeRamCommand.CanExecute(null));
+        h.Main.CancelCommand.Execute(null);
+        await run;
+    }
+}
+
 public sealed class RegistryReviewTests
 {
     private static void SeedBroken(PresentationHarness h)

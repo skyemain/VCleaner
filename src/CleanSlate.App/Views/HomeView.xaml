@@ -15,8 +15,16 @@
                     AutomationProperties.Name="{Binding PrimaryButtonText}"
                     AutomationProperties.HelpText="Scans your PC, then removes the junk that is safe to remove." />
 
+            <Border Margin="0,22,0,0" Padding="16,10" CornerRadius="12" Background="{DynamicResource AccentSoftBrush}"
+                    Visibility="{Binding ShowAuto, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="Automatic clean">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding AutoText}" FontFamily="{StaticResource MonoFont}" FontSize="13" TextAlignment="Center" />
+                    <Button Content="{Binding AutoCancelText}" Command="{Binding CancelAutoCommand}" HorizontalAlignment="Center" Margin="0,10,0,0" />
+                </StackPanel>
+            </Border>
+
             <TextBlock Text="{Binding LastCleanedText}" Style="{StaticResource SecondaryText}" FontFamily="{StaticResource MonoFont}"
-                       FontSize="11" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,30,0,0" />
+                       FontSize="11" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,22,0,0" />
 
             <StackPanel Margin="0,18,0,0" Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibility}}">
                 <ProgressBar IsIndeterminate="{Binding IsIndeterminate}" Value="{Binding ProgressFraction, Mode=OneWay}"
@@ -51,8 +59,9 @@
             </Border>
         </StackPanel>
 
-        <Grid Grid.Column="1" VerticalAlignment="Center" MaxWidth="720" HorizontalAlignment="Stretch">
-            <StackPanel>
+        <ScrollViewer Grid.Column="1" VerticalAlignment="Center" MaxWidth="720" HorizontalAlignment="Stretch"
+                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+            <StackPanel Margin="0,0,8,0">
                 <TextBlock Text="// TARGETS" Style="{StaticResource SectionTitle}" Margin="2,0,0,12" />
 
                 <ItemsControl ItemsSource="{Binding Rows}" Focusable="False" IsTabStop="False">
@@ -80,6 +89,26 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
+                <Border Style="{StaticResource Card}" Margin="0,0,0,8" Padding="18,11"
+                        Visibility="{Binding ShowRam, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="Memory">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="28" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE950;" FontFamily="{StaticResource IconFont}" FontSize="14" Foreground="{DynamicResource AccentBrush}"
+                                   VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="MEMORY" FontFamily="{StaticResource MonoFont}" FontWeight="SemiBold" FontSize="12" />
+                            <TextBlock Text="{Binding RamText}" Style="{StaticResource SecondaryText}" FontSize="12" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <Button Grid.Column="2" Content="Free up RAM" Command="{Binding FreeRamCommand}" VerticalAlignment="Center" Margin="16,0,0,0"
+                                ToolTip="Asks Windows to release RAM held by idle programs. Nothing is closed. The effect is partly temporary."
+                                AutomationProperties.HelpText="Releases memory held by idle programs without closing anything." />
+                    </Grid>
+                </Border>
+
                 <Button Style="{StaticResource LinkButton}" Content="{Binding ReviewRegistryText}" Command="{Binding ReviewRegistryCommand}"
                         HorizontalAlignment="Left" Margin="2,6,0,0"
                         Visibility="{Binding HasRegistryIssues, Converter={StaticResource BoolToVisibility}}" />
@@ -98,6 +127,6 @@
                     </Grid>
                 </Border>
             </StackPanel>
-        </Grid>
+        </ScrollViewer>
     </Grid>
 </UserControl>

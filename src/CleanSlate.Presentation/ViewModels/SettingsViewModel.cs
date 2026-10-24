@@ -339,6 +339,15 @@ public sealed class SettingsViewModel : PageViewModel
                 T("tray", "Minimize to the notification area", "Keeps CleanSlate in the tray when the window is minimized.", s => s.MinimizeToTray, (s, v) => s.MinimizeToTray = v),
                 T("notify", "Show a notification when cleaning finishes", "Only shown when the window is not in front.", s => s.ShowCompletionNotifications, (s, v) => s.ShowCompletionNotifications = v)
             }),
+            new("Automation", "Sign in, and CleanSlate opens, cleans on its own, shows what it recovered and closes. Only categories that are safe to run unattended are cleaned.", new[]
+            {
+                T("auto-clean", "Clean automatically when I sign in", "Opens a window, waits 5 seconds (you can cancel), scans, cleans and then closes itself. Also turns on starting with Windows.",
+                    s => s.AutoCleanOnStartup, (s, v) => s.AutoCleanOnStartup = v,
+                    "Clean automatically at sign-in?", "Every time you sign in, CleanSlate will open, wait 5 seconds, then permanently delete the categories you have enabled that are safe to run unattended (temp files, Prefetch, caches, and Chrome and Edge caches, closing those browsers if they are open). Your sign-ins, passwords and bookmarks are not touched. The Recycle Bin, privacy items, website storage and registry fixes are never done automatically. You can cancel during the countdown.", "Permanent"),
+                T("auto-close", "Close CleanSlate after an automatic clean", "Shows the result for about 12 seconds, then closes. Off keeps the window open.", s => s.CloseAfterAutoClean, (s, v) => s.CloseAfterAutoClean = v),
+                T("admin-start", "Start with administrator rights (no prompt)", "Uses a Windows scheduled task so Windows Temp, Prefetch and Windows logs are cleaned at sign-in too. Turn it on or off while CleanSlate is running as administrator.", s => s.ElevatedStartup, (s, v) => s.ElevatedStartup = v,
+                    "Start with administrator rights?", "CleanSlate will be started by a Windows scheduled task named \"CleanSlate\" that runs with administrator rights at every sign-in, without a UAC prompt. Anything that runs CleanSlate.exe from the install folder then runs elevated, so keep that folder protected. You can turn this off here at any time.", "Administrator")
+            }),
             new("Cleaning behavior", "One-click cleaning only runs categories that are safe to run unattended.", new[]
             {
                 T("review", "Always review before cleaning", "Shows every category and lets you deselect items before anything is deleted.", s => s.ReviewBeforeCleaning, (s, v) => s.ReviewBeforeCleaning = v)
@@ -407,9 +416,35 @@ public sealed class SettingsViewModel : PageViewModel
         var previousStartup = settings.LaunchOnStartup;
         set(settings, value);
 
-        if (toggle.Key == "startup" && !ApplyStartup(value))
+        if (toggle.Key == "startup")
         {
-            settings.LaunchOnStartup = previousStartup;
+            if (!ApplyStartup(value))
+            {
+                settings.LaunchOnStartup = previousStartup;
+                return false;
+            }
+
+            if (!value && settings.AutoCleanOnStartup)
+            {
+                settings.AutoCleanOnStartup = false;
+                Toggle("auto-clean").Refresh();
+            }
+        }
+        else if (toggle.Key == "auto-clean" && value && !settings.LaunchOnStartup)
+        {
+            settings.LaunchOnStartup = true;
+            if (!ApplyStartup(true))
+            {
+                settings.LaunchOnStartup = previousStartup;
+                settings.AutoCleanOnStartup = false;
+                return false;
+            }
+
+            Toggle("startup").Refresh();
+        }
+        else if (toggle.Key == "admin-start" && !ApplyElevatedStartup(value, previousStartup))
+        {
+            settings.ElevatedStartup = !value;
             return false;
         }
 
@@ -440,11 +475,20 @@ public sealed class SettingsViewModel : PageViewModel
                     return false;
                 }
 
+                if (_ctx.Settings.Current.ElevatedStartup)
+                {
+                    return true;
+                }
+
                 _ctx.Startup.Register(path);
             }
             else
             {
                 _ctx.Startup.Unregister();
+                if (_ctx.Settings.Current.ElevatedStartup && !RemoveStartupTask())
+                {
+                    return false;
+                }
             }
 
             return true;
@@ -453,6 +497,81 @@ public sealed class SettingsViewModel : PageViewModel
         {
             _ctx.Log.Error("Could not update the startup entry", ex);
             Message = "Windows refused the startup change: " + ex.Message;
+            return false;
+        }
+    }
+
+    private bool RemoveStartupTask()
+    {
+        if (_ctx.StartupTask is null)
+        {
+            return true;
+        }
+
+        try
+        {
+            _ctx.StartupTask.Unregister();
+            _ctx.Settings.Current.ElevatedStartup = false;
+            Toggle("admin-start").Refresh();
+            return true;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException or IOException)
+        {
+            _ctx.Log.Warning("Could not remove the startup task: " + ex.Message);
+            Message = "The administrator startup task could not be removed. Run CleanSlate as administrator and turn it off, or delete the \"CleanSlate\" task in Task Scheduler.";
+            return false;
+        }
+    }
+
+    /// <summary>Switches between the normal per-user startup entry and the elevated scheduled task.</summary>
+    private bool ApplyElevatedStartup(bool enable, bool previousStartup)
+    {
+        var task = _ctx.StartupTask;
+        if (task is null)
+        {
+            Message = "The administrator startup task is not available here.";
+            return false;
+        }
+
+        if (!_ctx.Elevation.IsElevated)
+        {
+            Message = "Turning this on or off needs administrator rights. Use \"Run as administrator\" on the home screen first.";
+            return false;
+        }
+
+        var settings = _ctx.Settings.Current;
+        try
+        {
+            if (enable)
+            {
+                var path = _ctx.Lifecycle.ExecutablePath;
+                if (string.IsNullOrEmpty(path))
+                {
+                    Message = "The program path is unknown, so the task was not created.";
+                    return false;
+                }
+
+                task.Register(path);
+                _ctx.Startup.Unregister();
+                settings.LaunchOnStartup = true;
+                Toggle("startup").Refresh();
+            }
+            else
+            {
+                task.Unregister();
+                if (settings.LaunchOnStartup && _ctx.Lifecycle.ExecutablePath is { Length: > 0 } path)
+                {
+                    _ctx.Startup.Register(path);
+                }
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException or IOException or ArgumentException)
+        {
+            _ctx.Log.Error("Could not change the administrator startup task", ex);
+            Message = "Windows refused the task change: " + ex.Message;
+            settings.LaunchOnStartup = previousStartup;
             return false;
         }
     }
@@ -589,10 +708,23 @@ public sealed class SettingsViewModel : PageViewModel
         }
 
         var hadStartup = _ctx.Settings.Current.LaunchOnStartup;
+        var hadTask = _ctx.Settings.Current.ElevatedStartup;
         _ctx.Settings.Reset();
         if (hadStartup)
         {
             ApplyStartup(false);
+        }
+
+        if (hadTask && _ctx.StartupTask is not null)
+        {
+            try
+            {
+                _ctx.StartupTask.Unregister();
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException or IOException)
+            {
+                _ctx.Log.Warning("Could not remove the startup task during reset: " + ex.Message);
+            }
         }
 
         BindToggles();

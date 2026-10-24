@@ -13,6 +13,15 @@ public sealed class CleanSlateSettings
     public bool FollowSystemTheme { get; set; } = true;
     public bool LaunchOnStartup { get; set; }
     public bool MinimizeToTray { get; set; }
+
+    /// <summary>At sign-in: open, wait a few seconds, scan, clean what is safe unattended, then close. Needs <see cref="LaunchOnStartup"/>.</summary>
+    public bool AutoCleanOnStartup { get; set; }
+
+    /// <summary>Close the app after an automatic clean once the result has been shown.</summary>
+    public bool CloseAfterAutoClean { get; set; } = true;
+
+    /// <summary>Start through an elevated scheduled task (no UAC prompt at sign-in) instead of the normal startup entry.</summary>
+    public bool ElevatedStartup { get; set; }
     public bool ShowCompletionNotifications { get; set; } = true;
 
     // Cleaning - system junk
@@ -78,6 +87,9 @@ public sealed class CleanSlateSettings
         FollowSystemTheme = FollowSystemTheme,
         LaunchOnStartup = LaunchOnStartup,
         MinimizeToTray = MinimizeToTray,
+        AutoCleanOnStartup = AutoCleanOnStartup,
+        CloseAfterAutoClean = CloseAfterAutoClean,
+        ElevatedStartup = ElevatedStartup,
         ShowCompletionNotifications = ShowCompletionNotifications,
         CleanUserTemp = CleanUserTemp,
         CleanWindowsTemp = CleanWindowsTemp,

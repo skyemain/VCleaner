@@ -228,3 +228,20 @@ public sealed class WindowsPlatformTests
         Assert.Equal(@"%CleanSlateUndefinedVar%\x", env.Expand(@"%CleanSlateUndefinedVar%\x"));
     }
 }
+
+public sealed class StartupTaskXmlTests
+{
+    [Fact]
+    public void Task_definition_is_valid_xml_runs_elevated_at_logon_and_escapes_values()
+    {
+        var xml = WindowsStartupTask.BuildXml(@"PC\Tom & Jerry", @"C:\Users\Tom & Jerry\AppData\Local\Programs\CleanSlate\CleanSlate.exe");
+
+        var doc = System.Xml.Linq.XDocument.Parse(xml.Substring(xml.IndexOf("<Task", StringComparison.Ordinal)));
+        var text = doc.ToString();
+        Assert.Contains("HighestAvailable", text);
+        Assert.Contains("LogonTrigger", text);
+        Assert.Contains("--startup", text);
+        Assert.Contains("DisallowStartIfOnBatteries>false", text);
+        Assert.Contains("Tom &amp; Jerry", text);
+    }
+}

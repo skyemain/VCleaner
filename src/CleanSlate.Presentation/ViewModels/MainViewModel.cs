@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using CleanSlate.Core.Interfaces;
 using CleanSlate.Core.Models;
 using CleanSlate.Core.Services;
 using CleanSlate.Presentation.Infrastructure;
@@ -38,6 +39,11 @@ public sealed class MainViewModel : ObservableObject
     private int _registryRepaired;
     private long _liveBytes;
     private long _liveItems;
+    private CancellationTokenSource? _autoCts;
+    private string _autoText = string.Empty;
+    private string _autoCancelText = string.Empty;
+    private string _ramText = string.Empty;
+    private bool _ramBusy;
 
     public MainViewModel(PresentationContext ctx)
     {
@@ -51,7 +57,9 @@ public sealed class MainViewModel : ObservableObject
             new(CleanerGroup.Privacy, "Run history and recent items, opt-in")
         };
 
-        PrimaryCommand = new AsyncRelayCommand(RunAsync, () => CanStart, OnUnexpectedError);
+        PrimaryCommand = new AsyncRelayCommand(() => RunAsync(automatic: false), () => CanStart, OnUnexpectedError);
+        CancelAutoCommand = new RelayCommand(CancelAuto, () => ShowAuto);
+        FreeRamCommand = new AsyncRelayCommand(FreeRamAsync, () => CanFreeRam, OnUnexpectedError);
         CancelCommand = new RelayCommand(Cancel, () => State is AppState.Scanning or AppState.Cleaning);
         DoneCommand = new RelayCommand(Done, () => State == AppState.Completed);
         ViewDetailsCommand = new RelayCommand(OpenDetails, () => HasResults && CanNavigate);
@@ -60,9 +68,46 @@ public sealed class MainViewModel : ObservableObject
         RestartAsAdministratorCommand = new AsyncRelayCommand(RestartAsAdministratorAsync, () => CanNavigate && !_ctx.Elevation.IsElevated, OnUnexpectedError);
 
         RefreshLastCleaned();
+        RefreshRam(null);
     }
 
     public ObservableCollection<CategoryRowViewModel> Rows { get; }
+
+    public RelayCommand CancelAutoCommand { get; }
+
+    public AsyncRelayCommand FreeRamCommand { get; }
+
+    /// <summary>"Starts in 5 s" or "Closing in 12 s" while an automatic run is waiting; empty otherwise.</summary>
+    public string AutoText
+    {
+        get => _autoText;
+        private set
+        {
+            if (SetProperty(ref _autoText, value))
+            {
+                OnPropertyChanged(nameof(ShowAuto));
+                CancelAutoCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string AutoCancelText
+    {
+        get => _autoCancelText;
+        private set => SetProperty(ref _autoCancelText, value);
+    }
+
+    public bool ShowAuto => !string.IsNullOrEmpty(AutoText);
+
+    public string RamText
+    {
+        get => _ramText;
+        private set => SetProperty(ref _ramText, value);
+    }
+
+    public bool ShowRam => _ctx.Memory is not null;
+
+    public bool CanFreeRam => _ctx.Memory is not null && !_ramBusy && State is AppState.Ready or AppState.Completed;
 
     public AsyncRelayCommand PrimaryCommand { get; }
 
@@ -239,6 +284,7 @@ public sealed class MainViewModel : ObservableObject
         ReviewRegistryCommand.RaiseCanExecuteChanged();
         OpenSettingsCommand.RaiseCanExecuteChanged();
         RestartAsAdministratorCommand.RaiseCanExecuteChanged();
+        FreeRamCommand.RaiseCanExecuteChanged();
         OnPropertyChanged(nameof(ShowAdminHint));
         OnPropertyChanged(nameof(HasResults));
         OnPropertyChanged(nameof(HasRegistryIssues));
@@ -271,6 +317,7 @@ public sealed class MainViewModel : ObservableObject
 
     private void Done()
     {
+        CancelAuto();
         ErrorMessage = string.Empty;
         Headline = string.Empty;
         Detail = string.Empty;
@@ -283,11 +330,130 @@ public sealed class MainViewModel : ObservableObject
         RefreshLastCleaned();
     }
 
-    private async Task RunAsync()
+    /// <summary>
+    /// The sign-in flow: wait a few seconds (cancelable), scan, clean only what is safe to run unattended, show the result, then close.
+    /// Nothing is ever asked, so anything that needs confirmation (Recycle Bin, privacy, website storage, registry) is skipped.
+    /// </summary>
+    public async Task RunAutomaticAsync()
     {
         if (!CanStart)
         {
             return;
+        }
+
+        var cts = new CancellationTokenSource();
+        _autoCts = cts;
+        try
+        {
+            if (!await CountdownAsync("Automatic clean starts in", "Cancel", _ctx.AutoStartDelay, cts.Token).ConfigureAwait(true))
+            {
+                return;
+            }
+
+            await RunAsync(automatic: true).ConfigureAwait(true);
+
+            if (State == AppState.Completed && _ctx.Settings.Current.CloseAfterAutoClean && !cts.IsCancellationRequested)
+            {
+                if (await CountdownAsync("Closing in", "Keep open", _ctx.AutoCloseDelay, cts.Token).ConfigureAwait(true))
+                {
+                    _ctx.Lifecycle.Shutdown();
+                }
+            }
+        }
+        finally
+        {
+            AutoText = string.Empty;
+            if (ReferenceEquals(_autoCts, cts))
+            {
+                _autoCts = null;
+            }
+
+            cts.Dispose();
+        }
+    }
+
+    /// <summary>Counts down in whole seconds. Returns false when the user canceled.</summary>
+    private async Task<bool> CountdownAsync(string label, string cancelText, TimeSpan duration, CancellationToken token)
+    {
+        AutoCancelText = cancelText;
+        var seconds = (int)Math.Ceiling(duration.TotalSeconds);
+        try
+        {
+            for (var remaining = seconds; remaining > 0; remaining--)
+            {
+                AutoText = $"{label} {remaining} s";
+                await Task.Delay(TimeSpan.FromSeconds(1), _ctx.Time, token).ConfigureAwait(true);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+
+        AutoText = string.Empty;
+        return !token.IsCancellationRequested;
+    }
+
+    private void CancelAuto() => _autoCts?.Cancel();
+
+    private async Task FreeRamAsync()
+    {
+        var memory = _ctx.Memory;
+        if (memory is null || _ramBusy)
+        {
+            return;
+        }
+
+        _ramBusy = true;
+        FreeRamCommand.RaiseCanExecuteChanged();
+        RamText = "Freeing RAM...";
+        try
+        {
+            var result = await Task.Run(() => memory.Clean(CancellationToken.None)).ConfigureAwait(true);
+            RefreshRam(result);
+        }
+        finally
+        {
+            _ramBusy = false;
+            FreeRamCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    private void RefreshRam(MemoryCleanResult? result)
+    {
+        if (_ctx.Memory is null)
+        {
+            RamText = string.Empty;
+            return;
+        }
+
+        try
+        {
+            var status = result?.After ?? _ctx.Memory.GetStatus();
+            var usage = $"{ByteFormatter.Format(status.UsedBytes)} in use of {ByteFormatter.Format(status.TotalBytes)}";
+            RamText = result is null
+                ? usage
+                : result.FreedBytes > 0
+                    ? $"Freed {ByteFormatter.Format(result.FreedBytes)} · {usage}"
+                    : $"Already lean, nothing more to free · {usage}";
+        }
+        catch (Exception ex)
+        {
+            _ctx.Log.Warning("Could not read memory status: " + ex.Message);
+            RamText = string.Empty;
+        }
+    }
+
+    private async Task RunAsync(bool automatic)
+    {
+        if (!CanStart)
+        {
+            return;
+        }
+
+        if (!automatic)
+        {
+            CancelAuto();
         }
 
         var runId = ++_runId;
@@ -305,6 +471,12 @@ public sealed class MainViewModel : ObservableObject
         }
 
         var settings = _ctx.Settings.Current.Clone();
+        if (automatic)
+        {
+            settings.ReviewBeforeCleaning = false;
+            settings.AskBeforeClosingBrowsers = false;
+        }
+
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
 
@@ -331,7 +503,7 @@ public sealed class MainViewModel : ObservableObject
 
             var mode = PlanMode.Automatic;
             var forced = PlanBuilder.RequiresReview(scan);
-            if (settings.ReviewBeforeCleaning || forced)
+            if (!automatic && (settings.ReviewBeforeCleaning || forced))
             {
                 mode = PlanMode.Reviewed;
                 if (!await ReviewAsync(scan, forced && !settings.ReviewBeforeCleaning).ConfigureAwait(true))
@@ -344,7 +516,7 @@ public sealed class MainViewModel : ObservableObject
             var plan = PlanBuilder.Build(scan, mode);
             if (plan.ActionCount == 0)
             {
-                CompleteWithoutCleaning(scan, mode);
+                CompleteWithoutCleaning(scan, mode, automatic && forced);
                 return;
             }
 
@@ -355,7 +527,7 @@ public sealed class MainViewModel : ObservableObject
             var cleanProgress = new DispatchedProgress<EngineProgress>(_ctx.Dispatcher, p => ApplyProgress(runId, p));
             var clean = await Task.Run(() => _ctx.Engine.CleanAsync(plan, settings, cleanProgress, token), CancellationToken.None).ConfigureAwait(true);
             _clean = clean;
-            Complete(scan, clean, mode);
+            Complete(scan, clean, mode, automatic && forced);
         }
         catch (EngineBusyException ex)
         {
@@ -481,17 +653,19 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    private void CompleteWithoutCleaning(ScanReport scan, PlanMode mode)
+    private const string SkippedForReviewNote = " Items that need your confirmation were skipped; run CleanSlate yourself to review them.";
+
+    private void CompleteWithoutCleaning(ScanReport scan, PlanMode mode, bool skippedForReview = false)
     {
         SaveSession(SessionRecorder.Create(scan, null, mode, _registryRepaired));
         Headline = "Nothing to clean";
-        Detail = "Your system is already tidy, or the remaining items need review or administrator rights.";
+        Detail = "Your system is already tidy, or the remaining items need review or administrator rights." + (skippedForReview ? SkippedForReviewNote : string.Empty);
         ShowScanRows();
         State = AppState.Completed;
         NotifyIfAppropriate("Nothing to clean", Detail);
     }
 
-    private void Complete(ScanReport scan, CleanReport clean, PlanMode mode)
+    private void Complete(ScanReport scan, CleanReport clean, PlanMode mode, bool skippedForReview = false)
     {
         SaveSession(SessionRecorder.Create(scan, clean, mode, _registryRepaired));
 
@@ -507,6 +681,11 @@ public sealed class MainViewModel : ObservableObject
         if (clean.Errors > 0)
         {
             Detail += ". Open details to see what could not be cleaned.";
+        }
+
+        if (skippedForReview)
+        {
+            Detail += "." + SkippedForReviewNote;
         }
 
         State = AppState.Completed;

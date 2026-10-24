@@ -58,6 +58,16 @@ Use profiles with real browsing history, bookmarks and a saved password you can 
 - [ ] Settings > Installation > Uninstall (and, separately, Windows Settings > Apps > CleanSlate > Uninstall): program folder, Start menu entry and startup entry disappear a few seconds after exit; data is kept or deleted according to your answer. `CleanSlate.exe --uninstall --quiet` removes the program silently and keeps data.
 - [ ] A `portable.txt` next to the exe suppresses the install offer.
 
+## 4c. Automation and RAM
+
+- [ ] Settings > Automation > *Clean automatically when I sign in*: a confirmation appears; accepting also turns on *Start CleanSlate when I sign in*. Declining changes nothing.
+- [ ] Sign out and in (or restart). A CleanSlate window comes to the front showing "Automatic clean starts in 5 s" with **Cancel**; it then scans, cleans, shows the recovered amount, shows "Closing in N s" and closes. History records the session.
+- [ ] Cancel during the countdown: nothing is deleted and the window stays open. *Keep open* during the closing countdown keeps it open.
+- [ ] With the Recycle Bin option and privacy cleanup enabled, an automatic run does not touch them and says items needing confirmation were skipped.
+- [ ] With Edge/Chrome running at sign-in, they are closed without a prompt and you are still signed in afterwards.
+- [ ] Run as administrator, turn on *Start with administrator rights*: Task Scheduler shows task `CleanSlate` (highest privileges, at logon, runs on battery). Next sign-in starts elevated with no UAC prompt and cleans Windows Temp and Prefetch. Turning it off (elevated) removes the task and restores the normal startup entry. Turning it on without elevation explains that administrator rights are needed.
+- [ ] **Free up RAM**: shows a freed amount (or "Already lean") and the in-use figure matches Task Manager roughly. No app closes or loses data. Disabled while a clean runs.
+
 ## 5. Review mode and confirmations
 
 - [ ] Enable "Always review before cleaning": Clean Now scans, then shows the review screen with sizes and risk. Deselect a category, confirm: only the remaining ones are cleaned.

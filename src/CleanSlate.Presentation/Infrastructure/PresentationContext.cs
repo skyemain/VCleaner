@@ -22,6 +22,14 @@ public sealed class PresentationContext
     public required IAppLogger Log { get; init; }
     public IBrowserInventory? Browsers { get; init; }
     public IInstallManager? Installer { get; init; }
+    public IMemoryCleaner? Memory { get; init; }
+    public IStartupTask? StartupTask { get; init; }
+
+    /// <summary>Pause before an automatic (sign-in) clean starts, so it can be canceled.</summary>
+    public TimeSpan AutoStartDelay { get; init; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>How long the result stays visible after an automatic clean before the app closes itself.</summary>
+    public TimeSpan AutoCloseDelay { get; init; } = TimeSpan.FromSeconds(12);
     public TimeProvider Time { get; init; } = TimeProvider.System;
     public string VersionText { get; init; } = "1.0.0";
 }
