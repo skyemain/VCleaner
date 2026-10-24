@@ -224,7 +224,7 @@ public sealed class SettingsViewModel : PageViewModel
                 T("shader", "DirectX shader cache", "Games and apps rebuild it; the first launch afterward may be slower.", s => s.CleanShaderCache, (s, v) => s.CleanShaderCache = v),
                 T("wer", "Error reports", "Windows Error Reporting archives and queues.", s => s.CleanErrorReports, (s, v) => s.CleanErrorReports = v),
                 T("dumps", "Crash dumps", "Memory dumps from crashed applications.", s => s.CleanCrashDumps, (s, v) => s.CleanCrashDumps = v),
-                T("logs", "Old Windows logs", "CBS and similar logs older than the minimum age. Requires administrator.", s => s.CleanWindowsLogs, (s, v) => s.CleanWindowsLogs = v, badge: "Administrator"),
+                T("logs", "Old Windows logs", "Rotated servicing and update logs older than 30 days. Requires administrator.", s => s.CleanWindowsLogs, (s, v) => s.CleanWindowsLogs = v, badge: "Administrator"),
                 T("recycle", "Empty the Recycle Bin", "Permanently deletes everything in the Recycle Bin.", s => s.EmptyRecycleBin, (s, v) => s.EmptyRecycleBin = v,
                     "Empty the Recycle Bin?", "When cleaning, CleanSlate will permanently empty the Recycle Bin after you confirm in the review screen. Deleted items cannot be recovered.", "Permanent"),
                 T("wu", "Windows Update cleanup", "Runs the supported Windows component cleanup (DISM). Requires administrator and can take several minutes.", s => s.CleanWindowsUpdateComponents, (s, v) => s.CleanWindowsUpdateComponents = v,
@@ -236,8 +236,8 @@ public sealed class SettingsViewModel : PageViewModel
             {
                 T("chrome", "Chrome cache", "HTTP, code and GPU caches of every profile.", s => s.CleanChromeCache, (s, v) => s.CleanChromeCache = v),
                 T("edge", "Edge cache", "HTTP, code and GPU caches of every profile.", s => s.CleanEdgeCache, (s, v) => s.CleanEdgeCache = v),
-                T("site-storage", "Website storage (Service Workers, cache storage)", "May sign you out of some sites or remove offline data. Off by default.", s => s.ClearBrowserSiteStorage, (s, v) => s.ClearBrowserSiteStorage = v,
-                    "Clear website storage?", "Website storage can include offline data and cached app shells for web apps. Some sites may need to reload their data. This is confirmed again in the review screen.", "Confirmation")
+                T("site-storage", "Website storage (Local Storage, IndexedDB, Cache Storage)", "Can sign you out of some sites and removes offline site data. Off by default.", s => s.ClearBrowserSiteStorage, (s, v) => s.ClearBrowserSiteStorage = v,
+                    "Clear website storage?", "Website storage includes Local Storage, IndexedDB, Session Storage and Cache Storage. Some sites may sign you out or lose offline data. Cookies are not removed. This is confirmed again in the review screen.", "Confirmation")
             }),
             new("Privacy", "Privacy cleanup is off by default and always shown in the review screen. Privacy entries are not backed up.", new[]
             {

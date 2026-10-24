@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Build, test (including Windows-only tests) and publish
+        shell: pwsh
+        run: ./build/publish.ps1 -Zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CleanSlate-win-x64
+          path: |
+            artifacts/publish/*.zip
+            artifacts/publish/SHA256SUMS.txt
+
+  linux-portable-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet test CleanSlate.sln -c Release --filter "FullyQualifiedName!~WindowsTests"
