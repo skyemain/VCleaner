@@ -23,22 +23,25 @@ public final class DocumentCleaner {
     private Uri tree;
     private int skipped;
     private boolean truncated;
+    private int entries;
 
     public DocumentCleaner(ContentResolver resolver) { this.resolver = resolver; }
 
     public Scan scan(Uri selectedTree, CancellationSignal cancel) throws Exception {
         tree = selectedTree;
-        observed.clear(); skipped = 0; truncated = false;
+        observed.clear(); skipped = 0; truncated = false; entries = 0;
         List<ReviewFile> files = new ArrayList<>();
         walk(DocumentsContract.getTreeDocumentId(tree), 0, new HashSet<>(), files, cancel);
         Map<Long, Integer> sizes = new HashMap<>();
         for (ReviewFile f : files) if (f.bytes() > 0) sizes.merge(f.bytes(), 1, Integer::sum);
         List<ReviewFile> measured = new ArrayList<>();
+        long hashBudget = 512L * 1024 * 1024;
         for (ReviewFile file : files) {
             cancel.throwIfCanceled();
             String hash = null;
-            if (file.bytes() > 0 && file.bytes() <= 64L * 1024 * 1024 && sizes.get(file.bytes()) > 1) {
+            if (file.bytes() > 0 && file.bytes() <= 64L * 1024 * 1024 && file.bytes() <= hashBudget && sizes.get(file.bytes()) > 1) {
                 try {
+                    hashBudget -= file.bytes();
                     hash = hash(Uri.parse(file.uri()), cancel);
                     Metadata after = query(Uri.parse(file.uri()));
                     if (!file.matches(after.bytes, after.modified)) hash = null;
@@ -58,7 +61,7 @@ public final class DocumentCleaner {
             if (cursor == null) { skipped++; return; }
             while (cursor.moveToNext()) {
                 cancel.throwIfCanceled();
-                if (files.size() >= 5000) { truncated = true; break; }
+                if (++entries > 5000) { truncated = true; break; }
                 Metadata m = metadata(cursor);
                 if (DocumentsContract.Document.MIME_TYPE_DIR.equals(m.type)) {
                     try { walk(m.id, depth + 1, visited, files, cancel); }

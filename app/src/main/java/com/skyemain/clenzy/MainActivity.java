@@ -93,7 +93,7 @@ public class MainActivity extends Activity {
     private void scan() {
         if (tree == null) { status.setText("Choose a folder first. Android restricts some system folders and Downloads roots; select a subfolder."); return; }
         setBusy(true); cancellation = new CancellationSignal();
-        status.setText("Scanning chosen folder; up to 5,000 files, 12 levels deep. Duplicate hashing is limited to same-size files up to 64 MiB.");
+        status.setText("Scanning chosen folder; up to 5,000 entries, 12 levels deep. Duplicate hashing reads up to 512 MiB total, with a 64 MiB limit per file.");
         worker.execute(() -> {
             try {
                 DocumentCleaner.Scan result = cleaner.scan(tree, cancellation);
