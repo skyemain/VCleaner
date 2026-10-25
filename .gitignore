@@ -1,9 +1,7 @@
+.gradle/
+**/build/
+local.properties
+.idea/
+*.jks
+*.keystore
 .DS_Store
-*.log
-*.p12
-*.pfx
-*.key
-macos/build/
-macos/DerivedData/
-*.xcuserstate
-xcuserdata/

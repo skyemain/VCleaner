@@ -1,37 +1,19 @@
-# Clenzy — macOS version 1.0
+# Clenzy for Android
 
-Native SwiftUI cleaner for macOS 13+, Apple silicon and Intel. Work only on the `mac` branch of `skyemain/VCleaner`.
+Native Android 8+ development candidate. Not approved for production. Only Android code, tests and build files live here.
 
-## Download and install
+## Useful cleanup within Android permissions
 
-[Latest universal DMG](https://github.com/skyemain/VCleaner/raw/refs/heads/mac/macos/release/Clenzy-latest-mac-universal.dmg).
-Quit the old app, drag Clenzy to Applications, eject the DMG and open Clenzy. If upgrading from CleanSlate, remove the old CleanSlate.app separately. No custom installer or required setup wizard.
+Choose a folder through Android's Storage Access Framework. Clenzy reviews large files (100 MiB+), files older than 30 days, and exact duplicate contents. Long-press a row to preview through an installed viewer. Nothing is selected automatically. Select files and confirm permanent deletion; cloud-provider deletion can also affect synced devices. Age alone does not make a file junk. There may be no recycle bin.
 
-## Behavior and safety
+Scanning is bounded to 5,000 files and 12 directory levels. SHA-256 duplicate hashing reads complete same-size files up to 64 MiB. Missing/changed/unreadable metadata is reported or skipped. Before deletion the app rechecks document metadata and, for hash matches, contents. Only files from the current chosen-tree scan can be deleted. Directory deletion is refused. Providers may change files between checks; verify selections and keep backups.
 
-- Clean includes eligible home Trash files (permanent deletion), allowlisted caches, temporary files older than 24 hours, diagnostic reports older than 30 days, and archived logs. Xcode DerivedData is opt-in.
-- Safari targets only Safari cache roots, never shared WebKit containers or browsing data. Chrome targets profile cache directories. Blocked roots are skipped and reported; accessible roots still clean.
-- Deletion checks ownership, age, exclusions, approved roots and file identity. Never follows symlinks, removes protected personal data or changes OS security settings.
-- Clean Up RAM samples running regular Dock apps and asks the five lowest-memory eligible apps to quit normally. Finder and Clenzy are excluded; save/cancel prompts are respected. Then the five largest remaining apps are shown for manual review. Unknown memory samples are omitted, not treated as zero. No forced quits or fake memory allocation.
-- Dashboard shows RAM, storage, battery time and estimated battery health. Login cleanup never empties Trash or quits apps.
+The app requests no broad storage, accessibility, internet or background kill permissions. Android restricts system/data folders and some root selections; choose an accessible subfolder. Clenzy cannot erase other apps' private caches or clean system RAM. RAM and storage metrics come from Android, not estimates of recovered space. Permission denial/cancellation is handled without deletion; reselect the folder if a stored grant expires. Rotation cancels work and requires a new scan.
 
-## Permissions and identity
+## Build, install and verify
 
-Settings > Cleaning access offers optional exact-folder consent and access diagnostics. macOS may still require Full Disk Access for protected data. Ad-hoc signatures change between builds, so privacy approval may need renewal. Reinstalling cannot reset TCC. Keep `com.skyemain.CleanSlate` as the bundle identifier for identity continuity; product, module, executable and visible name are Clenzy. Local preferences/history use Application Support/Clenzy. No Apple Developer signing identity is configured.
+Use Android Studio with JDK 17, Gradle 8.11.1, Android SDK 35 and AGP 8.9.2. From the root run `gradle testDebugUnitTest lintDebug assembleDebug assembleRelease`. CI also runs an Android 35 emulator smoke test and publishes `release/Clenzy-1.0-android-candidate.apk`. This APK is debug-signed for development and is not a production/store build. Installing may require allowing installs from the source used to open it. Release APKs require your own signing key; never commit private keys. Run `gradle connectedDebugAndroidTest` with a device/emulator.
 
-## Build, test and release
+## Maintainer reference
 
-From `macos/`:
-
-```sh
-python3 scripts/generate-xcodeproj.py
-scripts/verify-source.sh
-xcodebuild -project Clenzy.xcodeproj -scheme Clenzy -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
-scripts/build.sh
-codesign --force --deep --sign - build/Clenzy.app
-scripts/package-dmg.sh 1.0
-```
-
-The GitHub macOS workflow tests, builds both architectures, signs ad-hoc, packages, and commits the versioned DMG, stable latest DMG and checksums to `macos/release/`. It refuses to publish stale source commits. For future releases update the generator marketing/build versions, workflow and package default; regenerate the project. Keep this as the only Markdown reference; retain source, tests, assets, license and build/signing scripts.
-
-Version 1.0 renames CleanSlate to Clenzy, selects exactly up to five lowest-memory Dock apps instead of protecting the top five, and removes unused report code and duplicate documentation. Local test runs use temporary fixture files only and never close real user apps. Full native tests and universal packaging run in GitHub Actions.
+Framework Activity UI, DocumentCleaner for SAF enumeration/hashing/deletion and pure ReviewRules/ReviewFile for filtering and metadata guards. No external application libraries; AndroidX is used only in tests. Keep this as the only Markdown file. API reference: [Android shared document access](https://developer.android.com/training/data-storage/shared/documents-files). Before production approval test real local/cloud document providers, expired grants, cancellation, file modification races and confirmed deletion on a physical device. Main retains approved platform builds only.
