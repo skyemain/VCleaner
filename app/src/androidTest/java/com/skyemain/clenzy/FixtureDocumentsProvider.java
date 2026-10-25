@@ -16,6 +16,21 @@ public class FixtureDocumentsProvider extends DocumentsProvider {
         return new File(root(), id);
     }
     @Override public boolean isChildDocument(String parent, String child) { return parent.equals("root") && child.matches("[a-z]+\\.txt"); }
+    @Override public android.os.Bundle call(String method, String arg, android.os.Bundle extras) {
+        android.os.Bundle state = new android.os.Bundle();
+        File a = new File(root(), "a.txt"), b = new File(root(), "b.txt");
+        try {
+            if (method.equals("reset")) {
+                root().mkdirs();
+                java.nio.file.Files.write(a.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                java.nio.file.Files.write(b.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            } else if (method.equals("change")) {
+                java.nio.file.Files.write(b.toPath(), "changed content".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            } else if (method.equals("clear")) { a.delete(); b.delete(); root().delete(); }
+        } catch (IOException e) { throw new IllegalStateException(e); }
+        state.putBoolean("a", a.exists()); state.putBoolean("b", b.exists());
+        return state;
+    }
     public boolean onCreate() { root().mkdirs(); return true; }
     public Cursor queryRoots(String[] projection) { return new MatrixCursor(new String[]{"root_id","document_id","title","flags"}); }
     private void add(MatrixCursor c, File f) {

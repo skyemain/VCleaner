@@ -6,8 +6,6 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import java.io.File;
-import java.nio.file.Files;
 import java.util.List;
 import static org.junit.Assert.*;
 
@@ -15,10 +13,10 @@ import static org.junit.Assert.*;
 public class DocumentCleanupTest {
     @Test public void scansRealProviderDeletesOnlySelectedAndSkipsChangedFiles() throws Exception {
         var context = InstrumentationRegistry.getInstrumentation().getContext();
-        var root = new File(context.getCacheDir(), "provider-fixtures"); root.mkdirs();
-        var a = new File(root,"a.txt"); var b = new File(root,"b.txt");
+        var resolver = context.getContentResolver();
+        var endpoint = Uri.parse("content://com.skyemain.clenzy.test.documents");
         try {
-            Files.write(a.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8)); Files.write(b.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            resolver.call(endpoint, "reset", null, null);
             var cleaner = new DocumentCleaner(context.getContentResolver());
             Uri tree = DocumentsContract.buildTreeDocumentUri("com.skyemain.clenzy.test.documents", "root");
             var scan = cleaner.scan(tree, new CancellationSignal());
@@ -26,12 +24,14 @@ public class DocumentCleanupTest {
             assertEquals(2, duplicates.size());
             var selected = duplicates.stream().filter(f -> f.name().equals("a.txt")).findFirst().get();
             var outcome = cleaner.delete(List.of(selected), new CancellationSignal());
-            assertEquals(1, outcome.deleted()); assertFalse(a.exists()); assertTrue(b.exists());
+            assertEquals(1, outcome.deleted());
+            var state = resolver.call(endpoint, "state", null, null);
+            assertFalse(state.getBoolean("a")); assertTrue(state.getBoolean("b"));
             var stale = duplicates.stream().filter(f -> f.name().equals("b.txt")).findFirst().get();
-            Files.write(b.toPath(), "changed content".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            resolver.call(endpoint, "change", null, null);
             assertEquals(1, cleaner.delete(List.of(stale), new CancellationSignal()).skipped());
-            assertTrue(b.exists());
+            assertTrue(resolver.call(endpoint, "state", null, null).getBoolean("b"));
             assertEquals(1, cleaner.delete(List.of(new ReviewFile("content://elsewhere/not-scanned","x",1,1,null)), new CancellationSignal()).skipped());
-        } finally { a.delete(); b.delete(); root.delete(); }
+        } finally { resolver.call(endpoint, "clear", null, null); }
     }
 }
