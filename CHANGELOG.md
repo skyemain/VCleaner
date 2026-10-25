@@ -7,7 +7,7 @@
 - Add explicit, exact-folder permission requests using the macOS folder picker and restore saved security-scoped grants where supported. No cleaning occurs during permission setup.
 - Probe actual directory enumeration, show underlying EPERM/EACCES diagnostics, display the running app path, and provide a Safari data-access purpose string.
 - Show partial completion and a blocked-target count instead of a green success for access-denied cleanup targets.
-- Ad-hoc signing is still a distribution limitation: reinstalling does not clear or guarantee renewal of macOS privacy grants. A stable Developer ID signing identity is required for dependable app identity across updates.
+- Ad-hoc signing is still a distribution limitation: reinstalling does not clear or guarantee renewal of macOS privacy grants. A stable certificate-backed signing identity is needed for consistent app identity across updates; Developer ID is the normal choice for public distribution.
 
 ## 1.0.6
 
