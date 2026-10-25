@@ -22,7 +22,7 @@ mkdir -p "${stage}/.background"
 cp -R "${app}" "${stage}/CleanSlate.app"
 ln -s /Applications "${stage}/Applications"
 cat > "${stage}/Install CleanSlate.txt" <<'INSTALL'
-Open CleanSlate.app in this disk image and choose Install & replace older versions.
+Open Install CleanSlate.app in this disk image, then choose Install & replace older versions.
 It closes old copies, verifies and replaces the app in Applications, and opens the
 installed copy to Cleaning Access. User settings and history are preserved.
 
@@ -33,6 +33,30 @@ quit and reopen CleanSlate, then recheck. Reinstalling cannot reset macOS privac
 This build is ad-hoc signed and not notarized. You may need right-click > Open.
 You can still drag the app to Applications if administrator approval is needed.
 INSTALL
+# A separate bundle always starts the NEW copy, even if an older CleanSlate is open.
+launcher="${stage}/Install CleanSlate.app"
+mkdir -p "${launcher}/Contents/MacOS"
+cat > "${launcher}/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>com.skyemain.CleanSlate.Installer</string>
+<key>CFBundleExecutable</key><string>InstallCleanSlate</string>
+<key>CFBundleName</key><string>Install CleanSlate</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleShortVersionString</key><string>${version}</string>
+<key>CFBundleVersion</key><string>1</string>
+<key>LSMinimumSystemVersion</key><string>13.0</string>
+<key>LSUIElement</key><true/>
+</dict></plist>
+PLIST
+for arch in arm64 x86_64; do
+  xcrun swiftc -parse-as-library -O -target "${arch}-apple-macos13.0" Installer/main.swift -o "${stage}/launcher-${arch}"
+done
+lipo -create "${stage}/launcher-arm64" "${stage}/launcher-x86_64" -output "${launcher}/Contents/MacOS/InstallCleanSlate"
+rm "${stage}/launcher-arm64" "${stage}/launcher-x86_64"
+codesign --force --sign - "${launcher}"
+codesign --verify --deep --strict "${launcher}"
 cp scripts/dmg-background.png "${stage}/.background/background.png"
 
 raw="build/CleanSlate-raw.dmg"
@@ -64,7 +88,8 @@ tell application "Finder"
     set arrangement of viewOptions to not arranged
     set icon size of viewOptions to 96
     set background picture of viewOptions to file ".background:background.png"
-    set position of item "CleanSlate.app" of container window to {180, 190}
+    set position of item "Install CleanSlate.app" of container window to {100, 190}
+    set position of item "CleanSlate.app" of container window to {300, 190}
     set position of item "Applications" of container window to {500, 190}
     close
     open

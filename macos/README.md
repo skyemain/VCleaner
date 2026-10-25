@@ -97,7 +97,7 @@ They were not run in the environment that added this project.
 
 ## Install and repair access (1.0.7)
 
-Open CleanSlate from the new DMG and choose **Install & replace older versions**.
+Open Install CleanSlate from the new DMG and choose **Install & replace older versions**.
 The installer closes other CleanSlate processes normally, stages and checks the new
 bundle's signature, replaces `/Applications/CleanSlate.app` without merging files,
 and removes a validated legacy `~/Applications/CleanSlate.app` copy. If replacement

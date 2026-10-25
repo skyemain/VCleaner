@@ -76,7 +76,7 @@ jobs:
           Source commit: $SOURCE_SHA
           Build: $RUN_URL
 
-          Open CleanSlate in the DMG and choose Install & replace older versions.
+          Open Install CleanSlate in the DMG and choose Install & replace older versions.
           The installed copy opens Cleaning Access for folder approval.
           This build is ad-hoc signed, not notarized;
           macOS may require right-click > Open on first launch.

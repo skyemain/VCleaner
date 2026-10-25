@@ -56,7 +56,7 @@ struct AccessGuideView: View {
                     }
                     DisclosureGroup("Full Disk Access, Safari and reinstall help") {
                         VStack(alignment: .leading, spacing: 12) {
-                            step("1", "Install from the new DMG", "Open CleanSlate inside the downloaded DMG and choose Install & replace older versions. This quits old copies and replaces the installed app without merging old bundle files. User preferences and macOS privacy decisions are preserved.")
+                            step("1", "Install from the new DMG", "Open Install CleanSlate inside the downloaded DMG and choose Install & replace older versions. This quits old copies and replaces the installed app without merging old bundle files. User preferences and macOS privacy decisions are preserved.")
                             step("2", "Allow the installed copy", "In System Settings → Privacy & Security → Full Disk Access, remove an older CleanSlate entry, add Applications → CleanSlate and enable it. Quit and reopen CleanSlate, then Recheck. These builds are ad-hoc signed; grants may need renewal after updates.")
                             step("3", "For Safari", "Quit Safari with ⌘Q before cleaning. Allow the macOS prompt for Safari’s app data if you want its cache cleaned. Only the two cache folders above are targets, not cookies or history.")
                             Text("An EPERM error can come from privacy or other macOS protection; EACCES points to file permissions or ACLs. A folder-picker grant cannot override every macOS protection. Do not change ownership, disable SIP or modify the privacy database. Manual Clean permanently deletes eligible Trash files. Login cleans leave Trash alone.")

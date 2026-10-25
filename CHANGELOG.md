@@ -2,6 +2,7 @@
 
 ## 1.0.7
 
+- Add a distinct DMG installer launcher that starts the new version even when an older copy is running.
 - Add an in-app install/repair flow when opened outside Applications: close old processes, stage and verify the new bundle, replace the old bundle with rollback, remove the legacy personal Applications copy, and open the installed app to Cleaning Access. No downgrade, unrelated bundle replacement, or settings deletion.
 - Add explicit, exact-folder permission requests using the macOS folder picker and restore saved security-scoped grants where supported. No cleaning occurs during permission setup.
 - Probe actual directory enumeration, show underlying EPERM/EACCES diagnostics, display the running app path, and provide a Safari data-access purpose string.
