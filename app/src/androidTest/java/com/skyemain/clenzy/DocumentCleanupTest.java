@@ -53,7 +53,10 @@ public class DocumentCleanupTest {
             if (clickWhenReady(device, rootsSelector, 3000)) {
                 assertTrue("Fixture provider is missing from Android's folder picker", clickWhenReady(device, androidx.test.uiautomator.By.text("Clenzy test files"), 5000));
             }
-            assertTrue("Android folder picker did not show the fixture folder", clickWhenReady(device, androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("Use this folder", java.util.regex.Pattern.CASE_INSENSITIVE)), 10000));
+            if (!clickWhenReady(device, androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("Use this folder", java.util.regex.Pattern.CASE_INSENSITIVE)), 10000)) {
+                var dump = new java.io.ByteArrayOutputStream(); device.dumpWindowHierarchy(dump);
+                fail("Folder picker selection button missing. UI: " + dump.toString("UTF-8"));
+            }
             clickWhenReady(device, androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("Allow", java.util.regex.Pattern.CASE_INSENSITIVE)), 5000);
             device.waitForIdle();
             var chosenTree = new java.util.concurrent.atomic.AtomicReference<String>();
