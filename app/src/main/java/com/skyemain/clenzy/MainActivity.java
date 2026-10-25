@@ -85,8 +85,15 @@ public class MainActivity extends Activity {
         super.onActivityResult(request, result, data);
         if (request != 10 || result != RESULT_OK || data == null || data.getData() == null) return;
         tree = data.getData();
-        int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        try { getContentResolver().takePersistableUriPermission(tree, flags); getPreferences(0).edit().putString("folder", tree.toString()).apply(); }
+        try {
+            if ((data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION) == 0) throw new SecurityException("Read access required");
+            if ((data.getFlags() & Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0) {
+                getContentResolver().takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            } else {
+                getContentResolver().takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
+            getPreferences(0).edit().putString("folder", tree.toString()).apply();
+        }
         catch (SecurityException e) { status.setText("Folder access is for this session only."); }
         files = List.of(); selected.clear(); showRows(); scan();
     }
