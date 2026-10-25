@@ -41,7 +41,8 @@ public class DocumentCleanupTest {
         var resolver = context.getContentResolver();
         var endpoint = Uri.parse("content://com.skyemain.clenzy.test.documents");
         try (var scenario = androidx.test.core.app.ActivityScenario.launch(MainActivity.class)) {
-            fixtureCall(resolver, endpoint, "reset");
+            String resetState = fixtureCall(resolver, endpoint, "reset");
+            assertTrue("Fixture creation failed: " + resetState, resetState.contains("a=true") && resetState.contains("b=true"));
             var device = androidx.test.uiautomator.UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
             scenario.onActivity(activity -> {
                 var picker = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT_TREE);
@@ -77,7 +78,7 @@ public class DocumentCleanupTest {
             var cleaner = new DocumentCleaner(context.getContentResolver());
             Uri tree = Uri.parse(chosenTree.get());
             var scan = cleaner.scan(tree, new CancellationSignal());
-            assertEquals("Scan result: " + scan, 2, scan.files().size());
+            assertEquals("Tree: " + tree + "; provider: " + fixtureCall(resolver, endpoint, "state") + "; scan: " + scan, 2, scan.files().size());
             for (var file : scan.files()) {
                 try (var input = resolver.openInputStream(Uri.parse(file.uri()))) {
                     assertNotNull("Cannot open fixture " + file, input);
