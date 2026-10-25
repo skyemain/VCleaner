@@ -38,7 +38,7 @@ struct CleanSlateApp: App {
                 .preferredColorScheme(colorScheme)
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 1040, height: 680)
+        .defaultSize(width: 1040, height: 800)
         .commands {
             CommandGroup(replacing: .newItem) {}
             CommandGroup(replacing: .appSettings) {

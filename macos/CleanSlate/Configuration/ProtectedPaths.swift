@@ -29,10 +29,7 @@ enum ProtectedPaths {
     /// Cache directories Safari and WebKit actually fill. The container itself, cookies, and the Safari profile stay refused.
     static let safariCacheRelativeRoots: [String] = [
         "Library/Caches/com.apple.Safari",
-        "Library/Containers/com.apple.Safari/Data/Library/Caches",
-        "Library/Containers/com.apple.WebKit.Networking/Data/Library/Caches",
-        "Library/Containers/com.apple.WebKit.WebContent/Data/Library/Caches",
-        "Library/Containers/com.apple.WebKit.GPU/Data/Library/Caches"
+        "Library/Containers/com.apple.Safari/Data/Library/Caches"
     ]
 
     /// Rebuildable Apple service caches only; never sweep all application caches.

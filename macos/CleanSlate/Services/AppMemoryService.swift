@@ -30,7 +30,7 @@ enum AppMemoryService {
     }
 
     /// Group app helpers with their owning bundle; unreadable and other-user processes are omitted.
-    static func sample(apps: [MemoryAppIdentity], totalBytes: UInt64) -> [AppMemoryUsage] {
+    static func sample(apps: [MemoryAppIdentity], totalBytes: UInt64, limit: Int = 5) -> [AppMemoryUsage] {
         let capacity = max(Int(proc_listallpids(nil, 0)) + 128, 512)
         var pids = [pid_t](repeating: 0, count: capacity)
         let count = pids.withUnsafeMutableBytes { proc_listallpids($0.baseAddress, Int32($0.count)) }
@@ -49,16 +49,24 @@ enum AppMemoryService {
                   let bytes = footprint(pid) else { continue }
             totals[app.path, default: 0] += bytes
         }
-        return ranked(apps: apps, bytesByPath: totals, totalBytes: totalBytes)
+        return ranked(apps: apps, bytesByPath: totals, totalBytes: totalBytes, limit: limit)
     }
 
-    static func ranked(apps: [MemoryAppIdentity], bytesByPath: [String: UInt64], totalBytes: UInt64) -> [AppMemoryUsage] {
+    static func ranked(apps: [MemoryAppIdentity], bytesByPath: [String: UInt64], totalBytes: UInt64, limit: Int = 5) -> [AppMemoryUsage] {
         var seen = Set<String>()
         return apps.compactMap { app -> AppMemoryUsage? in
             guard seen.insert(app.path).inserted, let bytes = bytesByPath[app.path], bytes > 0 else { return nil }
             return AppMemoryUsage(id: app.path, name: app.name, pid: app.pid, bytes: bytes,
                 percent: totalBytes > 0 ? Double(bytes) / Double(totalBytes) * 100 : 0)
-        }.sorted { $0.bytes == $1.bytes ? $0.id < $1.id : $0.bytes > $1.bytes }.prefix(5).map { $0 }
+        }.sorted { $0.bytes == $1.bytes ? $0.id < $1.id : $0.bytes > $1.bytes }.prefix(max(0, limit)).map { $0 }
+    }
+
+    /// Freeze the five largest measured apps for this pass. Never target Finder or this app.
+    static func cleanupCandidates(_ ranked: [AppMemoryUsage], ownPID: pid_t) -> [AppMemoryUsage] {
+        let protected = Set(ranked.prefix(5).map(\.id))
+        return ranked.reversed().filter {
+            !protected.contains($0.id) && $0.pid != ownPID && $0.id != "/System/Library/CoreServices/Finder.app"
+        }
     }
 
     static func footprint(_ pid: pid_t) -> UInt64? {

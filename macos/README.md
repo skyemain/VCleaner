@@ -1,6 +1,6 @@
 # CleanSlate for macOS
 
-CleanSlate 1.0.5 is a native macOS cleaner. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes only cache and temporary files it can prove are disposable. RAM management offers a normal quit only after you choose and confirm one app.
+CleanSlate 1.0.6 is a native macOS cleaner. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes allowlisted caches, stale temporary files and eligible home Trash files. Clean Up RAM asks smaller measured apps to quit normally, keeps the top five plus Finder and CleanSlate, then opens a top-app review. Apps may show save/cancel dialogs; no forced quits are used.
 
 GitHub Actions tests and builds the universal disk image when the `mac` branch is pushed, then commits the latest DMG and checksums to [`release/`](release/). Share [the stable latest download](https://github.com/skyemain/VCleaner/raw/refs/heads/mac/macos/release/CleanSlate-latest-mac-universal.dmg). The copy in that image is ad-hoc signed so it can launch; it is not notarized, so the first open is a right-click → Open. Xcode is required to build it locally.
 
@@ -12,8 +12,8 @@ GitHub Actions tests and builds the universal disk image when the `mac` branch i
 | User caches | On | Help Viewer (`com.apple.helpd`), Spotlight suggestions (`com.apple.parsecd`), and Tips (`com.apple.touristd`) under `~/Library/Caches`, files older than 7 days, plus loose files sitting directly in `~/Library/Caches`. Other application cache folders are left alone. |
 | Diagnostic reports | On | `.ips`, `.crash`, `.spin`, `.diag`, and `.hang` files in `~/Library/Logs/DiagnosticReports` older than 30 days. Unified logs are not touched. |
 | Chrome | On | `Cache`, `Code Cache`, `GPUCache`, and the known shader caches in every Chrome profile. Cookies, history, passwords, bookmarks, and extensions are not candidates. |
-| Safari | On when readable | Safari’s own cache plus the WebKit network, web content, and GPU caches. These are the folders that actually grow. History, bookmarks, cookies, passwords, and website data are never opened. If macOS hides a cache, the Safari row says to turn on Full Disk Access instead of reporting that there was nothing to remove. |
-| Trash | Off | Counted only until you press **Empty Trash** and confirm. One-click cleaning never empties it. |
+| Safari | On when readable | Safari’s own cache folders, including its container cache. Shared WebKit containers used by other apps are left alone. History, bookmarks, cookies, passwords, and website data are never opened. If macOS hides a cache, the Safari row says to turn on Full Disk Access instead of reporting that there was nothing to remove. |
+| Trash | Included in manual Clean | Eligible home Trash files are permanently deleted as part of System Junk. Login cleans never touch Trash. |
 | Xcode DerivedData | Off | Opt-in. Archives and simulators are measured and never deleted. |
 | Quick Look thumbnails | Shown as unsupported | Undocumented system thumbnail databases are not deleted. |
 | Downloads | Never cleaned | Large files can be listed from System Health. There is no delete path. |
@@ -22,15 +22,15 @@ GitHub Actions tests and builds the universal disk image when the `mac` branch i
 
 Login cleaning runs the low-risk set only. It does not quit browsers, empty the Trash, or touch Xcode. If Safari or Chrome is open, that browser’s cache is skipped and the result says so. A manual clean can ask the browser to quit normally and waits; it never force-quits. Edge is not a target.
 
-## System overview
+## Home dashboard
 
-The overview contains four compact cards only: RAM usage, storage usage, estimated battery time remaining and battery health. It refreshes every five seconds while open. Time remaining is macOS's current estimate, not a guaranteed shutdown time; plugged-in, unknown and desktop/no-battery states have explicit labels. Where available, battery health shows the ratio of nominal charge capacity to design capacity, labelled as an estimate; it may differ from Apple's calibrated Battery Health value.
+The home screen contains three compact cards for storage usage, estimated battery time remaining and battery health, above the RAM panel. The three cards refresh every five seconds while visible. Time remaining is macOS's current estimate, not a guaranteed shutdown time; plugged-in, unknown and desktop/no-battery states have explicit labels. Where available, battery health shows the ratio of nominal charge capacity to design capacity, labelled as an estimate; it may differ from Apple's calibrated Battery Health value.
 
 Settings opens directly from the gear or ⌘,. Cleaning Access is a tab inside Settings and contains the setup guide and per-folder access checks.
 
-The home footer shows RAM usage plus the five largest readable apps and their helper processes. Percentages use total physical RAM as the denominator. Clean up RAM offers a confirmed normal quit; closing tabs/documents or enabling browser Memory Saver can also reduce RAM use. macOS manages cache reclamation and compression automatically.
+The home footer shows RAM usage plus the five largest readable apps and their helper processes. Percentages use total physical RAM as the denominator. Clean Up RAM requests normal quits from smaller measured apps, preserving the top five, Finder and CleanSlate, and then opens a manual top-app review; closing tabs/documents or enabling browser Memory Saver can also reduce RAM use. macOS manages cache reclamation and compression automatically.
 
-System Junk includes hidden temporary files older than 24 hours, the supported seven-day cache allowlist, diagnostic reports and archived rotated logs older than 30 days, and home Trash. Current unrotated logs are excluded. Trash is measured in manual scans; every deletion needs a separate confirmation, with a leave-and-continue option. Hidden Trash files are included, while protected, excluded, inaccessible items and symbolic links are kept. Login cleaning always skips Trash. Xcode DerivedData remains an optional larger cleanup target; archives and simulators are never deleted.
+System Junk includes hidden temporary files older than 24 hours, the supported seven-day cache allowlist, diagnostic reports and archived rotated logs older than 30 days, and home Trash. Current unrotated logs are excluded. Manual Clean includes Trash without a separate control or confirmation; permanent deletion is disclosed on the home screen and in Settings. Hidden Trash files are included, while protected, excluded, inaccessible items and symbolic links are kept. Login cleaning always skips Trash. Xcode DerivedData remains an optional larger cleanup target; archives and simulators are never deleted.
 
 ## First clean and Safari access
 
@@ -42,7 +42,7 @@ The first manual Clean opens an access guide with a continue-with-available-acce
 4. Quit Safari completely with ⌘Q, or approve the app’s normal browser-quit prompt, before cleaning.
 5. If access still fails after an update, remove the older privacy entry, re-add the installed copy, relaunch, and inspect the blocked folder paths. Some system-protected or other-user files remain inaccessible. No SIP changes, administrator access, Accessibility or Screen Recording permission are needed.
 
-Login-item approval and Downloads access apply only to their optional features. RAM monitoring and normal app quitting need no extra privacy permission. A missing cache directory is normal. Access probes check directory access, not the global Full Disk Access switch. One blocked system-cache folder no longer skips the other supported cache folders.
+Login-item approval applies only when using that optional feature. RAM monitoring and normal app quitting need no extra privacy permission. A missing cache directory is normal. Access probes check directory access, not the global Full Disk Access switch. One blocked system or Safari cache folder does not skip other accessible cache folders. For denied Trash or Safari access, grant Full Disk Access to the Applications copy, then quit and reopen it. With ad-hoc signed updates, you may need to remove and re-add that copy.
 
 ## Automatic cleaning at login
 
@@ -70,9 +70,9 @@ To sign, package, and notarize, using credentials that stay outside the reposito
 ```bash
 export DEVELOPER_ID_APPLICATION="Developer ID Application: Your Name (TEAMID)"
 scripts/sign.sh
-scripts/package-dmg.sh 1.0.5
+scripts/package-dmg.sh 1.0.6
 xcrun notarytool store-credentials cleanslate --apple-id you@example.com --team-id TEAMID
-NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.5-mac-universal.dmg
+NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.6-mac-universal.dmg
 scripts/verify-release.sh
 ```
 

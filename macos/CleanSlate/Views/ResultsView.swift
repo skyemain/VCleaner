@@ -4,26 +4,26 @@ struct ResultsView: View {
     let result: CleanRunResult
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(result.record.dryRun ? "Dry run" : "Cleaning complete")
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-            labeled(result.record.dryRun ? "Would recover" : "Space recovered", ByteFormat.string(from: result.record.deletedBytes))
-            labeled("Files cleaned", "\(result.record.deletedCount)")
-            labeled("Files skipped", "\(result.record.skippedCount)")
-            labeled("Errors", "\(result.record.errors.count)")
-            labeled("Duration", String(format: "%.1f seconds", result.record.duration))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(OpsTheme.mint)
+                Text(result.record.dryRun ? "Dry run" : "Cleaning complete")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Text(ByteFormat.string(from: result.record.deletedBytes))
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(OpsTheme.mint)
+            }
+            HStack(spacing: 12) {
+                Text("\(result.record.deletedCount) files")
+                Text("\(result.record.skippedCount) skipped")
+                Text("\(result.record.errors.count) errors")
+                Spacer(minLength: 0)
+                Text(String(format: "%.1f s", result.record.duration))
+            }
+            .font(.system(size: 10, design: .monospaced)).foregroundStyle(OpsTheme.secondary)
         }
-        .frame(maxWidth: 280, alignment: .leading)
         .modifier(GlassCard())
         .accessibilityElement(children: .combine)
-    }
-
-    private func labeled(_ title: String, _ value: String) -> some View {
-        HStack {
-            Text(title).foregroundStyle(OpsTheme.secondary)
-            Spacer()
-            Text(value).font(.system(size: 12, design: .monospaced))
-        }
-        .font(.system(size: 12))
     }
 }

@@ -10,7 +10,7 @@ final class SafeDeletionTests: XCTestCase {
         XCTAssertFalse(ProtectedPaths.isApprovedRoot(fixture.home.appendingPathComponent("Library/Safari"), home: fixture.home, temporaryDirectory: fixture.temporary, allowXcodeDerivedData: false, allowTrash: false))
         XCTAssertFalse(ProtectedPaths.isApprovedRoot(fixture.home.appendingPathComponent("Library/Containers/com.apple.Safari"), home: fixture.home, temporaryDirectory: fixture.temporary, allowXcodeDerivedData: false, allowTrash: false))
         XCTAssertFalse(ProtectedPaths.isApprovedRoot(fixture.home.appendingPathComponent("Library/Containers/com.apple.Safari/Data/Library/Cookies"), home: fixture.home, temporaryDirectory: fixture.temporary, allowXcodeDerivedData: false, allowTrash: false))
-        XCTAssertTrue(ProtectedPaths.isApprovedRoot(fixture.home.appendingPathComponent("Library/Containers/com.apple.WebKit.Networking/Data/Library/Caches"), home: fixture.home, temporaryDirectory: fixture.temporary, allowXcodeDerivedData: false, allowTrash: false))
+        XCTAssertFalse(ProtectedPaths.isApprovedRoot(fixture.home.appendingPathComponent("Library/Containers/com.apple.WebKit.Networking/Data/Library/Caches"), home: fixture.home, temporaryDirectory: fixture.temporary, allowXcodeDerivedData: false, allowTrash: false))
         XCTAssertTrue(ProtectedPaths.isApprovedRoot(fixture.home.appendingPathComponent("Library/Caches/com.apple.Safari"), home: fixture.home, temporaryDirectory: fixture.temporary, allowXcodeDerivedData: false, allowTrash: false))
         XCTAssertFalse(ProtectedPaths.isApprovedRoot(fixture.home.appendingPathComponent("Library/Developer/Xcode/Archives"), home: fixture.home, temporaryDirectory: fixture.temporary, allowXcodeDerivedData: true, allowTrash: false))
     }

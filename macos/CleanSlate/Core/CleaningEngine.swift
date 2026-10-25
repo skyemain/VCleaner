@@ -171,6 +171,10 @@ actor CleaningEngine {
         case .unsupported(let reason):
             return ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .unsupported(reason))
         case .unavailable(let reason):
+            // A protected Safari root must not block readable caches in another root.
+            if estimate.id == "safari" {
+                return await cleanSafari(context: context(request), request: request, cancel: cancel)
+            }
             return ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .unavailable(reason))
         case .skipped(let reason):
             return ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: estimate.fileCount, errors: [], status: .skipped(reason))
@@ -203,7 +207,7 @@ actor CleaningEngine {
             return XcodeCleaner.clean(context, cancel: cancel)
         case "trash":
             guard request.mode == .manual, request.emptyTrashConfirmed else {
-                return ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: estimate.fileCount, errors: [], status: .skipped("Trash is emptied only after a separate confirmation."))
+                return ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: estimate.fileCount, errors: [], status: .skipped("Trash cleanup is included only in an authorized manual clean."))
             }
             return TrashInspector.empty(context, cancel: cancel)
         default:

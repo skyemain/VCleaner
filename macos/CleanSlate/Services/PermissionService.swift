@@ -22,6 +22,8 @@ enum PermissionService {
         var fullDiskAccessNote: String
     }
 
+    static let trashAccessHelp = "Trash needs access. Open Settings → Cleaning Access → Open Full Disk Access. Add the CleanSlate copy in Applications, enable it, then quit and reopen CleanSlate. After an app update, you may need to remove and re-add that copy. Locked or other-user files remain untouched."
+
     static let accessHelp = "macOS denied access to this folder. Full Disk Access may allow protected caches; files owned by another account, system-protected files and files in use can still be skipped. Click for the access guide."
 
     static func canRead(_ url: URL) -> Bool { access(url.path, R_OK) == 0 }

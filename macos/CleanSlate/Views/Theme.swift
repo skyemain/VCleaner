@@ -61,7 +61,7 @@ struct RadarButton: View {
             .shadow(color: OpsTheme.mint.opacity(0.35), radius: spinning ? 28 : 18)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Clean. Scans the Mac and removes junk that is safe to remove.")
+        .accessibilityLabel("Clean. Removes eligible caches, temporary files and Trash files. Trash deletion is permanent.")
     }
 }
 

@@ -197,16 +197,14 @@ final class MainInteractionTests: XCTestCase {
     }
 
     @MainActor
-    func testDirectTrashActionUsesTheEngineAndRecordsHistory() async throws {
+    func testManualCleanIncludesTrashAndRecordsHistory() async throws {
         let fixture = try Fixture()
         defer { fixture.destroy() }
         let file = try fixture.write(relative: ".Trash/.hidden", bytes: 17)
         let store = HistoryStore(fileURL: fixture.root.appendingPathComponent("history.json"))
         let model = MainViewModel(settings: SettingsViewModel(store: MemoryPreferenceStore(), loginItems: FakeLoginItems()),
             engine: CleaningEngine(locations: fixture.locations), history: store, closeApp: {}, accessGuideAcknowledged: true)
-        model.requestEmptyTrash()
-        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
-        model.answerEmptyTrash(true)
+        model.cleanNow()
         for _ in 0..<200 { if model.phase == .completed { break }; try await Task.sleep(nanoseconds: 10_000_000) }
         XCTAssertEqual(model.phase, .completed)
         XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
@@ -214,7 +212,7 @@ final class MainInteractionTests: XCTestCase {
     }
 
     @MainActor
-    func testLeavingTrashContinuesSystemJunkCleanup() async throws {
+    func testBlockedTrashDoesNotStopSystemJunkCleanup() async throws {
         let fixture = try Fixture()
         defer { fixture.destroy() }
         let trash = try fixture.write(relative: ".Trash/keep", bytes: 12)
@@ -222,14 +220,16 @@ final class MainInteractionTests: XCTestCase {
         let model = MainViewModel(settings: SettingsViewModel(store: MemoryPreferenceStore(), loginItems: FakeLoginItems()),
             engine: CleaningEngine(locations: fixture.locations), history: HistoryStore(fileURL: fixture.root.appendingPathComponent("history.json")),
             closeApp: {}, accessGuideAcknowledged: true)
+        let trashRoot = trash.deletingLastPathComponent()
+        chmod(trashRoot.path, 0)
+        defer { chmod(trashRoot.path, 0o755) }
         model.cleanNow()
-        for _ in 0..<200 { if model.trashPrompt { break }; try await Task.sleep(nanoseconds: 10_000_000) }
-        XCTAssertTrue(model.trashPrompt)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: trash.path))
-        model.answerEmptyTrash(false)
         for _ in 0..<200 { if model.phase == .completed { break }; try await Task.sleep(nanoseconds: 10_000_000) }
         XCTAssertEqual(model.phase, .completed)
+        chmod(trashRoot.path, 0o755)
         XCTAssertTrue(FileManager.default.fileExists(atPath: trash.path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: temp.path))
+        XCTAssertTrue(model.rows.first { $0.id == "junk" }?.needsAttention == true)
+        XCTAssertFalse(model.rows.contains { $0.id == "health" || $0.id == "trash" })
     }
 }

@@ -84,12 +84,12 @@ def main() -> None:
 				CODE_SIGN_ENTITLEMENTS = CleanSlate/Resources/CleanSlate.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CleanSlate/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MARKETING_VERSION = 1.0.5;
+				MARKETING_VERSION = 1.0.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.CleanSlate;
 				PRODUCT_NAME = CleanSlate;
 				SWIFT_STRICT_CONCURRENCY = minimal;

@@ -35,18 +35,12 @@ final class MainViewModel: ObservableObject {
     @Published var recoveredText = "Recovered space: 0 MB"
     @Published var health = HealthSnapshot()
     @Published var showDetails = false
-    @Published var showHealth = false
     @Published var browserPrompt: String?
-    @Published var trashPrompt = false
-    @Published var trashDuringClean = false
-    @Published var trashSummary = "Trash · confirmation required"
-    private var trashDecisionMade = false
-    private var pendingTrashConfirmed = false
-    private var trashEstimate: ModuleEstimate?
     @Published var freeingMemory = false
     @Published var memoryNote = ""
     @Published var memory = MemoryInfoService.snapshot()
     @Published var topMemoryApps: [AppMemoryUsage] = []
+    private var allMemoryApps: [AppMemoryUsage] = []
     @Published var showMemoryApps = false
     @Published var showSettings = false
     @Published var settingsTab = SettingsTab.preferences
@@ -60,10 +54,11 @@ final class MainViewModel: ObservableObject {
         let identities = AppMemoryService.identities()
         let snapshot = await Task.detached(priority: .utility) {
             let memory = MemoryInfoService.snapshot()
-            return (memory, AppMemoryService.sample(apps: identities, totalBytes: memory.totalBytes))
+            return (memory, AppMemoryService.sample(apps: identities, totalBytes: memory.totalBytes, limit: Int.max))
         }.value
         memory = snapshot.0
-        topMemoryApps = snapshot.1
+        allMemoryApps = snapshot.1
+        topMemoryApps = Array(snapshot.1.prefix(5))
     }
 
     var cleaningAccessPending: Bool { cleanAfterGuide }
@@ -77,8 +72,7 @@ final class MainViewModel: ObservableObject {
     func openAccessGuide(forClean: Bool = false) {
         settingsTab = .access
         cleanAfterGuide = forClean
-        if showHealth || showDetails {
-            showHealth = false
+        if showDetails {
             showDetails = false
             Task {
                 try? await Task.sleep(nanoseconds: 350_000_000)
@@ -115,9 +109,7 @@ final class MainViewModel: ObservableObject {
     }
 
     func selectTarget(_ row: HomeRow) {
-        if row.id == "health" {
-            showHealth = true
-        } else if row.needsAttention {
+        if row.needsAttention {
             openAccessGuide()
         } else {
             Task { await preview() }
@@ -166,8 +158,35 @@ final class MainViewModel: ObservableObject {
 
     func freeMemory() {
         guard !freeingMemory, phase != .working, phase != .countingDown else { return }
-        memoryNote = ""
-        showMemoryApps = true
+        freeingMemory = true
+        memoryNote = "Reviewing smaller apps…"
+        Task {
+            await refreshMemory()
+            let before = memory.usedBytes
+            let candidates = AppMemoryService.cleanupCandidates(allMemoryApps, ownPID: getpid())
+            var requested: [(AppMemoryUsage, NSRunningApplication)] = []
+            for candidate in candidates {
+                guard let app = NSRunningApplication(processIdentifier: candidate.pid), !app.isTerminated,
+                      app.activationPolicy == .regular,
+                      app.bundleIdentifier != "com.apple.finder",
+                      app.bundleURL?.standardizedFileURL.resolvingSymlinksInPath().path == candidate.id else { continue }
+                // Normal quit preserves each app's own save/cancel prompts. No forced termination.
+                requested.append((candidate, app))
+                _ = app.terminate()
+            }
+            for _ in 0..<20 {
+                if requested.allSatisfy({ $0.1.isTerminated }) { break }
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
+            let closed = requested.filter { $0.1.isTerminated }
+            let remaining = requested.filter { !$0.1.isTerminated }
+            await refreshMemory()
+            let result = requested.isEmpty ? "No smaller measured apps to close." : "Closed \(closed.count) of \(requested.count) smaller apps."
+            let waiting = remaining.isEmpty ? "" : " Still open: \(remaining.map { $0.0.name }.joined(separator: ", ")). Save your work or respond to their quit dialogs."
+            memoryNote = result + " RAM used: \(ByteFormat.string(from: Int64(before))) → \(ByteFormat.string(from: Int64(memory.usedBytes))). Other apps affect this reading." + waiting
+            freeingMemory = false
+            showMemoryApps = true
+        }
     }
 
     /// Called only after the person confirms one named app in the RAM review.
@@ -197,13 +216,11 @@ final class MainViewModel: ObservableObject {
     }
 
     func cleanNow() {
-        guard phase == .idle || phase == .completed || phase == .failed else { return }
+        guard !freeingMemory, phase == .idle || phase == .completed || phase == .failed else { return }
         if !permissionsAcknowledged {
             openAccessGuide(forClean: true)
             return
         }
-        trashDecisionMade = false
-        pendingTrashConfirmed = false
         pendingReview = false
         runTask = Task {
             if await browsersNeedQuitPrompt() {
@@ -223,34 +240,13 @@ final class MainViewModel: ObservableObject {
         runTask = Task { await run(mode: .manual, fromReview: fromReview) }
     }
 
-    func requestEmptyTrash() {
-        guard phase != .working, phase != .countingDown else { return }
-        trashDuringClean = false
-        trashPrompt = true
-    }
-
-    func answerEmptyTrash(_ empty: Bool) {
-        trashPrompt = false
-        if trashDuringClean {
-            trashDuringClean = false
-            trashDecisionMade = true
-            pendingTrashConfirmed = empty
-            let fromReview = pendingReview
-            runTask = Task { await run(mode: .manual, fromReview: fromReview) }
-        } else if empty {
-            runTask = Task { await emptyTrash() }
-        }
-    }
-
     func cleanFromReview() {
-        guard phase == .idle || phase == .completed else { return }
+        guard !freeingMemory, phase == .idle || phase == .completed else { return }
         showDetails = false
         if !permissionsAcknowledged {
             openAccessGuide(forClean: true)
             return
         }
-        trashDecisionMade = false
-        pendingTrashConfirmed = false
         pendingReview = true
         runTask = Task {
             if await browsersNeedQuitPrompt() {
@@ -284,7 +280,6 @@ final class MainViewModel: ObservableObject {
         let request = makeRequest(mode: .manual, emptyTrashConfirmed: false, allowBrowserQuit: false)
         do {
             estimates = try await engine.scan(request)
-            updateTrashEstimate(estimates)
             showDetails = true
         } catch CleanEngineError.alreadyRunning {
             errorMessage = "A clean is already running."
@@ -328,29 +323,17 @@ final class MainViewModel: ObservableObject {
             await preview()
             return
         }
-        if mode == .manual, !trashDecisionMade, !settings.preferences.dryRun {
-            if let trashEstimate, trashEstimate.fileCount > 0 {
-                pendingReview = fromReview
-                trashDuringClean = true
-                trashPrompt = true
-                return
-            }
-            trashDecisionMade = true
-        }
         phase = .working
         statusText = "Cleaning"
         let allowQuit = mode == .manual && pendingBrowserQuit
         pendingBrowserQuit = false
-        let request = makeRequest(mode: mode, emptyTrashConfirmed: mode == .manual && (pendingTrashConfirmed || settings.preferences.dryRun), allowBrowserQuit: allowQuit)
+        let request = makeRequest(mode: mode, emptyTrashConfirmed: mode == .manual, allowBrowserQuit: allowQuit)
         do {
             let outcome = try await engine.clean(request)
             result = outcome
             try? history.append(outcome.record)
             AppLog.finished(outcome.record)
             apply(outcome)
-            if let trash = outcome.modules.first(where: { $0.estimate.id == "trash" }) {
-                trashSummary = trash.cleanup.deletedBytes > 0 ? "Trash · \(ByteFormat.string(from: trash.cleanup.deletedBytes)) removed" : "Trash · left unchanged"
-            }
             phase = .completed
             statusText = outcome.record.dryRun ? "Dry run" : "Cleaning complete"
             recoveredText = (outcome.record.dryRun ? "Would recover: " : "Recovered space: ") + ByteFormat.string(from: outcome.record.deletedBytes)
@@ -364,34 +347,9 @@ final class MainViewModel: ObservableObject {
         }
     }
 
-    private func emptyTrash() async {
-        phase = .working
-        let categories = EnabledCategories(temporaryFiles: false, userCaches: false, diagnosticReports: false,
-            chrome: false, edge: false, safari: false, emptyTrash: true)
-        let request = CleanRequest(mode: .manual, dryRun: settings.preferences.dryRun, categories: categories,
-            exclusions: settings.preferences.excludedPaths, allowBrowserQuit: false, emptyTrashConfirmed: true)
-        do {
-            let outcome = try await engine.clean(request)
-            result = outcome
-            try? history.append(outcome.record)
-            AppLog.finished(outcome.record)
-            apply(outcome)
-            trashSummary = "Trash · \(ByteFormat.string(from: outcome.deletedBytes)) \(request.dryRun ? "eligible" : "removed")"
-            statusText = request.dryRun ? "Dry run" : "Trash cleanup complete"
-            recoveredText = (request.dryRun ? "Would recover: " : "Recovered space: ") + ByteFormat.string(from: outcome.deletedBytes)
-            refreshLastCleaned()
-            errorMessage = outcome.record.errors.first ?? ""
-            phase = .completed
-        } catch {
-            phase = .failed
-            errorMessage = "Trash cleanup could not start. Another operation may be running."
-        }
-    }
-
     private func browsersNeedQuitPrompt() async -> Bool {
         let request = makeRequest(mode: .manual, emptyTrashConfirmed: false, allowBrowserQuit: false)
         let running = (try? await engine.scan(request)) ?? []
-        updateTrashEstimate(running)
         let busy = running.contains { estimate in
             if case .skipped(let reason) = estimate.status, reason.contains("running") { return true }
             return false
@@ -414,13 +372,6 @@ final class MainViewModel: ObservableObject {
             allowBrowserQuit: allowBrowserQuit,
             emptyTrashConfirmed: emptyTrashConfirmed
         )
-    }
-
-    private func updateTrashEstimate(_ estimates: [ModuleEstimate]) {
-        trashEstimate = estimates.first { $0.id == "trash" }
-        if let trashEstimate {
-            trashSummary = "Trash · \(ByteFormat.string(from: trashEstimate.byteCount))"
-        }
     }
 
     private func apply(_ outcome: CleanRunResult) {
@@ -447,8 +398,7 @@ final class MainViewModel: ObservableObject {
         rows = [
             HomeRow(id: "junk", title: "SYSTEM JUNK", detail: detail(["temp", "user-cache", "loose-cache", "diagnostics", "rotated-logs", "trash"], idle: "Ready"), needsAttention: needsAccess(["temp", "user-cache", "loose-cache", "diagnostics", "rotated-logs", "trash"])),
             HomeRow(id: "safari", title: "SAFARI", detail: detail(["safari"], idle: "Ready"), needsAttention: needsAccess(["safari"])),
-            HomeRow(id: "chrome", title: "CHROME", detail: detail(["chrome"], idle: "Ready"), needsAttention: needsAccess(["chrome"])),
-            HomeRow(id: "health", title: "SYSTEM OVERVIEW", detail: "RAM, storage & battery")
+            HomeRow(id: "chrome", title: "CHROME", detail: detail(["chrome"], idle: "Ready"), needsAttention: needsAccess(["chrome"]))
         ]
     }
 
@@ -468,8 +418,7 @@ final class MainViewModel: ObservableObject {
     private static let placeholderRows = [
         HomeRow(id: "junk", title: "SYSTEM JUNK", detail: "Ready"),
         HomeRow(id: "safari", title: "SAFARI", detail: "Ready"),
-        HomeRow(id: "chrome", title: "CHROME", detail: "Ready"),
-        HomeRow(id: "health", title: "SYSTEM OVERVIEW", detail: "RAM, storage & battery")
+        HomeRow(id: "chrome", title: "CHROME", detail: "Ready")
     ]
 }
 

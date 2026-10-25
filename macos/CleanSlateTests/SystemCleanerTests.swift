@@ -108,6 +108,17 @@ final class AppMemoryTests: XCTestCase {
         XCTAssertEqual(ranked[4].bytes, 300)
     }
 
+    func testBatchRAMCleanupKeepsTopFiveFinderAndItself() {
+        let apps = (0..<9).map { MemoryAppIdentity(path: "/Apps/App\($0).app", name: "App\($0)", pid: Int32($0 + 1)) }
+            + [MemoryAppIdentity(path: "/System/Library/CoreServices/Finder.app", name: "Finder", pid: 99)]
+        let totals = Dictionary(uniqueKeysWithValues: apps.enumerated().map { ($0.element.path, UInt64(1000 - $0.offset * 50)) })
+        let ranked = AppMemoryService.ranked(apps: apps, bytesByPath: totals, totalBytes: 10_000, limit: Int.max)
+        XCTAssertEqual(ranked.count, 10)
+        let candidates = AppMemoryService.cleanupCandidates(ranked, ownPID: 8)
+        XCTAssertEqual(candidates.map(\.name), ["App8", "App6", "App5"])
+        XCTAssertTrue(AppMemoryService.cleanupCandidates(Array(ranked.prefix(5)), ownPID: 123).isEmpty)
+    }
+
     func testUnavailableAndZeroMemorySamplesAreNotInvented() {
         let apps = [MemoryAppIdentity(path: "/Apps/App.app", name: "App", pid: 1)]
         XCTAssertTrue(AppMemoryService.ranked(apps: apps, bytesByPath: [:], totalBytes: 100).isEmpty)

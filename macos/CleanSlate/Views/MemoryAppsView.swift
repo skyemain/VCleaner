@@ -10,8 +10,8 @@ struct MemoryAppsView: View {
         VStack(alignment: .leading, spacing: 18) {
             Text("[ MANAGE RAM ]").font(.system(size: 13, weight: .semibold, design: .monospaced))
                 .foregroundStyle(OpsTheme.mint)
-            Text("Release memory by closing an app you no longer need.").font(.headline)
-            Text("Closing unused browser tabs or large documents can also reduce RAM use. Browser Memory Saver can suspend inactive tabs. macOS handles cache reclamation and compression automatically. To release an app’s memory here, choose Quit; the app may ask you to save first.")
+            Text("Smaller apps handled. Review your top five.").font(.headline)
+            Text("The five largest measured apps and Finder were kept open. Apps with save dialogs may still be waiting. You can close a large app below, or reduce RAM by closing its unused tabs and documents.")
                 .font(.system(size: 12)).foregroundStyle(OpsTheme.secondary)
             ForEach(model.topMemoryApps) { app in
                 HStack {
@@ -19,7 +19,7 @@ struct MemoryAppsView: View {
                     Spacer()
                     Text(app.percentText).monospacedDigit().foregroundStyle(OpsTheme.mint)
                     Button("Quit…") { pending = app }
-                        .disabled(model.freeingMemory || app.pid == getpid())
+                        .disabled(model.freeingMemory || app.pid == getpid() || app.id == "/System/Library/CoreServices/Finder.app")
                 }.modifier(GlassCard())
             }
             if model.topMemoryApps.isEmpty {

@@ -2,12 +2,12 @@ import Foundation
 
 enum SafariCleaner {
     static let bundleIdentifier = "com.apple.Safari"
-    static let unavailableMessage = "Safari cache access was denied by macOS. Click Safari on the home screen for the access guide: add the installed CleanSlate app to Full Disk Access, quit and reopen it, then quit Safari and retry."
+    static let unavailableMessage = "Some Safari caches need access. Accessible caches are still cleaned. Open Settings → Cleaning Access, add the installed CleanSlate copy to Full Disk Access, reopen it, and quit Safari before retrying."
 
     static func estimate(_ context: ScanContext) -> ModuleEstimate {
         let totals = measure(context)
         if totals.blocked {
-            return ModuleEstimate(id: "safari", title: "SAFARI", status: .unavailable(unavailableMessage), fileCount: 0, byteCount: 0, samplePaths: [])
+            return ModuleEstimate(id: "safari", title: "SAFARI", status: .unavailable(unavailableMessage), fileCount: totals.fileCount, byteCount: totals.byteCount, samplePaths: totals.samplePaths)
         }
         return ModuleEstimate(id: "safari", title: "SAFARI", status: .ready, fileCount: totals.fileCount, byteCount: totals.byteCount, samplePaths: totals.samplePaths)
     }

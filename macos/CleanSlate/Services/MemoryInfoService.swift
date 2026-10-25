@@ -14,7 +14,7 @@ struct MemorySnapshot: Equatable, Sendable {
 }
 
 enum MemoryInfoService {
-    static let explanation = "macOS manages cached memory automatically. To release memory held by an app, review the largest apps and choose one to quit normally. No app is closed without your confirmation."
+    static let explanation = "macOS manages cached memory automatically. Clean Up RAM asks smaller measured apps to quit normally, keeps the top five plus Finder and CleanSlate, then opens a manual review. Apps can show save or cancel dialogs."
 
     static func snapshot() -> MemorySnapshot {
         let total = ProcessInfo.processInfo.physicalMemory

@@ -12,9 +12,9 @@ struct AccessGuideView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("A short setup for your first clean")
                         .font(.title2.weight(.semibold))
-                    Text("Basic temporary and cache cleaning works with the access you already have. Safari and some protected caches may need Full Disk Access. macOS requires you to grant it yourself; CleanSlate cannot switch it on.")
+                    Text("Basic temporary and cache cleaning works with the access you already have. Trash and Safari’s protected caches may need Full Disk Access. Manual Clean includes permanent deletion of eligible Trash files; automatic login cleaning never touches Trash. macOS requires you to grant it yourself; CleanSlate cannot switch it on.")
                     step("1", "Install the copy you will use", "Drag CleanSlate from the disk image to Applications, eject the disk image, and open Applications → CleanSlate. Grant access to that copy, not the one inside the disk image.")
-                    step("2", "Allow protected cache access", "Open System Settings → Privacy & Security → Full Disk Access. Use + to add Applications → CleanSlate, then turn its switch on. This permits access to sensitive files; CleanSlate’s cleanup rules still restrict deletion to its cache allowlist.")
+                    step("2", "Allow protected cache access", "Open System Settings → Privacy & Security → Full Disk Access. Use + to add Applications → CleanSlate, then turn its switch on. This permits access to sensitive files; CleanSlate restricts deletion to its cleanup allowlist and your home Trash.")
                     HStack {
                         Button("Open Full Disk Access") { PermissionService.openPrivacySettings() }
                             .tint(OpsTheme.mint)
@@ -25,9 +25,9 @@ struct AccessGuideView: View {
                     step("3", "Quit and reopen CleanSlate", "After changing access, quit CleanSlate completely (⌘Q), reopen the installed copy, then click Recheck access here. A switch that is on is not proof that every folder is accessible.")
                     step("4", "For Safari: quit the browser too", "Use Safari → Quit Safari (⌘Q), not just the red window button. Alternatively, approve Quit and clean when CleanSlate asks. If macOS asks whether CleanSlate may access another app’s data, allow it only if you want that cache cleaned.")
                     Text("Still blocked?").font(.headline)
-                    Text("If Full Disk Access is already on, remove the old CleanSlate entry, add the installed copy again, and relaunch it. Check the paths below. Ownership, files in use and macOS system protection can still prevent cleaning. Do not disable SIP or change folder permissions. You can continue and leave blocked items alone.")
+                    Text("If Trash or Safari is still denied, remove the old CleanSlate entry from Full Disk Access, add the current installed copy again, and relaunch it. These builds are ad-hoc signed, so macOS may require access to be granted again after an update. Safari is limited to its own cache folders; shared WebKit containers used by other apps are not cleaned. Check the paths below. Ownership, files in use and macOS system protection can still prevent cleaning. Do not disable SIP or change folder permissions. You can continue and leave blocked items alone.")
                     Text("Other features").font(.headline)
-                    Text("Start at login is optional: allow CleanSlate under General → Login Items if macOS requests approval. Downloads access is needed only for the optional large-file report. RAM monitoring and normal app quitting do not need Full Disk Access. Accessibility, Screen Recording and administrator access are not required for cache cleaning.")
+                    Text("Start at login is optional: allow CleanSlate under General → Login Items if macOS requests approval. RAM monitoring and normal app quitting do not need Full Disk Access. Accessibility, Screen Recording and administrator access are not required for cache cleaning.")
                     HStack {
                         Text("Current folder access").font(.headline)
                         Spacer()

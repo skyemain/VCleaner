@@ -29,12 +29,6 @@ struct MainView: View {
         } message: {
             Text(model.browserPrompt ?? "")
         }
-        .alert(model.trashDuringClean ? "Include Trash in this clean?" : "Clean the Trash?", isPresented: $model.trashPrompt) {
-            Button("Clean Trash", role: .destructive) { model.answerEmptyTrash(true) }
-            Button(model.trashDuringClean ? "Leave Trash and continue" : "Cancel", role: .cancel) { model.answerEmptyTrash(false) }
-        } message: {
-            Text("Eligible files in your home Trash are permanently deleted, including hidden files. This cannot be undone. Excluded, protected or inaccessible items are kept.")
-        }
         .sheet(isPresented: $model.showDetails) {
             ScanDetailsView(model: model)
         }
@@ -44,9 +38,6 @@ struct MainView: View {
         .sheet(isPresented: $model.showMemoryApps) {
             MemoryAppsView(model: model)
         }
-        .sheet(isPresented: $model.showHealth) {
-            HealthView(model: model)
-        }
     }
 
     private var browserPresented: Binding<Bool> {
@@ -54,7 +45,8 @@ struct MainView: View {
     }
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
             header
             HStack(alignment: .center, spacing: 48) {
                 leftColumn
@@ -62,9 +54,13 @@ struct MainView: View {
             }
             .padding(.horizontal, 36)
             .padding(.bottom, 20)
+            HomeMetricsView(model: model)
+                .padding(.horizontal, 36)
+                .padding(.bottom, 12)
             memoryFooter
                 .padding(.horizontal, 36)
                 .padding(.bottom, 20)
+            }
         }
     }
 
@@ -88,8 +84,10 @@ struct MainView: View {
                     .buttonStyle(.bordered)
                     .tint(OpsTheme.mint)
                     .disabled(model.freeingMemory || model.phase == .working || model.phase == .countingDown)
-                    .help(MemoryInfoService.explanation)
+                    .help("Quits smaller measured apps normally, keeps the top five and Finder, then opens a review. Apps may ask you to save.")
             }
+            Text("Closes smaller apps; keeps the top five + Finder. Save prompts are respected.")
+                .font(.system(size: 10)).foregroundStyle(OpsTheme.secondary)
             HStack(spacing: 10) {
                 Text("TOP APPS")
                     .font(.system(size: 9, weight: .semibold, design: .monospaced))
@@ -144,7 +142,7 @@ struct MainView: View {
     }
 
     private var leftColumn: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: 16) {
             Text("Keep your Mac clean and running smoothly.")
                 .font(.system(size: 13))
                 .foregroundStyle(OpsTheme.secondary)
@@ -154,6 +152,9 @@ struct MainView: View {
                 model.cleanNow()
             }
             .disabled(model.phase == .working || model.phase == .countingDown || model.freeingMemory)
+            Text("Includes Trash · permanently deletes eligible files")
+                .font(.system(size: 10)).foregroundStyle(OpsTheme.secondary)
+                .multilineTextAlignment(.center)
             if !model.countdownText.isEmpty {
                 VStack(spacing: 8) {
                     Text(model.countdownText)
@@ -165,9 +166,6 @@ struct MainView: View {
             Text(model.lastCleanedText)
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(OpsTheme.secondary)
-            if let result = model.result, model.phase == .completed {
-                ResultsView(result: result)
-            }
             if !model.errorMessage.isEmpty {
                 Text(model.errorMessage)
                     .font(.system(size: 12))
@@ -200,15 +198,6 @@ struct MainView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(row.title), \(row.detail)")
-                    if row.id == "junk" {
-                        HStack {
-                            Text(model.trashSummary).font(.system(size: 10)).foregroundStyle(OpsTheme.secondary)
-                            Spacer()
-                            Button("Clean Trash…") { model.requestEmptyTrash() }
-                                .buttonStyle(.bordered).font(.system(size: 10))
-                                .disabled(model.phase == .working || model.phase == .countingDown)
-                        }.padding(.leading, 20)
-                    }
                 }.modifier(GlassCard())
             }
             HStack {
@@ -221,6 +210,9 @@ struct MainView: View {
                     .tint(OpsTheme.mint)
             }
             .padding(.top, 6)
+            if let result = model.result, model.phase == .completed {
+                ResultsView(result: result)
+            }
 
         }
     }

@@ -38,7 +38,7 @@ final class BrowserCleanerTests: XCTestCase {
     func testSafariRemovesTheWebKitNetworkCacheAndLeavesTheProfile() throws {
         let fixture = try Fixture()
         defer { fixture.destroy() }
-        let cached = try fixture.write(relative: "Library/Containers/com.apple.WebKit.Networking/Data/Library/Caches/WebKit/NetworkCache/record", bytes: 200, age: 0)
+        let cached = try fixture.write(relative: "Library/Containers/com.apple.Safari/Data/Library/Caches/WebKit/NetworkCache/record", bytes: 200, age: 0)
         let cookies = try fixture.write(relative: "Library/Containers/com.apple.Safari/Data/Library/Cookies/Cookies.binarycookies", bytes: 40, age: 0)
         let history = try fixture.write(relative: "Library/Containers/com.apple.Safari/Data/Library/Safari/History.db", bytes: 80, age: 0)
         let estimate = SafariCleaner.estimate(fixture.context())
@@ -73,6 +73,34 @@ final class BrowserCleanerTests: XCTestCase {
         defer { chmod(hidden.path, 0o755) }
         let estimate = SafariCleaner.estimate(fixture.context())
         XCTAssertEqual(estimate.status, .unavailable(SafariCleaner.unavailableMessage))
+    }
+
+    func testBlockedSafariRootDoesNotPreventAccessibleCacheCleaning() async throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let blocked = try fixture.write(relative: "Library/Caches/com.apple.Safari/keep", bytes: 9).deletingLastPathComponent()
+        let removable = try fixture.write(relative: "Library/Containers/com.apple.Safari/Data/Library/Caches/data", bytes: 20)
+        chmod(blocked.path, 0)
+        defer { chmod(blocked.path, 0o755) }
+        let estimate = SafariCleaner.estimate(fixture.context())
+        XCTAssertEqual(estimate.byteCount, 20)
+        let outcome = try await CleaningEngine(locations: fixture.locations).clean(CleanRequest(mode: .manual,
+            dryRun: false, categories: EnabledCategories(), exclusions: [], allowBrowserQuit: false, emptyTrashConfirmed: false))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: removable.path))
+        let safari = outcome.modules.first { $0.estimate.id == "safari" }
+        XCTAssertEqual(safari?.cleanup.deletedBytes, 20)
+        XCTAssertEqual(safari?.cleanup.status, .unavailable(SafariCleaner.unavailableMessage))
+        chmod(blocked.path, 0o755)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: blocked.appendingPathComponent("keep").path))
+    }
+
+    func testSharedWebKitContainersAreNotSafariCleanupTargets() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let shared = try fixture.write(relative: "Library/Containers/com.apple.WebKit.Networking/Data/Library/Caches/data", bytes: 20)
+        XCTAssertEqual(SafariCleaner.estimate(fixture.context()).byteCount, 0)
+        _ = SafariCleaner.clean(fixture.context(), cancel: { false })
+        XCTAssertTrue(FileManager.default.fileExists(atPath: shared.path))
     }
 
     func testAMacCleanDoesNotIncludeEdge() async throws {

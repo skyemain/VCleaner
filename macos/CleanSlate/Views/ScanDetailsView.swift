@@ -53,23 +53,10 @@ struct ScanDetailsView: View {
     }
 }
 
-struct HealthView: View {
+struct HomeMetricsView: View {
     @ObservedObject var model: MainViewModel
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                Text("[ SYSTEM OVERVIEW ]")
-                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(OpsTheme.mint)
-                Spacer()
-                Button("Done") { dismiss() }.buttonStyle(.bordered)
-            }
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                metric(title: "RAM USAGE", icon: "memorychip", value: model.health.memory.map { "\(Int($0.usageFraction * 100))%" } ?? "—",
-                    detail: model.health.memory.map { "\(ByteFormat.string(from: Int64($0.usedBytes))) of \(ByteFormat.string(from: Int64($0.totalBytes))) used" } ?? "Reading…",
-                    fraction: model.health.memory?.usageFraction)
+        HStack(spacing: 12) {
                 metric(title: "STORAGE USED", icon: "internaldrive", value: model.health.disk.map { "\(Int(storageFraction($0) * 100))%" } ?? "—",
                     detail: model.health.disk.map { "\(ByteFormat.string(from: $0.availableBytes)) available of \(ByteFormat.string(from: $0.totalBytes))" } ?? "Unavailable",
                     fraction: model.health.disk.map(storageFraction))
@@ -78,10 +65,7 @@ struct HealthView: View {
                 metric(title: "BATTERY HEALTH", icon: "heart", value: model.health.battery?.healthFraction.map { "\(Int($0 * 100))%" } ?? model.health.battery?.health ?? "—",
                     detail: model.health.battery?.healthFraction != nil ? "Estimated maximum capacity" : "Reported by macOS",
                     fraction: model.health.battery?.healthFraction)
-            }
         }
-        .padding(24).frame(width: 700)
-        .background(OpsTheme.background).foregroundStyle(OpsTheme.text)
         .task {
             while !Task.isCancelled {
                 await model.refreshOverview()
@@ -95,13 +79,13 @@ struct HealthView: View {
     }
 
     private func metric(title: String, icon: String, value: String, detail: String, fraction: Double?) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Image(systemName: icon).foregroundStyle(OpsTheme.mint)
                 Text(title).font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundStyle(OpsTheme.secondary)
             }
-            Text(value).font(.system(size: 26, weight: .semibold, design: .rounded))
+            Text(value).font(.system(size: 24, weight: .semibold, design: .rounded))
                 .lineLimit(1).minimumScaleFactor(0.65)
             if let fraction {
                 ProgressView(value: fraction).tint(OpsTheme.mint)
@@ -112,7 +96,7 @@ struct HealthView: View {
                 .lineLimit(2).frame(height: 28, alignment: .top)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18).background(OpsTheme.card, in: RoundedRectangle(cornerRadius: 16))
+        .padding(16).background(OpsTheme.card, in: RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(OpsTheme.cardStroke, lineWidth: 1))
     }
 }

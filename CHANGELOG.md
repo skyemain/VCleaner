@@ -1,5 +1,13 @@
 # macOS changelog
 
+## 1.0.6
+
+- Move live storage, battery time and battery health cards onto the home screen beside the RAM monitor; remove the separate System Overview sheet.
+- Include eligible home Trash files in manual Clean without a separate Trash control. Clearly disclose permanent deletion; login cleans still leave Trash alone.
+- Clean accessible Safari caches even when another cache is blocked. Leave shared WebKit containers alone and keep blocked-folder guidance in Settings.
+- Clean Up RAM requests normal quits from smaller measured apps, preserving the top five, Finder and CleanSlate, then opens the top-app review. Save/cancel dialogs remain under each app's control; RAM results use observed readings.
+- Clarify Full Disk Access setup for Trash and Safari, including re-adding the installed copy after ad-hoc-signed updates.
+
 ## 1.0.5
 
 - Replace the text-heavy System Overview with RAM, storage, battery time and battery-health cards.
