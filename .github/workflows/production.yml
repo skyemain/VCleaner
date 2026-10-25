@@ -1,0 +1,31 @@
+name: Verify production releases
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  production:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify approved manifest and checksums
+        run: |
+          python3 - <<'PYCODE'
+          import json,hashlib,pathlib
+          root=pathlib.Path('releases'); m=json.loads((root/'manifest.json').read_text())
+          assert m['approved_platforms']==['macos']
+          assert {p.name for p in root.iterdir() if p.is_dir()}=={'macos'}
+          for item in m['releases']:
+              assert item['platform'] in m['approved_platforms']
+              assert hashlib.sha256((root/item['file']).read_bytes()).hexdigest()==item['sha256']
+          PYCODE
+          (cd releases/macos && shasum -a 256 -c SHA256SUMS.txt)
+      - name: Verify Mac distribution bundle
+        run: |
+          hdiutil attach releases/macos/Clenzy-latest-mac-universal.dmg -readonly -nobrowse -mountpoint /tmp/clenzy-production
+          trap 'hdiutil detach /tmp/clenzy-production' EXIT
+          codesign --verify --deep --strict /tmp/clenzy-production/Clenzy.app
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' /tmp/clenzy-production/Clenzy.app/Contents/Info.plist)" = '1.0.1'
+          ARCHS=$(lipo -archs /tmp/clenzy-production/Clenzy.app/Contents/MacOS/Clenzy)
+          [[ "$ARCHS" == *arm64* && "$ARCHS" == *x86_64* ]]
