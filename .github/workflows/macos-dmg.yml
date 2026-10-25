@@ -44,12 +44,12 @@ jobs:
 
       - name: Package drag-and-drop disk image
         working-directory: macos
-        run: scripts/package-dmg.sh 1.0.7
+        run: scripts/package-dmg.sh 1.0.8
 
       - uses: actions/upload-artifact@v4
         with:
-          name: CleanSlate-1.0.7-mac-universal
-          path: macos/release/CleanSlate-1.0.7-mac-universal.dmg
+          name: CleanSlate-1.0.8-mac-universal
+          path: macos/release/CleanSlate-1.0.8-mac-universal.dmg
           if-no-files-found: error
 
       - name: Keep the latest DMG in the mac branch
@@ -63,21 +63,21 @@ jobs:
             echo "A newer source commit exists; its workflow will publish the latest DMG."
             exit 0
           fi
-          find macos/release -maxdepth 1 -name '*.dmg' ! -name 'CleanSlate-1.0.7-mac-universal.dmg' -delete
-          cp macos/release/CleanSlate-1.0.7-mac-universal.dmg macos/release/CleanSlate-latest-mac-universal.dmg
+          find macos/release -maxdepth 1 -name '*.dmg' ! -name 'CleanSlate-1.0.8-mac-universal.dmg' -delete
+          cp macos/release/CleanSlate-1.0.8-mac-universal.dmg macos/release/CleanSlate-latest-mac-universal.dmg
           (cd macos/release && shasum -a 256 *.dmg > SHA256SUMS.txt)
           cat > macos/release/README.txt <<EOF
-          CleanSlate 1.0.7 for macOS 13 and newer (Apple silicon and Intel).
+          CleanSlate 1.0.8 for macOS 13 and newer (Apple silicon and Intel).
 
           Share CleanSlate-latest-mac-universal.dmg for the latest successful build.
-          CleanSlate-1.0.7-mac-universal.dmg is the same build with its version in the filename.
+          CleanSlate-1.0.8-mac-universal.dmg is the same build with its version in the filename.
           Verify downloads against SHA256SUMS.txt.
 
           Source commit: $SOURCE_SHA
           Build: $RUN_URL
 
-          Open Install CleanSlate in the DMG and choose Install & replace older versions.
-          The installed copy opens Cleaning Access for folder approval.
+          Quit CleanSlate, drag the app to Applications and choose Replace.
+          Eject the DMG and open the installed copy. No setup wizard is required.
           This build is ad-hoc signed, not notarized;
           macOS may require right-click > Open on first launch.
           EOF

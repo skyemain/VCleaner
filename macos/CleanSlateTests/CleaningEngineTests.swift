@@ -127,8 +127,7 @@ final class LoginAndSettingsTests: XCTestCase {
             history: HistoryStore(fileURL: fixture.root.appendingPathComponent("history.json")),
             sleep: { _ in box.model?.cancel() },
             closeApp: {},
-            loginLaunchDetector: { false },
-            offerInstallation: false
+            loginLaunchDetector: { false }
         )
         box.model = model
         model.onAppear(arguments: ["--login-clean"])
@@ -188,7 +187,7 @@ final class MainInteractionTests: XCTestCase {
         defer { fixture.destroy() }
         let model = MainViewModel(settings: SettingsViewModel(store: MemoryPreferenceStore(), loginItems: FakeLoginItems()),
             engine: CleaningEngine(locations: fixture.locations), history: HistoryStore(fileURL: fixture.root.appendingPathComponent("history.json")),
-            closeApp: {}, accessGuideAcknowledged: true)
+            closeApp: {})
         model.openSettings()
         XCTAssertTrue(model.showSettings)
         XCTAssertEqual(model.settingsTab, .preferences)
@@ -198,18 +197,34 @@ final class MainInteractionTests: XCTestCase {
     }
 
     @MainActor
+    func testNormalLaunchAndLegacyInstallerArgumentOpenDashboardWithoutSetup() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let model = MainViewModel(settings: SettingsViewModel(store: MemoryPreferenceStore(), loginItems: FakeLoginItems()),
+            engine: CleaningEngine(locations: fixture.locations), history: HistoryStore(fileURL: fixture.root.appendingPathComponent("history.json")),
+            closeApp: {}, loginLaunchDetector: { false })
+        for arguments in [[], ["--installation-complete"], []] {
+            model.onAppear(arguments: arguments)
+            XCTAssertFalse(model.showSettings)
+            XCTAssertFalse(model.showDetails)
+            XCTAssertEqual(model.phase, .idle)
+        }
+    }
+
+    @MainActor
     func testManualCleanIncludesTrashAndRecordsHistory() async throws {
         let fixture = try Fixture()
         defer { fixture.destroy() }
         let file = try fixture.write(relative: ".Trash/.hidden", bytes: 17)
         let store = HistoryStore(fileURL: fixture.root.appendingPathComponent("history.json"))
         let model = MainViewModel(settings: SettingsViewModel(store: MemoryPreferenceStore(), loginItems: FakeLoginItems()),
-            engine: CleaningEngine(locations: fixture.locations), history: store, closeApp: {}, accessGuideAcknowledged: true)
+            engine: CleaningEngine(locations: fixture.locations), history: store, closeApp: {})
         model.cleanNow()
         for _ in 0..<200 { if model.phase == .completed { break }; try await Task.sleep(nanoseconds: 10_000_000) }
         XCTAssertEqual(model.phase, .completed)
         XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
         XCTAssertEqual(store.load().last?.deletedBytes, 17)
+        XCTAssertFalse(model.showSettings)
     }
 
     @MainActor
@@ -220,7 +235,7 @@ final class MainInteractionTests: XCTestCase {
         let temp = try fixture.write(relative: "old.tmp", bytes: 10, age: -86_400 * 3, in: fixture.temporary)
         let model = MainViewModel(settings: SettingsViewModel(store: MemoryPreferenceStore(), loginItems: FakeLoginItems()),
             engine: CleaningEngine(locations: fixture.locations), history: HistoryStore(fileURL: fixture.root.appendingPathComponent("history.json")),
-            closeApp: {}, accessGuideAcknowledged: true)
+            closeApp: {})
         let trashRoot = trash.deletingLastPathComponent()
         chmod(trashRoot.path, 0)
         defer { chmod(trashRoot.path, 0o755) }

@@ -49,12 +49,7 @@ final class MainViewModel: ObservableObject {
     @Published var checkingPermissions = false
     @Published var grantingAccess = false
     @Published var accessMessage = ""
-    @Published var showInstallation = false
-    @Published var installing = false
-    @Published var installationMessage = ""
     private let folderAccess = FolderAccessService()
-    private var installationOffered = false
-    private let offerInstallation: Bool
 
     func grantFolderAccess(_ check: PermissionService.Check) {
         guard !grantingAccess, phase != .working else { return }
@@ -65,28 +60,6 @@ final class MainViewModel: ObservableObject {
             grantingAccess = false
         }
     }
-
-    func installApp() {
-        guard !installing else { return }
-        installing = true
-        installationMessage = "Closing older copies and verifying the new app…"
-        Task {
-            do {
-                let installed = try await InstallationService.install()
-                let configuration = NSWorkspace.OpenConfiguration()
-                configuration.arguments = ["--installation-complete"]
-                configuration.createsNewApplicationInstance = true
-                _ = try await NSWorkspace.shared.openApplication(at: installed, configuration: configuration)
-                NSApp.terminate(nil)
-            } catch {
-                installationMessage = error.localizedDescription
-                installing = false
-            }
-        }
-    }
-
-    private var cleanAfterGuide = false
-    private var permissionsAcknowledged = UserDefaults.standard.bool(forKey: "accessGuide.v1.acknowledged")
 
     func refreshMemory() async {
         let identities = AppMemoryService.identities()
@@ -99,17 +72,13 @@ final class MainViewModel: ObservableObject {
         topMemoryApps = Array(snapshot.1.prefix(5))
     }
 
-    var cleaningAccessPending: Bool { cleanAfterGuide }
-
     func openSettings() {
-        cleanAfterGuide = false
         settingsTab = .preferences
         showSettings = true
     }
 
-    func openAccessGuide(forClean: Bool = false) {
+    func openAccessGuide() {
         settingsTab = .access
-        cleanAfterGuide = forClean
         if showDetails {
             showDetails = false
             Task {
@@ -132,18 +101,8 @@ final class MainViewModel: ObservableObject {
         checkingPermissions = false
     }
 
-    func continueFromAccessGuide() {
-        UserDefaults.standard.set(true, forKey: "accessGuide.v1.acknowledged")
-        permissionsAcknowledged = true
+    func closeAccessGuide() {
         showSettings = false
-        let shouldClean = cleanAfterGuide
-        cleanAfterGuide = false
-        if shouldClean {
-            Task {
-                try? await Task.sleep(nanoseconds: 350_000_000)
-                cleanNow()
-            }
-        }
     }
 
     func selectTarget(_ row: HomeRow) {
@@ -174,13 +133,9 @@ final class MainViewModel: ObservableObject {
             try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
         },
         closeApp: @escaping () -> Void = { NSApp.terminate(nil) },
-        loginLaunchDetector: @escaping () -> Bool = LoginLaunchDetection.current,
-        accessGuideAcknowledged: Bool? = nil,
-        offerInstallation: Bool = true
+        loginLaunchDetector: @escaping () -> Bool = LoginLaunchDetection.current
     ) {
         self.settings = settings
-        self.offerInstallation = offerInstallation
-        if let accessGuideAcknowledged { permissionsAcknowledged = accessGuideAcknowledged }
         self.engine = engine ?? CleaningEngine(locations: .currentUser(), applications: MacApplicationController())
         self.history = history
         self.sleep = sleep
@@ -190,17 +145,6 @@ final class MainViewModel: ObservableObject {
     }
 
     func onAppear(arguments: [String]) {
-        if offerInstallation, !installationOffered, Bundle.main.bundleIdentifier == InstallationService.bundleID {
-            installationOffered = true
-            if !InstallationService.isInstalledCopy {
-                showInstallation = true
-                return
-            }
-            if arguments.contains("--installation-complete") {
-                openAccessGuide()
-                return
-            }
-        }
         let forced = arguments.contains("--login-clean")
         guard forced || (loginLaunchDetector() && settings.preferences.cleanAtLogin) else { return }
         guard runTask == nil else { return }
@@ -268,10 +212,6 @@ final class MainViewModel: ObservableObject {
 
     func cleanNow() {
         guard !freeingMemory, phase == .idle || phase == .completed || phase == .failed else { return }
-        if !permissionsAcknowledged {
-            openAccessGuide(forClean: true)
-            return
-        }
         pendingReview = false
         runTask = Task {
             if await browsersNeedQuitPrompt() {
@@ -294,10 +234,6 @@ final class MainViewModel: ObservableObject {
     func cleanFromReview() {
         guard !freeingMemory, phase == .idle || phase == .completed else { return }
         showDetails = false
-        if !permissionsAcknowledged {
-            openAccessGuide(forClean: true)
-            return
-        }
         pendingReview = true
         runTask = Task {
             if await browsersNeedQuitPrompt() {

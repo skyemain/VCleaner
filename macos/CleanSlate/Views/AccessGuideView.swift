@@ -23,10 +23,6 @@ struct AccessGuideView: View {
                     }.buttonStyle(.bordered)
                     Text("Running copy: \(Bundle.main.bundleURL.path)")
                         .font(.system(size: 10, design: .monospaced)).foregroundStyle(OpsTheme.secondary).textSelection(.enabled)
-                    if !InstallationService.isInstalledCopy {
-                        Text("Install this copy in Applications first. Quit this settings panel to use the installation prompt when opening the app from the DMG.")
-                            .font(.caption).foregroundStyle(OpsTheme.amber)
-                    }
                     if !model.accessMessage.isEmpty {
                         Text(model.accessMessage).font(.system(size: 12)).foregroundStyle(OpsTheme.mint).textSelection(.enabled)
                     }
@@ -56,7 +52,7 @@ struct AccessGuideView: View {
                     }
                     DisclosureGroup("Full Disk Access, Safari and reinstall help") {
                         VStack(alignment: .leading, spacing: 12) {
-                            step("1", "Install from the new DMG", "Open Install CleanSlate inside the downloaded DMG and choose Install & replace older versions. This quits old copies and replaces the installed app without merging old bundle files. User preferences and macOS privacy decisions are preserved.")
+                            step("1", "Install from the new DMG", "Quit CleanSlate, drag the new app from the DMG to Applications and choose Replace in Finder. Eject the DMG and open CleanSlate from Applications. The app opens directly to the dashboard; this access guide is optional.")
                             step("2", "Allow the installed copy", "In System Settings → Privacy & Security → Full Disk Access, remove an older CleanSlate entry, add Applications → CleanSlate and enable it. Quit and reopen CleanSlate, then Recheck. These builds are ad-hoc signed; grants may need renewal after updates.")
                             step("3", "For Safari", "Quit Safari with ⌘Q before cleaning. Allow the macOS prompt for Safari’s app data if you want its cache cleaned. Only the two cache folders above are targets, not cookies or history.")
                             Text("An EPERM error can come from privacy or other macOS protection; EACCES points to file permissions or ACLs. A folder-picker grant cannot override every macOS protection. Do not change ownership, disable SIP or modify the privacy database. Manual Clean permanently deletes eligible Trash files. Login cleans leave Trash alone.")
@@ -65,7 +61,7 @@ struct AccessGuideView: View {
                     }
                 }
             }
-            Button(model.cleaningAccessPending ? "Continue with available access" : "Done") { model.continueFromAccessGuide() }
+            Button("Done") { model.closeAccessGuide() }
                 .buttonStyle(.borderedProminent).tint(OpsTheme.mintDeep)
         }
         .padding(20).frame(maxWidth: .infinity, maxHeight: .infinity)

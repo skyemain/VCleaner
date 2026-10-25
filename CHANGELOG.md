@@ -1,5 +1,11 @@
 # macOS changelog
 
+## 1.0.8
+
+- Remove the stalled custom installer, its DMG launcher and automatic installation/version checks. Restore a standard drag-to-Applications DMG.
+- Open directly to the dashboard, including when passed the old installation-complete argument. Remove the first-clean permission-guide gate and post-install redirect.
+- Keep folder access help optional in Settings. Accessible files still clean; blocked targets remain clearly reported as skipped, without opening a setup wizard.
+
 ## 1.0.7
 
 - Add a distinct DMG installer launcher that starts the new version even when an older copy is running.
