@@ -11,6 +11,19 @@ import static org.junit.Assert.*;
 
 @RunWith(AndroidJUnit4.class)
 public class DocumentCleanupTest {
+    private boolean clickWhenReady(androidx.test.uiautomator.UiDevice device, androidx.test.uiautomator.BySelector selector, long timeout) throws Exception {
+        if (!device.wait(androidx.test.uiautomator.Until.hasObject(selector), timeout)) return false;
+        for (int attempt=0; attempt<20; attempt++) {
+            try {
+                device.waitForIdle();
+                var object = device.findObject(selector);
+                if (object != null) { object.click(); return true; }
+            } catch (androidx.test.uiautomator.StaleObjectException ignored) { }
+            Thread.sleep(150);
+        }
+        return false;
+    }
+
     private String fixtureCall(android.content.ContentResolver resolver, Uri endpoint, String method) throws Exception {
         var automation = InstrumentationRegistry.getInstrumentation().getUiAutomation();
         var descriptor = automation.executeShellCommand("content call --uri content://com.skyemain.clenzy.test.documents --method " + method);
@@ -36,19 +49,12 @@ public class DocumentCleanupTest {
                 picker.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION | android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION | android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
                 activity.startActivityForResult(picker, 10);
             });
-            var rootsButton = device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.desc(java.util.regex.Pattern.compile("Show roots|Open navigation drawer", java.util.regex.Pattern.CASE_INSENSITIVE))), 3000);
-            if (rootsButton != null) {
-                rootsButton.click();
-                var fixtureRoot = device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text("Clenzy test files")), 5000);
-                assertNotNull("Fixture provider is missing from Android's folder picker", fixtureRoot);
-                fixtureRoot.click();
-                device.waitForIdle();
+            var rootsSelector = androidx.test.uiautomator.By.desc(java.util.regex.Pattern.compile("Show roots|Open navigation drawer", java.util.regex.Pattern.CASE_INSENSITIVE));
+            if (clickWhenReady(device, rootsSelector, 3000)) {
+                assertTrue("Fixture provider is missing from Android's folder picker", clickWhenReady(device, androidx.test.uiautomator.By.text("Clenzy test files"), 5000));
             }
-            var useFolder = device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("Use this folder", java.util.regex.Pattern.CASE_INSENSITIVE))), 10000);
-            assertNotNull("Android folder picker did not show the fixture folder", useFolder);
-            useFolder.click();
-            var allow = device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("Allow", java.util.regex.Pattern.CASE_INSENSITIVE))), 5000);
-            if (allow != null) allow.click();
+            assertTrue("Android folder picker did not show the fixture folder", clickWhenReady(device, androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("Use this folder", java.util.regex.Pattern.CASE_INSENSITIVE)), 10000));
+            clickWhenReady(device, androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("Allow", java.util.regex.Pattern.CASE_INSENSITIVE)), 5000);
             device.waitForIdle();
             var chosenTree = new java.util.concurrent.atomic.AtomicReference<String>();
             for (int attempt=0; attempt<30 && chosenTree.get()==null; attempt++) {
