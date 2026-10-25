@@ -48,6 +48,8 @@ enum PermissionService {
     static func checks(locations: Locations) -> [Check] {
         let roots: [(String, URL)] = [("Temporary files", locations.temporaryDirectory),
             ("User caches", locations.url("Library/Caches")),
+            ("Trash", locations.url(".Trash")),
+            ("Archived logs", locations.url("Library/Logs")),
             ("Diagnostic reports", locations.url("Library/Logs/DiagnosticReports"))]
             + ProtectedPaths.systemCacheRelativeRoots.map { ("System cache", locations.url($0)) }
             + ProtectedPaths.safariCacheRelativeRoots.map { ("Safari / WebKit cache", locations.url($0)) }

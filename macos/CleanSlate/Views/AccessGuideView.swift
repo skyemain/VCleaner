@@ -3,16 +3,11 @@ import SwiftUI
 
 struct AccessGuideView: View {
     @ObservedObject var model: MainViewModel
+    var embedded = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("[ CLEANING ACCESS ]").font(.system(size: 13, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(OpsTheme.mint)
-                Spacer()
-                Button("Close") { dismiss() }
-            }
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("A short setup for your first clean")
@@ -57,10 +52,10 @@ struct AccessGuideView: View {
                     }
                 }
             }
-            Button("Continue with available access") { model.continueFromAccessGuide() }
+            Button(model.cleaningAccessPending ? "Continue with available access" : "Done") { model.continueFromAccessGuide() }
                 .buttonStyle(.borderedProminent).tint(OpsTheme.mintDeep)
         }
-        .padding(24).frame(width: 660, height: 650)
+        .padding(20).frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OpsTheme.background).foregroundStyle(OpsTheme.text)
     }
 

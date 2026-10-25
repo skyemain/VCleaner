@@ -13,11 +13,11 @@ struct WalkStats: Equatable, Sendable {
 enum DirectoryWalker {
     private static let sampleLimit = 20
 
-    static func collect(root: URL, minimumAge: Date?, exclusions: [String], fileManager: FileManager) -> WalkStats {
-        files(root: root, minimumAge: minimumAge, exclusions: exclusions, fileManager: fileManager, keepURLs: false)
+    static func collect(root: URL, minimumAge: Date?, exclusions: [String], fileManager: FileManager, includeHidden: Bool = false) -> WalkStats {
+        files(root: root, minimumAge: minimumAge, exclusions: exclusions, fileManager: fileManager, keepURLs: false, includeHidden: includeHidden)
     }
 
-    static func files(root: URL, minimumAge: Date?, exclusions: [String], fileManager: FileManager, keepURLs: Bool = true) -> WalkStats {
+    static func files(root: URL, minimumAge: Date?, exclusions: [String], fileManager: FileManager, keepURLs: Bool = true, includeHidden: Bool = false) -> WalkStats {
         var stats = WalkStats()
         if isUnreadable(root) {
             stats.accessDenied = true
@@ -31,7 +31,7 @@ enum DirectoryWalker {
         guard let enumerator = fileManager.enumerator(
             at: root,
             includingPropertiesForKeys: keys,
-            options: [.skipsHiddenFiles],
+            options: includeHidden ? [] : [.skipsHiddenFiles],
             errorHandler: { _, error in
                 stats.skippedCount += 1
                 let failure = error as NSError
@@ -58,9 +58,11 @@ enum DirectoryWalker {
                 stats.skippedCount += 1
                 continue
             }
-            if let minimumAge, let modified = values?.contentModificationDate, modified > minimumAge {
-                stats.skippedCount += 1
-                continue
+            if let minimumAge {
+                guard let modified = values?.contentModificationDate, modified <= minimumAge else {
+                    stats.skippedCount += 1
+                    continue
+                }
             }
             let path = url.path
             if ScanContext.isExcluded(path, exclusions: contextExclusions) {

@@ -58,67 +58,61 @@ struct HealthView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
                 Text("[ SYSTEM OVERVIEW ]")
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
                     .foregroundStyle(OpsTheme.mint)
-                Text("A report to help you understand your Mac. It shows RAM, swap, available disk space and startup items that point to missing apps. Opening this page does not clean files or free RAM.")
-                    .font(.system(size: 12)).foregroundStyle(OpsTheme.secondary)
-                if let memory = model.health.memory {
-                    Text("Memory \(ByteFormat.string(from: Int64(memory.usedBytes))) used of \(ByteFormat.string(from: Int64(memory.totalBytes))). Memory state: \(memory.pressure).")
-                    Text(memory.explanation).foregroundStyle(OpsTheme.secondary)
-                    if let swap = memory.swapUsedBytes {
-                        Text("Swap in use: \(ByteFormat.string(from: Int64(swap)))").foregroundStyle(OpsTheme.secondary)
-                    }
-                }
-                if let disk = model.health.disk {
-                    Text("\(disk.volumeName) · \(disk.fileSystem) · \(ByteFormat.string(from: disk.availableBytes)) available of \(ByteFormat.string(from: disk.totalBytes)).")
-                    Text("APFS snapshots and Time Machine backups are never deleted.").foregroundStyle(OpsTheme.secondary)
-                }
-                Text("Xcode archives \(ByteFormat.string(from: model.health.archiveBytes)) and simulators \(ByteFormat.string(from: model.health.simulatorBytes)) are shown for review only.")
-                    .foregroundStyle(OpsTheme.secondary)
-                if !model.health.largeDownloads.isEmpty {
-                    Text("Large downloads, not deleted")
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    ForEach(model.health.largeDownloads, id: \.self) { Text($0).font(.system(size: 12)) }
-                }
-                if !model.health.agents.isEmpty {
-                    Text("Login agents pointing at a missing program")
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    ForEach(model.health.agents) { agent in
-                        HStack {
-                            Text(agent.summary).font(.system(size: 12))
-                            Spacer()
-                            Button("Back up and disable") { model.quarantine(agent) }
-                        }
-                    }
-                } else {
-                    Text("No broken user login agents were found.").foregroundStyle(OpsTheme.secondary)
-                }
-                if !model.health.leftovers.isEmpty {
-                    Text("Possible leftovers. Nothing in this list is deleted.")
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    ForEach(model.health.leftovers.prefix(30)) { item in
-                        Text(item.note).font(.system(size: 12)).foregroundStyle(OpsTheme.secondary)
-                    }
-                }
-                if let permissions = model.health.permissions {
-                    Text(permissions.cachesReadable ? "User caches are readable." : "User caches are not readable.")
-                    Text(permissions.fullDiskAccessNote).foregroundStyle(OpsTheme.secondary)
-                }
-                Text("Large downloads, Xcode archives, simulators and possible leftovers are reports only. Back up and disable is a separate action for one broken startup item.")
-                    .font(.caption).foregroundStyle(OpsTheme.secondary)
-                Button("Cleaning access guide") {
-                    dismiss()
-                    model.openAccessGuide()
-                }
-                Button("Close") { dismiss() }
+                Spacer()
+                Button("Done") { dismiss() }.buttonStyle(.bordered)
             }
-            .padding(24)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                metric(title: "RAM USAGE", icon: "memorychip", value: model.health.memory.map { "\(Int($0.usageFraction * 100))%" } ?? "—",
+                    detail: model.health.memory.map { "\(ByteFormat.string(from: Int64($0.usedBytes))) of \(ByteFormat.string(from: Int64($0.totalBytes))) used" } ?? "Reading…",
+                    fraction: model.health.memory?.usageFraction)
+                metric(title: "STORAGE USED", icon: "internaldrive", value: model.health.disk.map { "\(Int(storageFraction($0) * 100))%" } ?? "—",
+                    detail: model.health.disk.map { "\(ByteFormat.string(from: $0.availableBytes)) available of \(ByteFormat.string(from: $0.totalBytes))" } ?? "Unavailable",
+                    fraction: model.health.disk.map(storageFraction))
+                metric(title: "BATTERY TIME LEFT", icon: "battery.75percent", value: model.health.battery?.timeRemaining ?? "—",
+                    detail: model.health.battery?.powerState ?? "Reading…", fraction: model.health.battery?.chargeFraction)
+                metric(title: "BATTERY HEALTH", icon: "heart", value: model.health.battery?.healthFraction.map { "\(Int($0 * 100))%" } ?? model.health.battery?.health ?? "—",
+                    detail: model.health.battery?.healthFraction != nil ? "Estimated maximum capacity" : "Reported by macOS",
+                    fraction: model.health.battery?.healthFraction)
+            }
         }
-        .frame(minWidth: 620, minHeight: 480)
-        .background(OpsTheme.background)
-        .foregroundStyle(OpsTheme.text)
+        .padding(24).frame(width: 700)
+        .background(OpsTheme.background).foregroundStyle(OpsTheme.text)
+        .task {
+            while !Task.isCancelled {
+                await model.refreshOverview()
+                do { try await Task.sleep(nanoseconds: 5_000_000_000) } catch { break }
+            }
+        }
+    }
+
+    private func storageFraction(_ disk: DiskSnapshot) -> Double {
+        disk.totalBytes > 0 ? min(1, max(0, Double(disk.usedBytes) / Double(disk.totalBytes))) : 0
+    }
+
+    private func metric(title: String, icon: String, value: String, detail: String, fraction: Double?) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Image(systemName: icon).foregroundStyle(OpsTheme.mint)
+                Text(title).font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(OpsTheme.secondary)
+            }
+            Text(value).font(.system(size: 26, weight: .semibold, design: .rounded))
+                .lineLimit(1).minimumScaleFactor(0.65)
+            if let fraction {
+                ProgressView(value: fraction).tint(OpsTheme.mint)
+            } else {
+                RoundedRectangle(cornerRadius: 3).fill(OpsTheme.secondary.opacity(0.15)).frame(height: 4)
+            }
+            Text(detail).font(.system(size: 11)).foregroundStyle(OpsTheme.secondary)
+                .lineLimit(2).frame(height: 28, alignment: .top)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18).background(OpsTheme.card, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(OpsTheme.cardStroke, lineWidth: 1))
     }
 }

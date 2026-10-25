@@ -23,21 +23,19 @@ struct SettingsView: View {
             Section("Cleaning") {
                 Toggle("User temporary files", isOn: binding(\.cleanTemporaryFiles))
                 Toggle("Supported user caches", isOn: binding(\.cleanUserCaches))
-                Text("System Junk removes temporary files older than 24 hours; Help Viewer, Spotlight suggestions, Tips and loose cache files older than 7 days; and diagnostic reports older than 30 days. Documents and application data stay.")
+                Text("System Junk removes temporary files (including hidden files) older than 24 hours; Help Viewer, Spotlight suggestions, Tips and loose cache files older than 7 days; and diagnostic reports and archived, rotated logs older than 30 days. Documents and application data stay.")
                     .font(.caption).foregroundStyle(.secondary)
-                Toggle("Eligible diagnostic reports", isOn: binding(\.cleanDiagnosticReports))
+                Toggle("Old reports and archived logs", isOn: binding(\.cleanDiagnosticReports))
                 Toggle("Chrome safe cache", isOn: binding(\.cleanChrome))
                 Toggle("Safari safe cache", isOn: binding(\.cleanSafari))
                 Text("Safari cleaning removes the web cache, including the WebKit network cache. History, bookmarks, cookies, and passwords stay. If the Safari row says access is blocked, turn on Full Disk Access for CleanSlate.")
                     .font(.caption).foregroundStyle(.secondary)
-                Toggle("Offer to empty Trash", isOn: binding(\.emptyTrash))
+                Text("Trash is measured with System Junk. Emptying it always needs a separate confirmation and never runs at login.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("Xcode DerivedData", isOn: binding(\.cleanXcodeDerivedData))
                 Toggle("Privacy history cleaning", isOn: .constant(false))
                     .disabled(true)
                 Text("Browsing history stays. macOS does not provide a safe API that clears it without editing protected databases.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Toggle("App leftover report", isOn: binding(\.appLeftoverScan))
-                Text("The leftover report is analysis only. CleanSlate does not delete Application Support folders.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Advanced") {
@@ -66,7 +64,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 520, height: 640)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var loginText: String {
@@ -83,5 +81,32 @@ struct SettingsView: View {
             get: { settings.preferences[keyPath: keyPath] },
             set: { newValue in settings.update { $0[keyPath: keyPath] = newValue } }
         )
+    }
+}
+
+struct SettingsPanelView: View {
+    @ObservedObject var model: MainViewModel
+    @EnvironmentObject private var settings: SettingsViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 14) {
+            HStack {
+                Text("[ SETTINGS ]").font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(OpsTheme.mint)
+                Spacer()
+                Button("Done") { model.showSettings = false; dismiss() }
+            }
+            TabView(selection: $model.settingsTab) {
+                SettingsView().environmentObject(settings)
+                    .tabItem { Label("Preferences", systemImage: "slider.horizontal.3") }
+                    .tag(MainViewModel.SettingsTab.preferences)
+                AccessGuideView(model: model, embedded: true)
+                    .tabItem { Label("Cleaning access", systemImage: "lock.shield") }
+                    .tag(MainViewModel.SettingsTab.access)
+            }
+        }
+        .padding(20).frame(width: 700, height: 700)
+        .background(OpsTheme.background).foregroundStyle(OpsTheme.text)
     }
 }

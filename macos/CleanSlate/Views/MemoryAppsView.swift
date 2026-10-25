@@ -11,7 +11,7 @@ struct MemoryAppsView: View {
             Text("[ MANAGE RAM ]").font(.system(size: 13, weight: .semibold, design: .monospaced))
                 .foregroundStyle(OpsTheme.mint)
             Text("Release memory by closing an app you no longer need.").font(.headline)
-            Text("macOS already manages cached memory. CleanSlate cannot safely erase memory belonging to an open app. Choose an app below to request a normal quit; it may ask you to save your work. Nothing is selected or closed automatically.")
+            Text("Closing unused browser tabs or large documents can also reduce RAM use. Browser Memory Saver can suspend inactive tabs. macOS handles cache reclamation and compression automatically. To release an app’s memory here, choose Quit; the app may ask you to save first.")
                 .font(.system(size: 12)).foregroundStyle(OpsTheme.secondary)
             ForEach(model.topMemoryApps) { app in
                 HStack {

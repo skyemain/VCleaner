@@ -29,17 +29,17 @@ struct MainView: View {
         } message: {
             Text(model.browserPrompt ?? "")
         }
-        .alert("Empty the Trash?", isPresented: $model.trashPrompt) {
-            Button("Empty Trash", role: .destructive) { model.answerEmptyTrash(true) }
-            Button("Cancel", role: .cancel) { model.answerEmptyTrash(false) }
+        .alert(model.trashDuringClean ? "Include Trash in this clean?" : "Clean the Trash?", isPresented: $model.trashPrompt) {
+            Button("Clean Trash", role: .destructive) { model.answerEmptyTrash(true) }
+            Button(model.trashDuringClean ? "Leave Trash and continue" : "Cancel", role: .cancel) { model.answerEmptyTrash(false) }
         } message: {
-            Text("Everything in the Trash is permanently deleted. This cannot be undone.")
+            Text("Eligible files in your home Trash are permanently deleted, including hidden files. This cannot be undone. Excluded, protected or inaccessible items are kept.")
         }
         .sheet(isPresented: $model.showDetails) {
             ScanDetailsView(model: model)
         }
-        .sheet(isPresented: $model.showPermissions) {
-            AccessGuideView(model: model)
+        .sheet(isPresented: $model.showSettings) {
+            SettingsPanelView(model: model).environmentObject(settings)
         }
         .sheet(isPresented: $model.showMemoryApps) {
             MemoryAppsView(model: model)
@@ -128,12 +128,8 @@ struct MainView: View {
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(OpsTheme.secondary)
             Spacer()
-            Button("Access guide") { model.openAccessGuide() }
-                .buttonStyle(.plain)
-                .font(.system(size: 11))
-                .foregroundStyle(OpsTheme.secondary)
             Button {
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                model.openSettings()
             } label: {
                 Image(systemName: "gearshape")
                     .frame(width: 34, height: 34)
@@ -141,7 +137,6 @@ struct MainView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Settings")
-            .keyboardShortcut(",", modifiers: .command)
         }
         .padding(.horizontal, 36)
         .padding(.top, 22)
@@ -189,33 +184,32 @@ struct MainView: View {
                 .tracking(2)
                 .foregroundStyle(OpsTheme.mint)
             ForEach(model.rows) { row in
-                Button {
-                    model.selectTarget(row)
-                } label: {
-                    HStack(spacing: 12) {
-                        Circle()
-                            .fill(row.needsAttention ? OpsTheme.amber : OpsTheme.mint)
-                            .frame(width: 8, height: 8)
-                            .shadow(color: OpsTheme.mint.opacity(0.8), radius: 4)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(row.title)
-                                .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            Text(row.detail)
-                                .font(.system(size: 12))
-                                .foregroundStyle(OpsTheme.secondary)
-                                .lineLimit(2)
-                        }
-                        Spacer()
-                        if row.needsAttention {
-                            Image(systemName: "questionmark.circle").foregroundStyle(OpsTheme.amber)
-                        } else if row.id == "health" {
-                            Image(systemName: "chevron.right").foregroundStyle(OpsTheme.secondary)
-                        }
+                VStack(alignment: .leading, spacing: 8) {
+                    Button { model.selectTarget(row) } label: {
+                        HStack(spacing: 12) {
+                            Circle().fill(row.needsAttention ? OpsTheme.amber : OpsTheme.mint)
+                                .frame(width: 8, height: 8)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(row.title).font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                Text(row.detail).font(.system(size: 12)).foregroundStyle(OpsTheme.secondary).lineLimit(2)
+                            }
+                            Spacer()
+                            Image(systemName: row.needsAttention ? "questionmark.circle" : "chevron.right")
+                                .foregroundStyle(row.needsAttention ? OpsTheme.amber : OpsTheme.secondary)
+                        }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                     }
-                    .modifier(GlassCard())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("\(row.title), \(row.detail)")
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(row.title), \(row.detail)")
+                    if row.id == "junk" {
+                        HStack {
+                            Text(model.trashSummary).font(.system(size: 10)).foregroundStyle(OpsTheme.secondary)
+                            Spacer()
+                            Button("Clean Trash…") { model.requestEmptyTrash() }
+                                .buttonStyle(.bordered).font(.system(size: 10))
+                                .disabled(model.phase == .working || model.phase == .countingDown)
+                        }.padding(.leading, 20)
+                    }
+                }.modifier(GlassCard())
             }
             HStack {
                 Text(model.recoveredText)
@@ -227,11 +221,7 @@ struct MainView: View {
                     .tint(OpsTheme.mint)
             }
             .padding(.top, 6)
-            if settings.preferences.emptyTrash {
-                Button("Empty Trash…") { model.requestEmptyTrash() }
-                    .buttonStyle(.bordered)
-                    .accessibilityHint("Permanently deletes everything in the Trash after you confirm.")
-            }
+
         }
     }
 }

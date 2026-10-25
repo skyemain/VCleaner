@@ -3,6 +3,31 @@ import XCTest
 @testable import CleanSlate
 
 final class SystemCleanerTests: XCTestCase {
+    func testOldHiddenTemporaryFilesAreIncludedButFreshOnesStay() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let old = try fixture.write(relative: ".old-cache/data", bytes: 15, age: -86_400 * 3, in: fixture.temporary)
+        let fresh = try fixture.write(relative: ".new", bytes: 20, age: -60, in: fixture.temporary)
+        XCTAssertEqual(SystemCleaners.temporaryFiles(fixture.context()).byteCount, 15)
+        XCTAssertEqual(SystemCleaners.cleanTemporary(fixture.context(), cancel: { false }).deletedBytes, 15)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: old.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fresh.path))
+    }
+
+    func testArchivedLogsRespectAgeAndLeaveActiveLogsAndExclusions() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let old = try fixture.write(relative: "Library/Logs/App/app.log.2.gz", bytes: 10, age: -86_400 * 40)
+        let active = try fixture.write(relative: "Library/Logs/App/app.log", age: -86_400 * 40)
+        let fresh = try fixture.write(relative: "Library/Logs/App/app.log.1", age: -60)
+        let excluded = try fixture.write(relative: "Library/Logs/App/keep.log.gz", age: -86_400 * 40)
+        let context = fixture.context(exclusions: [excluded.path])
+        XCTAssertEqual(SystemCleaners.rotatedLogs(context).byteCount, 10)
+        XCTAssertEqual(SystemCleaners.cleanRotatedLogs(context, cancel: { false }).deletedBytes, 10)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: old.path))
+        for file in [active, fresh, excluded] { XCTAssertTrue(FileManager.default.fileExists(atPath: file.path)) }
+    }
+
     func testRecentTemporaryFilesAreKept() throws {
         let fixture = try Fixture()
         defer { fixture.destroy() }
@@ -116,5 +141,15 @@ final class AppMemoryTests: XCTestCase {
             dryRun: false, categories: categories, exclusions: [], allowBrowserQuit: false, emptyTrashConfirmed: false))
         XCTAssertFalse(FileManager.default.fileExists(atPath: removable.path))
         XCTAssertTrue(result.modules.contains { if case .unavailable = $0.cleanup.status { return true }; return false })
+    }
+}
+
+final class BatteryInfoTests: XCTestCase {
+    func testBatteryTimeNeverInventsAnEstimate() {
+        XCTAssertEqual(BatteryInfoService.timeLabel(seconds: -1, pluggedIn: false), "Calculating…")
+        XCTAssertEqual(BatteryInfoService.timeLabel(seconds: 10_800, pluggedIn: true), "Plugged in")
+        XCTAssertEqual(BatteryInfoService.timeLabel(seconds: 3660, pluggedIn: false), "≈ 1 h 1 min")
+        XCTAssertEqual(BatteryInfoService.fraction(50, 100), 0.5)
+        XCTAssertEqual(BatteryInfoService.fraction(50, 0), nil)
     }
 }

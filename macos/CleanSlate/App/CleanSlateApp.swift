@@ -41,11 +41,10 @@ struct CleanSlateApp: App {
         .defaultSize(width: 1040, height: 680)
         .commands {
             CommandGroup(replacing: .newItem) {}
-        }
-
-        Settings {
-            SettingsView()
-                .environmentObject(container.settings)
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") { container.main.openSettings() }
+                    .keyboardShortcut(",", modifiers: .command)
+            }
         }
 
         MenuBarExtra("CleanSlate", systemImage: "circle.hexagongrid", isInserted: menuBarInserted) {

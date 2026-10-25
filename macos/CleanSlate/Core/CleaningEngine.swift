@@ -96,6 +96,7 @@ actor CleaningEngine {
         }
         if categories.diagnosticReports {
             modules.append(SystemCleaners.diagnosticReports(context))
+            modules.append(SystemCleaners.rotatedLogs(context))
         }
         modules.append(SystemCleaners.thumbnails())
         if categories.safari {
@@ -187,6 +188,8 @@ actor CleaningEngine {
             return SystemCleaners.cleanHelpCaches(context, cancel: cancel)
         case "loose-cache":
             return SystemCleaners.cleanLooseCaches(context, cancel: cancel)
+        case "rotated-logs":
+            return SystemCleaners.cleanRotatedLogs(context, cancel: cancel)
         case "diagnostics":
             return SystemCleaners.cleanDiagnostics(context, cancel: cancel)
         case "safari":

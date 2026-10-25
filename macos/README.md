@@ -1,6 +1,6 @@
 # CleanSlate for macOS
 
-CleanSlate 1.0.4 is a native macOS cleaner. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes only cache and temporary files it can prove are disposable. RAM management offers a normal quit only after you choose and confirm one app.
+CleanSlate 1.0.5 is a native macOS cleaner. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes only cache and temporary files it can prove are disposable. RAM management offers a normal quit only after you choose and confirm one app.
 
 GitHub Actions tests and builds the universal disk image when the `mac` branch is pushed, then commits the latest DMG and checksums to [`release/`](release/). Share [the stable latest download](https://github.com/skyemain/VCleaner/raw/refs/heads/mac/macos/release/CleanSlate-latest-mac-universal.dmg). The copy in that image is ad-hoc signed so it can launch; it is not notarized, so the first open is a right-click → Open. Xcode is required to build it locally.
 
@@ -22,13 +22,15 @@ GitHub Actions tests and builds the universal disk image when the `mac` branch i
 
 Login cleaning runs the low-risk set only. It does not quit browsers, empty the Trash, or touch Xcode. If Safari or Chrome is open, that browser’s cache is skipped and the result says so. A manual clean can ask the browser to quit normally and waits; it never force-quits. Edge is not a target.
 
-## System health
+## System overview
 
-System Overview explains RAM state, swap, disk capacity, and startup items that point to missing programs. Opening the report does not clean files or release memory. Downloads, Xcode archives, simulators and possible leftovers are reports only. A broken LaunchAgent can be backed up and disabled as a separate confirmed action.
+The overview contains four compact cards only: RAM usage, storage usage, estimated battery time remaining and battery health. It refreshes every five seconds while open. Time remaining is macOS's current estimate, not a guaranteed shutdown time; plugged-in, unknown and desktop/no-battery states have explicit labels. Where available, battery health shows the ratio of nominal charge capacity to design capacity, labelled as an estimate; it may differ from Apple's calibrated Battery Health value.
 
-The home footer shows RAM usage plus the five largest readable foreground apps and their helper processes. Percentages use total physical RAM as the denominator and use per-process physical footprints; inaccessible processes and shared memory mean these estimates can differ from Activity Monitor.
+Settings opens directly from the gear or ⌘,. Cleaning Access is a tab inside Settings and contains the setup guide and per-folder access checks.
 
-**Clean up RAM** opens a review of these apps. Each app has a **Quit…** action and a confirmation. CleanSlate requests a normal quit, allows save dialogs, never forces an app closed, and reports observed system RAM before and after. Other running apps affect that change, so it is not presented as a guaranteed amount recovered. The former allocation-based cache-reclamation method has been removed: macOS already manages caches, and an open app’s live memory cannot safely be erased.
+The home footer shows RAM usage plus the five largest readable apps and their helper processes. Percentages use total physical RAM as the denominator. Clean up RAM offers a confirmed normal quit; closing tabs/documents or enabling browser Memory Saver can also reduce RAM use. macOS manages cache reclamation and compression automatically.
+
+System Junk includes hidden temporary files older than 24 hours, the supported seven-day cache allowlist, diagnostic reports and archived rotated logs older than 30 days, and home Trash. Current unrotated logs are excluded. Trash is measured in manual scans; every deletion needs a separate confirmation, with a leave-and-continue option. Hidden Trash files are included, while protected, excluded, inaccessible items and symbolic links are kept. Login cleaning always skips Trash. Xcode DerivedData remains an optional larger cleanup target; archives and simulators are never deleted.
 
 ## First clean and Safari access
 
@@ -68,9 +70,9 @@ To sign, package, and notarize, using credentials that stay outside the reposito
 ```bash
 export DEVELOPER_ID_APPLICATION="Developer ID Application: Your Name (TEAMID)"
 scripts/sign.sh
-scripts/package-dmg.sh 1.0.4
+scripts/package-dmg.sh 1.0.5
 xcrun notarytool store-credentials cleanslate --apple-id you@example.com --team-id TEAMID
-NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.4-mac-universal.dmg
+NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.5-mac-universal.dmg
 scripts/verify-release.sh
 ```
 

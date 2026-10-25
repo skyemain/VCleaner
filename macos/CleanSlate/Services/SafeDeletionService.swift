@@ -17,6 +17,7 @@ struct DeletionOutcome: Equatable, Sendable {
 struct SafeDeletionService: Sendable {
     var allowXcodeDerivedData = false
     var allowTrash = false
+    var includeHidden = false
 
     func deleteEligibleFiles(
         under root: URL,
@@ -43,7 +44,7 @@ struct SafeDeletionService: Sendable {
                 root: resolvedRoot,
                 minimumAge: minimumAge,
                 exclusions: context.exclusions,
-                fileManager: FileManager()
+                fileManager: FileManager(), includeHidden: includeHidden
             )
             outcome.accessDenied = stats.accessDenied
             outcome.deletedCount = stats.fileCount
@@ -56,7 +57,7 @@ struct SafeDeletionService: Sendable {
             root: resolvedRoot,
             minimumAge: minimumAge,
             exclusions: context.exclusions,
-            fileManager: FileManager()
+            fileManager: FileManager(), includeHidden: includeHidden
         )
         outcome.accessDenied = files.accessDenied
         outcome.skippedCount += files.skippedCount
@@ -65,7 +66,7 @@ struct SafeDeletionService: Sendable {
                 outcome.errors.append("Cancelled. Files already removed were not restored.")
                 break
             }
-            switch deleteOne(file, approvedRoot: resolvedRoot, context: context) {
+            switch deleteOne(file, approvedRoot: resolvedRoot, context: context, minimumAge: minimumAge) {
             case .deleted(let bytes):
                 outcome.deletedCount += 1
                 outcome.deletedBytes += bytes
@@ -82,7 +83,7 @@ struct SafeDeletionService: Sendable {
     }
 
     /// Deletes specific files that are already known to sit inside an approved root. Used for filtered sets such as old diagnostic reports.
-    func deleteListedFiles(_ urls: [URL], under root: URL, context: ScanContext, shouldCancel: @escaping () -> Bool = { false }) -> DeletionOutcome {
+    func deleteListedFiles(_ urls: [URL], under root: URL, context: ScanContext, minimumAge: Date? = nil, shouldCancel: @escaping () -> Bool = { false }) -> DeletionOutcome {
         var outcome = DeletionOutcome()
         let resolvedRoot = root.standardizedFileURL.resolvingSymlinksInPath()
         guard ProtectedPaths.isApprovedRoot(
@@ -107,7 +108,7 @@ struct SafeDeletionService: Sendable {
                 outcome.deletedBytes += Int64(size)
                 continue
             }
-            switch deleteOne(url, approvedRoot: resolvedRoot, context: context) {
+            switch deleteOne(url, approvedRoot: resolvedRoot, context: context, minimumAge: minimumAge) {
             case .deleted(let bytes):
                 outcome.deletedCount += 1
                 outcome.deletedBytes += bytes
@@ -127,7 +128,7 @@ struct SafeDeletionService: Sendable {
         case failed(String)
     }
 
-    private func deleteOne(_ url: URL, approvedRoot: URL, context: ScanContext) -> OneShot {
+    private func deleteOne(_ url: URL, approvedRoot: URL, context: ScanContext, minimumAge: Date?) -> OneShot {
         let path = url.path
         if context.isExcluded(path) || ProtectedPaths.isReserved(url) {
             return .skipped
@@ -171,6 +172,10 @@ struct SafeDeletionService: Sendable {
         }
         guard opened.st_dev == info.st_dev, opened.st_ino == info.st_ino else {
             return .failed("Skipped \(url.lastPathComponent): it changed before it could be removed.")
+        }
+        if let minimumAge {
+            let modified = Date(timeIntervalSince1970: Double(opened.st_mtimespec.tv_sec) + Double(opened.st_mtimespec.tv_nsec) / 1_000_000_000)
+            if modified > minimumAge { return .skipped }
         }
         let bytes = Int64(opened.st_size)
         guard unlink(path) == 0 else {

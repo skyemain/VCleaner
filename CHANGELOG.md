@@ -1,5 +1,13 @@
 # macOS changelog
 
+## 1.0.5
+
+- Replace the text-heavy System Overview with RAM, storage, battery time and battery-health cards.
+- Open Settings directly from the gear and ⌘,; consolidate the access guide into its Cleaning Access tab.
+- Integrate home Trash into System Junk with per-clean confirmation and a leave-and-continue choice.
+- Include hidden stale temporary files and archived rotated logs; recheck file age immediately before deletion.
+- Explain tab/document closing and browser Memory Saver alongside normal app quitting for RAM management.
+
 ## 1.0.4
 
 - Replace the footer pressure label with five compact app memory percentages, including readable helpers.

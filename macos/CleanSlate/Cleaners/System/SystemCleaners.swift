@@ -12,7 +12,7 @@ enum SystemCleaners {
             title: "Temporary files",
             root: context.locations.temporaryDirectory,
             context: context,
-            minimumAge: context.now.addingTimeInterval(-temporaryFileAge)
+            minimumAge: context.now.addingTimeInterval(-temporaryFileAge), includeHidden: true
         )
     }
 
@@ -103,6 +103,41 @@ enum SystemCleaners {
         return ModuleEstimate(id: "diagnostics", title: "Diagnostic reports", status: .ready, fileCount: count, byteCount: bytes, samplePaths: sample)
     }
 
+    /// Only archived log names: app.log.gz, app.log.1, app.log.2.gz, etc.
+    static func isRotatedLog(_ url: URL) -> Bool {
+        let name = url.lastPathComponent.lowercased()
+        if name.hasSuffix(".log.gz") { return true }
+        guard let marker = name.range(of: ".log.", options: .backwards) else { return false }
+        var suffix = String(name[marker.upperBound...])
+        if suffix.hasSuffix(".gz") { suffix.removeLast(3) }
+        return !suffix.isEmpty && suffix.allSatisfy { $0.isNumber && $0.isASCII }
+    }
+
+    private static func rotatedLogFiles(_ context: ScanContext) -> WalkStats {
+        DirectoryWalker.files(root: context.locations.url("Library/Logs"),
+            minimumAge: context.now.addingTimeInterval(-diagnosticRetention),
+            exclusions: context.exclusions, fileManager: FileManager())
+    }
+
+    static func rotatedLogs(_ context: ScanContext) -> ModuleEstimate {
+        let stats = rotatedLogFiles(context)
+        let files = stats.urls.filter(isRotatedLog)
+        let bytes = files.reduce(Int64(0)) { total, url in
+            total + Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+        }
+        return ModuleEstimate(id: "rotated-logs", title: "Archived logs (30+ days)",
+            status: stats.accessDenied ? .unavailable(PermissionService.accessHelp) : .ready,
+            fileCount: files.count, byteCount: bytes, samplePaths: Array(files.prefix(20).map(\.path)))
+    }
+
+    static func cleanRotatedLogs(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
+        let files = rotatedLogFiles(context).urls.filter(isRotatedLog)
+        let outcome = SafeDeletionService().deleteListedFiles(files, under: context.locations.url("Library/Logs"),
+            context: context, minimumAge: context.now.addingTimeInterval(-diagnosticRetention), shouldCancel: cancel)
+        return ModuleCleanup(deletedCount: outcome.deletedCount, deletedBytes: outcome.deletedBytes,
+            skippedCount: outcome.skippedCount, errors: outcome.errors, status: .ready)
+    }
+
     static func thumbnails() -> ModuleEstimate {
         ModuleEstimate(
             id: "thumbnails",
@@ -115,7 +150,7 @@ enum SystemCleaners {
     }
 
     static func cleanTemporary(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
-        clean(idRoot: context.locations.temporaryDirectory, context: context, minimumAge: context.now.addingTimeInterval(-temporaryFileAge), allowXcode: false, allowTrash: false, cancel: cancel)
+        clean(idRoot: context.locations.temporaryDirectory, context: context, minimumAge: context.now.addingTimeInterval(-temporaryFileAge), allowXcode: false, allowTrash: false, includeHidden: true, cancel: cancel)
     }
 
     static func cleanHelpCaches(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
@@ -148,20 +183,20 @@ enum SystemCleaners {
             guard values?.isRegularFile == true, let modified = values?.contentModificationDate else { return false }
             return modified <= cutoff && !context.isExcluded(url.path)
         }
-        let outcome = SafeDeletionService().deleteListedFiles(urls, under: root, context: context, shouldCancel: cancel)
+        let outcome = SafeDeletionService().deleteListedFiles(urls, under: root, context: context, minimumAge: cutoff, shouldCancel: cancel)
         return ModuleCleanup(deletedCount: outcome.deletedCount, deletedBytes: outcome.deletedBytes, skippedCount: outcome.skippedCount, errors: outcome.errors, status: .ready)
     }
 
-    private static func estimate(id: String, title: String, root: URL, context: ScanContext, minimumAge: Date?) -> ModuleEstimate {
+    private static func estimate(id: String, title: String, root: URL, context: ScanContext, minimumAge: Date?, includeHidden: Bool = false) -> ModuleEstimate {
         if DirectoryWalker.isUnreadable(root) {
             return ModuleEstimate(id: id, title: title, status: .unavailable(PermissionService.accessHelp), fileCount: 0, byteCount: 0, samplePaths: [])
         }
-        let stats = DirectoryWalker.collect(root: root, minimumAge: minimumAge, exclusions: context.exclusions, fileManager: FileManager())
+        let stats = DirectoryWalker.collect(root: root, minimumAge: minimumAge, exclusions: context.exclusions, fileManager: FileManager(), includeHidden: includeHidden)
         return ModuleEstimate(id: id, title: title, status: stats.accessDenied ? .unavailable(PermissionService.accessHelp) : .ready, fileCount: stats.fileCount, byteCount: stats.byteCount, samplePaths: stats.samplePaths)
     }
 
-    private static func clean(idRoot: URL, context: ScanContext, minimumAge: Date?, allowXcode: Bool, allowTrash: Bool, cancel: @escaping () -> Bool) -> ModuleCleanup {
-        var service = SafeDeletionService(allowXcodeDerivedData: allowXcode, allowTrash: allowTrash)
+    private static func clean(idRoot: URL, context: ScanContext, minimumAge: Date?, allowXcode: Bool, allowTrash: Bool, includeHidden: Bool = false, cancel: @escaping () -> Bool) -> ModuleCleanup {
+        var service = SafeDeletionService(allowXcodeDerivedData: allowXcode, allowTrash: allowTrash, includeHidden: includeHidden)
         let outcome = service.deleteEligibleFiles(under: idRoot, context: context, minimumAge: minimumAge, shouldCancel: cancel)
         return ModuleCleanup(deletedCount: outcome.deletedCount, deletedBytes: outcome.deletedBytes, skippedCount: outcome.skippedCount, errors: outcome.errors, status: outcome.accessDenied ? .unavailable(PermissionService.accessHelp) : .ready)
     }

@@ -95,7 +95,7 @@ enum ProtectedPaths {
             return true
         }
         if systemCacheRelativeRoots.contains(where: { isSpecificCache(path, home: home, prefix: $0) }) { return true }
-        if isSpecificCache(path, home: home, prefix: "Library/Logs/DiagnosticReports") { return true }
+        if isSpecificCache(path, home: home, prefix: "Library/Logs") { return true }
         if chromiumCache(path, home: home, support: "Library/Application Support/Google/Chrome") { return true }
         if chromiumCache(path, home: home, support: "Library/Caches/Google/Chrome") { return true }
         if allowXcodeDerivedData, isInside(path, home: home, relative: "Library/Developer/Xcode/DerivedData"), path != standardized(home.appendingPathComponent("Library/Developer/Xcode/DerivedData")) {

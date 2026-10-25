@@ -2,6 +2,23 @@ import XCTest
 @testable import CleanSlate
 
 final class CleaningEngineTests: XCTestCase {
+    func testTrashRequiresConfirmationAndIncludesHiddenFilesWhenConfirmed() async throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let file = try fixture.write(relative: ".Trash/.hidden", bytes: 23)
+        var categories = EnabledCategories()
+        categories.emptyTrash = true
+        let engine = CleaningEngine(locations: fixture.locations)
+        let no = CleanRequest(mode: .manual, dryRun: false, categories: categories, exclusions: [], allowBrowserQuit: false, emptyTrashConfirmed: false)
+        _ = try await engine.clean(no)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
+        var yes = no
+        yes.emptyTrashConfirmed = true
+        let result = try await engine.clean(yes)
+        XCTAssertEqual(result.deletedBytes, 23)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+    }
+
     func testLoginCleanDoesNotEmptyTrashOrTouchXcode() async throws {
         let fixture = try Fixture()
         defer { fixture.destroy() }
@@ -160,5 +177,59 @@ final class PermissionAndHistoryTests: XCTestCase {
         XCTAssertTrue(report.contains("Space recovered"))
         XCTAssertTrue(report.contains("Files cleaned: 2"))
         XCTAssertFalse(report.contains("password"))
+    }
+}
+
+final class MainInteractionTests: XCTestCase {
+    @MainActor
+    func testSettingsAndAccessGuideOpenTheSamePanelOnDifferentTabs() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let model = MainViewModel(settings: SettingsViewModel(store: MemoryPreferenceStore(), loginItems: FakeLoginItems()),
+            engine: CleaningEngine(locations: fixture.locations), history: HistoryStore(fileURL: fixture.root.appendingPathComponent("history.json")),
+            closeApp: {}, accessGuideAcknowledged: true)
+        model.openSettings()
+        XCTAssertTrue(model.showSettings)
+        XCTAssertEqual(model.settingsTab, .preferences)
+        model.openAccessGuide()
+        XCTAssertTrue(model.showSettings)
+        XCTAssertEqual(model.settingsTab, .access)
+    }
+
+    @MainActor
+    func testDirectTrashActionUsesTheEngineAndRecordsHistory() async throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let file = try fixture.write(relative: ".Trash/.hidden", bytes: 17)
+        let store = HistoryStore(fileURL: fixture.root.appendingPathComponent("history.json"))
+        let model = MainViewModel(settings: SettingsViewModel(store: MemoryPreferenceStore(), loginItems: FakeLoginItems()),
+            engine: CleaningEngine(locations: fixture.locations), history: store, closeApp: {}, accessGuideAcknowledged: true)
+        model.requestEmptyTrash()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
+        model.answerEmptyTrash(true)
+        for _ in 0..<200 { if model.phase == .completed { break }; try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(model.phase, .completed)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+        XCTAssertEqual(store.load().last?.deletedBytes, 17)
+    }
+
+    @MainActor
+    func testLeavingTrashContinuesSystemJunkCleanup() async throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let trash = try fixture.write(relative: ".Trash/keep", bytes: 12)
+        let temp = try fixture.write(relative: "old.tmp", bytes: 10, age: -86_400 * 3, in: fixture.temporary)
+        let model = MainViewModel(settings: SettingsViewModel(store: MemoryPreferenceStore(), loginItems: FakeLoginItems()),
+            engine: CleaningEngine(locations: fixture.locations), history: HistoryStore(fileURL: fixture.root.appendingPathComponent("history.json")),
+            closeApp: {}, accessGuideAcknowledged: true)
+        model.cleanNow()
+        for _ in 0..<200 { if model.trashPrompt { break }; try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertTrue(model.trashPrompt)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: trash.path))
+        model.answerEmptyTrash(false)
+        for _ in 0..<200 { if model.phase == .completed { break }; try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(model.phase, .completed)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: trash.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: temp.path))
     }
 }
