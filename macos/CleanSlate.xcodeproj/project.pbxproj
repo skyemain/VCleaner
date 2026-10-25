@@ -108,6 +108,7 @@
 				PRODUCT_NAME = CleanSlate;
 				SWIFT_STRICT_CONCURRENCY = minimal;
 				SWIFT_VERSION = 6.0;
+				ENABLE_TESTABILITY = YES;
 				CODE_SIGN_IDENTITY = "-";
 			}; name = Debug; };
 		831F0B0E7AD0243B76867D45 = { isa = XCBuildConfiguration; buildSettings = { 

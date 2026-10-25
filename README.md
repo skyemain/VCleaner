@@ -15,6 +15,10 @@ xcodebuild -project CleanSlate.xcodeproj -scheme CleanSlate -destination 'platfo
 scripts/build.sh
 ```
 
-Pushing to `mac` runs the macOS workflow to test and package an ad-hoc signed universal DMG. Download the matching workflow artifact for the latest build. The committed `macos/release/CleanSlate-1.0.1-mac-universal.dmg` is an older build and does not include the current fixes.
+## Download and share
+
+[Download the latest Mac DMG](https://github.com/skyemain/VCleaner/raw/refs/heads/mac/macos/release/CleanSlate-latest-mac-universal.dmg).
+
+Every successful `mac` build updates [`macos/release/`](macos/release/) with the current version, a stable latest filename, and SHA-256 checksums. The previous DMG remains available until its replacement passes tests and packaging. The workflow also saves a downloadable build artifact.
 
 See [the macOS guide](macos/README.md) for cleaning rules, Safari permissions, RAM monitoring, signing and notarization.
