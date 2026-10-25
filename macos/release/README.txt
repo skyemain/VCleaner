@@ -1,17 +1,11 @@
-`CleanSlate-1.0.1-mac-universal.dmg` is an ad-hoc signed universal build from GitHub Actions.
-It is not notarized. macOS will warn the first time you open it: right-click CleanSlate, choose Open, then Open again.
-Dragging the app to Applications does not need a developer account.
+CleanSlate 1.0.3 for macOS 13 and newer (Apple silicon and Intel).
 
-This is a historical build and does not contain the latest source fixes. Download the latest successful macOS DMG workflow artifact for the current build.
+Share CleanSlate-latest-mac-universal.dmg for the latest successful build.
+CleanSlate-1.0.3-mac-universal.dmg is the same build with its version in the filename.
+Verify downloads against SHA256SUMS.txt.
 
-Later release builds that you sign with your own Developer ID replace this file. They are produced on a Mac with:
+Source commit: 480bbd2e4d153b363fae913579989e43ede1479d
+Build: https://github.com/skyemain/VCleaner/actions/runs/40224421665
 
-On macOS, from the macos directory:
-
-  scripts/build.sh
-  scripts/sign.sh                  # requires DEVELOPER_ID_APPLICATION
-  scripts/package-dmg.sh 1.0.1
-  scripts/notarize.sh release/CleanSlate-1.0.1-mac-universal.dmg
-  scripts/verify-release.sh
-
-An unsigned build from build.sh is a local development build. It is not notarized and Gatekeeper will not treat it as trusted.
+Drag CleanSlate to Applications. This build is ad-hoc signed, not notarized;
+macOS may require right-click > Open on first launch.
