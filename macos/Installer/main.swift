@@ -7,9 +7,9 @@ struct InstallerLauncher {
         let application = NSApplication.shared
         application.setActivationPolicy(.accessory)
         Task {
-            let source = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("CleanSlate.app")
-            guard Bundle(url: source)?.bundleIdentifier == "com.skyemain.CleanSlate" else {
-                showError("Keep Install CleanSlate beside CleanSlate.app inside the downloaded disk image.")
+            guard let source = Bundle.main.url(forResource: "CleanSlate", withExtension: "app"),
+                  Bundle(url: source)?.bundleIdentifier == "com.skyemain.CleanSlate" else {
+                showError("The installer payload is missing or invalid. Download a fresh CleanSlate disk image.")
                 application.terminate(nil)
                 return
             }

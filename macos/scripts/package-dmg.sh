@@ -35,7 +35,9 @@ You can still drag the app to Applications if administrator approval is needed.
 INSTALL
 # A separate bundle always starts the NEW copy, even if an older CleanSlate is open.
 launcher="${stage}/Install CleanSlate.app"
-mkdir -p "${launcher}/Contents/MacOS"
+mkdir -p "${launcher}/Contents/MacOS" "${launcher}/Contents/Resources"
+# Keep the payload inside the signed bundle so Gatekeeper translocation cannot hide it.
+cp -R "${app}" "${launcher}/Contents/Resources/CleanSlate.app"
 cat > "${launcher}/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
