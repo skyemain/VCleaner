@@ -548,7 +548,12 @@ public sealed class ConfigurationTests
 
         var files = Directory.GetFiles(layout.LogsDirectory);
         Assert.Equal(2, files.Length);
-        var text = string.Join("\n", files.Select(f => File.ReadAllText(f)));
+        var text = string.Join("\n", files.Select(f =>
+        {
+            using var stream = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(stream);
+            return reader.ReadToEnd();
+        }));
         Assert.Contains("%USERPROFILE%", text);
         Assert.DoesNotContain("alice", text);
 
