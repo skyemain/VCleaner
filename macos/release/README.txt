@@ -1,11 +1,11 @@
-Clenzy 1.0 for macOS 13 and newer (Apple silicon and Intel).
+Clenzy 1.0.1 for macOS 13 and newer (Apple silicon and Intel).
 
 Share Clenzy-latest-mac-universal.dmg for the latest successful build.
-Clenzy-1.0-mac-universal.dmg is the same build with its version in the filename.
+Clenzy-1.0.1-mac-universal.dmg is the same build with its version in the filename.
 Verify downloads against SHA256SUMS.txt.
 
-Source commit: 6380c7e98d1686ada42b0becdcab87bd9f4d4bff
-Build: https://github.com/skyemain/VCleaner/actions/runs/40235474093
+Source commit: 24c1f71140c5e224009d2c2f17034c487a564328
+Build: https://github.com/skyemain/VCleaner/actions/runs/40236998107
 
 Quit CleanSlate or Clenzy, then drag Clenzy to Applications.
 Replace an existing Clenzy; remove an old CleanSlate.app separately.
