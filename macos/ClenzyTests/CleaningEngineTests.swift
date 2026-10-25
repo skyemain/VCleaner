@@ -1,4 +1,5 @@
 import XCTest
+import AppKit
 @testable import Clenzy
 
 final class CleaningEngineTests: XCTestCase {
@@ -247,5 +248,35 @@ final class MainInteractionTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: temp.path))
         XCTAssertTrue(model.rows.first { $0.id == "junk" }?.needsAttention == true)
         XCTAssertFalse(model.rows.contains { $0.id == "health" || $0.id == "trash" })
+    }
+}
+
+final class RelaunchTests: XCTestCase {
+    func testRelaunchPreservesPathAsOneArgumentAndWaitsForExit() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let marker = fixture.root.appendingPathComponent("opened")
+        let opener = fixture.root.appendingPathComponent("open-fixture")
+        try "#!/bin/sh\n/usr/bin/printf '%s\n' \"$@\" > \"\(marker.path)\"\n".write(to: opener, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: opener.path)
+        let child = Process()
+        child.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        child.arguments = ["0.6"]
+        try child.run()
+        let helper = Process()
+        helper.executableURL = URL(fileURLWithPath: "/bin/sh")
+        helper.arguments = RelaunchPlan(bundleURL: URL(fileURLWithPath: "/Applications/Clenzy $ Test.app"), pid: child.processIdentifier).arguments(opener: opener.path)
+        try helper.run()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: marker.path))
+        child.waitUntilExit()
+        helper.waitUntilExit()
+        XCTAssertEqual(helper.terminationStatus, 0)
+        let opened = try String(contentsOf: marker, encoding: .utf8)
+        XCTAssertEqual(opened, "-n\n/Applications/Clenzy $ Test.app\n--args\n--after-access-restart\n")
+    }
+
+    @MainActor
+    func testPermissionQuitIsAcceptedImmediately() {
+        XCTAssertEqual(AppLifecycleDelegate().applicationShouldTerminate(NSApplication.shared), .terminateNow)
     }
 }

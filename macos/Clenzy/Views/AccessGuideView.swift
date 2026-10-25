@@ -21,6 +21,8 @@ struct AccessGuideView: View {
                             Task { await model.recheckPermissions() }
                         }.disabled(model.checkingPermissions || model.grantingAccess)
                     }.buttonStyle(.bordered)
+                    Button("Restart Clenzy after granting access") { model.restartAfterAccessChange() }
+                        .buttonStyle(.borderedProminent).tint(OpsTheme.mintDeep)
                     Text("Running copy: \(Bundle.main.bundleURL.path)")
                         .font(.system(size: 10, design: .monospaced)).foregroundStyle(OpsTheme.secondary).textSelection(.enabled)
                     if !model.accessMessage.isEmpty {

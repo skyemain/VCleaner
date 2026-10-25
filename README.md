@@ -35,3 +35,5 @@ scripts/package-dmg.sh 1.0
 The GitHub macOS workflow tests, builds both architectures, signs ad-hoc, packages, and commits the versioned DMG, stable latest DMG and checksums to `macos/release/`. It refuses to publish stale source commits. For future releases update the generator marketing/build versions, workflow and package default; regenerate the project. Keep this as the only Markdown reference; retain source, tests, assets, license and build/signing scripts.
 
 Version 1.0 renames CleanSlate to Clenzy, selects exactly up to five lowest-memory Dock apps instead of protecting the top five, and removes unused report code and duplicate documentation. Local test runs use temporary fixture files only and never close real user apps. Full native tests and universal packaging run in GitHub Actions.
+
+Mac 1.0.1 candidate: explicit Restart Clenzy action prepares a bounded helper, quits normally, waits for exit, and reopens the exact bundle without triggering cleanup. The app delegate accepts OS quit requests immediately. Native tests exercise only a fixture child and fake opener. Main retains the approved 1.0 release until the candidate is approved.

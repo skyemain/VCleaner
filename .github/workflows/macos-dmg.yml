@@ -44,12 +44,12 @@ jobs:
 
       - name: Package drag-and-drop disk image
         working-directory: macos
-        run: scripts/package-dmg.sh 1.0
+        run: scripts/package-dmg.sh 1.0.1
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Clenzy-1.0-mac-universal
-          path: macos/release/Clenzy-1.0-mac-universal.dmg
+          name: Clenzy-1.0.1-mac-universal
+          path: macos/release/Clenzy-1.0.1-mac-universal.dmg
           if-no-files-found: error
 
       - name: Keep the latest DMG in the mac branch
@@ -63,14 +63,14 @@ jobs:
             echo "A newer source commit exists; its workflow will publish the latest DMG."
             exit 0
           fi
-          find macos/release -maxdepth 1 -name '*.dmg' ! -name 'Clenzy-1.0-mac-universal.dmg' -delete
-          cp macos/release/Clenzy-1.0-mac-universal.dmg macos/release/Clenzy-latest-mac-universal.dmg
+          find macos/release -maxdepth 1 -name '*.dmg' ! -name 'Clenzy-1.0.1-mac-universal.dmg' -delete
+          cp macos/release/Clenzy-1.0.1-mac-universal.dmg macos/release/Clenzy-latest-mac-universal.dmg
           (cd macos/release && shasum -a 256 *.dmg > SHA256SUMS.txt)
           cat > macos/release/README.txt <<EOF
-          Clenzy 1.0 for macOS 13 and newer (Apple silicon and Intel).
+          Clenzy 1.0.1 for macOS 13 and newer (Apple silicon and Intel).
 
           Share Clenzy-latest-mac-universal.dmg for the latest successful build.
-          Clenzy-1.0-mac-universal.dmg is the same build with its version in the filename.
+          Clenzy-1.0.1-mac-universal.dmg is the same build with its version in the filename.
           Verify downloads against SHA256SUMS.txt.
 
           Source commit: $SOURCE_SHA

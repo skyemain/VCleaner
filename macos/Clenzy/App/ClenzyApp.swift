@@ -22,6 +22,7 @@ final class AppContainer: ObservableObject {
 
 @main
 struct ClenzyApp: App {
+    @NSApplicationDelegateAdaptor(AppLifecycleDelegate.self) private var lifecycle
     @StateObject private var container: AppContainer
 
     init() {

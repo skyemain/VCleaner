@@ -72,6 +72,18 @@ final class MainViewModel: ObservableObject {
         topMemoryApps = Array(snapshot.1.prefix(5))
     }
 
+    func restartAfterAccessChange() {
+        guard phase != .working, phase != .countingDown, !freeingMemory else {
+            accessMessage = "Finish or cancel the current cleanup before restarting."
+            return
+        }
+        do {
+            try RelaunchService.restart()
+        } catch {
+            accessMessage = "Restart could not be prepared: \(error.localizedDescription). Quit with ⌘Q and open Clenzy from Applications."
+        }
+    }
+
     func openSettings() {
         settingsTab = .preferences
         showSettings = true
@@ -145,6 +157,10 @@ final class MainViewModel: ObservableObject {
     }
 
     func onAppear(arguments: [String]) {
+        if arguments.contains("--after-access-restart") {
+            Task { await recheckPermissions() }
+            return
+        }
         let forced = arguments.contains("--login-clean")
         guard forced || (loginLaunchDetector() && settings.preferences.cleanAtLogin) else { return }
         guard runTask == nil else { return }

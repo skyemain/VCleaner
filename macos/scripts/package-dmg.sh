@@ -9,7 +9,7 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 2
 fi
 
-version="${1:-1.0}"
+version="${1:-1.0.1}"
 app="build/Clenzy.app"
 if [[ ! -d "${app}" ]]; then
   echo "error: ${app} is missing. Run scripts/build.sh first." >&2
