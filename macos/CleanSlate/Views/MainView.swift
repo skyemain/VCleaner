@@ -15,6 +15,13 @@ struct MainView: View {
         }
         .foregroundStyle(OpsTheme.text)
         .onAppear { model.onAppear(arguments: CommandLine.arguments) }
+        .task {
+            while !Task.isCancelled {
+                model.refreshMemory()
+                do { try await Task.sleep(nanoseconds: 2_000_000_000) }
+                catch { break }
+            }
+        }
         .onTapGesture { model.holdOpen() }
         .alert("Quit the browser?", isPresented: browserPresented) {
             Button("Quit and clean") { model.answerBrowserQuit(true) }
@@ -48,8 +55,42 @@ struct MainView: View {
                 rightColumn
             }
             .padding(.horizontal, 36)
-            .padding(.bottom, 28)
+            .padding(.bottom, 20)
+            memoryFooter
+                .padding(.horizontal, 36)
+                .padding(.bottom, 20)
         }
+    }
+
+    private var memoryFooter: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 18) {
+                Image(systemName: "memorychip").foregroundStyle(OpsTheme.mint)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("RAM USAGE · \(Int(model.memory.usageFraction * 100))%")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    ProgressView(value: model.memory.usageFraction)
+                        .tint(OpsTheme.mint)
+                        .frame(width: 180)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("\(ByteFormat.string(from: Int64(model.memory.usedBytes))) / \(ByteFormat.string(from: Int64(model.memory.totalBytes)))")
+                    Text("Pressure: \(model.memory.pressure)")
+                        .foregroundStyle(OpsTheme.secondary)
+                }
+                .font(.system(size: 11, design: .monospaced))
+                Spacer()
+                Button(model.freeingMemory ? "CLEANING RAM…" : "CLEAN UP RAM") { model.freeMemory() }
+                    .buttonStyle(.bordered)
+                    .tint(OpsTheme.mint)
+                    .disabled(model.freeingMemory || model.phase == .working || model.phase == .countingDown)
+                    .help(MemoryInfoService.explanation)
+            }
+            if !model.memoryNote.isEmpty {
+                Text(model.memoryNote).font(.caption).foregroundStyle(OpsTheme.secondary)
+            }
+        }
+        .modifier(GlassCard())
     }
 
     private var header: some View {
@@ -91,27 +132,6 @@ struct MainView: View {
                 model.cleanNow()
             }
             .disabled(model.phase == .working || model.phase == .countingDown || model.freeingMemory)
-            Button {
-                model.freeMemory()
-            } label: {
-                Text(model.freeingMemory ? "FREEING" : "FREE RAM")
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    .tracking(2)
-                    .frame(width: 220)
-                    .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(OpsTheme.cardStroke, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .disabled(model.freeingMemory || model.phase == .working || model.phase == .countingDown)
-            .accessibilityLabel("Free RAM. Asks macOS to release inactive memory without quitting apps.")
-            if !model.memoryNote.isEmpty {
-                Text(model.memoryNote)
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(OpsTheme.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 260)
-            }
             if !model.countdownText.isEmpty {
                 VStack(spacing: 8) {
                     Text(model.countdownText)

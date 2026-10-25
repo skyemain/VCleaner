@@ -23,6 +23,8 @@ struct SettingsView: View {
             Section("Cleaning") {
                 Toggle("User temporary files", isOn: binding(\.cleanTemporaryFiles))
                 Toggle("Supported user caches", isOn: binding(\.cleanUserCaches))
+                Text("System Junk removes temporary files older than 24 hours; Help Viewer, Spotlight suggestions, Tips and loose cache files older than 7 days; and diagnostic reports older than 30 days. Documents and application data stay.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("Eligible diagnostic reports", isOn: binding(\.cleanDiagnosticReports))
                 Toggle("Chrome safe cache", isOn: binding(\.cleanChrome))
                 Toggle("Safari safe cache", isOn: binding(\.cleanSafari))

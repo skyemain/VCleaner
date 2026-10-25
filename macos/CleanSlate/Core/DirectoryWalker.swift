@@ -2,6 +2,7 @@ import Darwin
 import Foundation
 
 struct WalkStats: Equatable, Sendable {
+    var accessDenied = false
     var fileCount: Int = 0
     var byteCount: Int64 = 0
     var skippedCount: Int = 0
@@ -18,6 +19,10 @@ enum DirectoryWalker {
 
     static func files(root: URL, minimumAge: Date?, exclusions: [String], fileManager: FileManager, keepURLs: Bool = true) -> WalkStats {
         var stats = WalkStats()
+        if isUnreadable(root) {
+            stats.accessDenied = true
+            return stats
+        }
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(atPath: root.path, isDirectory: &isDirectory), isDirectory.boolValue else {
             return stats
@@ -27,8 +32,14 @@ enum DirectoryWalker {
             at: root,
             includingPropertiesForKeys: keys,
             options: [.skipsHiddenFiles],
-            errorHandler: { _, _ in
-                true
+            errorHandler: { _, error in
+                stats.skippedCount += 1
+                let failure = error as NSError
+                if failure.domain == NSCocoaErrorDomain && failure.code == NSFileReadNoPermissionError
+                    || failure.domain == NSPOSIXErrorDomain && [Int(EACCES), Int(EPERM)].contains(failure.code) {
+                    stats.accessDenied = true
+                }
+                return true
             }
         ) else {
             stats.skippedCount += 1
@@ -52,7 +63,7 @@ enum DirectoryWalker {
                 continue
             }
             let path = url.path
-            if contextExclusions.contains(where: { path == $0 || path.hasPrefix($0.hasSuffix("/") ? $0 : $0 + "/") }) {
+            if ScanContext.isExcluded(path, exclusions: contextExclusions) {
                 stats.skippedCount += 1
                 continue
             }

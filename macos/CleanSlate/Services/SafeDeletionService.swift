@@ -2,6 +2,7 @@ import Darwin
 import Foundation
 
 struct DeletionOutcome: Equatable, Sendable {
+    var accessDenied = false
     var deletedCount: Int = 0
     var deletedBytes: Int64 = 0
     var skippedCount: Int = 0
@@ -44,6 +45,7 @@ struct SafeDeletionService: Sendable {
                 exclusions: context.exclusions,
                 fileManager: FileManager()
             )
+            outcome.accessDenied = stats.accessDenied
             outcome.deletedCount = stats.fileCount
             outcome.deletedBytes = stats.byteCount
             outcome.skippedCount = stats.skippedCount
@@ -56,6 +58,7 @@ struct SafeDeletionService: Sendable {
             exclusions: context.exclusions,
             fileManager: FileManager()
         )
+        outcome.accessDenied = files.accessDenied
         outcome.skippedCount += files.skippedCount
         for file in files.urls {
             if shouldCancel() {

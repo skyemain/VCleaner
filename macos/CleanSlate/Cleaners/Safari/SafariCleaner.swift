@@ -6,7 +6,7 @@ enum SafariCleaner {
 
     static func estimate(_ context: ScanContext) -> ModuleEstimate {
         let totals = measure(context)
-        if totals.fileCount == 0, totals.blocked {
+        if totals.blocked {
             return ModuleEstimate(id: "safari", title: "SAFARI", status: .unavailable(unavailableMessage), fileCount: 0, byteCount: 0, samplePaths: [])
         }
         return ModuleEstimate(id: "safari", title: "SAFARI", status: .ready, fileCount: totals.fileCount, byteCount: totals.byteCount, samplePaths: totals.samplePaths)
@@ -15,7 +15,7 @@ enum SafariCleaner {
     static func clean(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
         var cleanup = ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .ready)
         var blocked = false
-        for root in existingRoots(context) {
+        for root in cacheRoots(context) {
             if cancel() {
                 cleanup.errors.append("Cancelled.")
                 break
@@ -29,8 +29,9 @@ enum SafariCleaner {
             cleanup.deletedBytes += outcome.deletedBytes
             cleanup.skippedCount += outcome.skippedCount
             cleanup.errors.append(contentsOf: outcome.errors.prefix(20))
+            blocked = blocked || outcome.accessDenied
         }
-        if cleanup.deletedCount == 0, blocked {
+        if blocked {
             cleanup.status = .unavailable(unavailableMessage)
         } else if cleanup.deletedCount == 0, !cleanup.errors.isEmpty {
             cleanup.status = .skipped("Safari’s cache could not be removed. Quit Safari and try again.")
@@ -47,12 +48,13 @@ enum SafariCleaner {
 
     private static func measure(_ context: ScanContext) -> Totals {
         var totals = Totals()
-        for root in existingRoots(context) {
+        for root in cacheRoots(context) {
             if DirectoryWalker.isUnreadable(root) {
                 totals.blocked = true
                 continue
             }
             let stats = DirectoryWalker.collect(root: root, minimumAge: nil, exclusions: context.exclusions, fileManager: FileManager())
+            totals.blocked = totals.blocked || stats.accessDenied
             totals.fileCount += stats.fileCount
             totals.byteCount += stats.byteCount
             for path in stats.samplePaths where totals.samplePaths.count < 20 {
@@ -62,12 +64,8 @@ enum SafariCleaner {
         return totals
     }
 
-    /// Roots that exist. Missing ones are skipped. `fsCachedData` is inside the Safari cache root, so it is not listed on its own.
-    private static func existingRoots(_ context: ScanContext) -> [URL] {
-        let fm = FileManager()
-        return ProtectedPaths.safariCacheRelativeRoots.map { context.locations.url($0) }.filter { root in
-            var isDirectory: ObjCBool = false
-            return fm.fileExists(atPath: root.path, isDirectory: &isDirectory) && isDirectory.boolValue
-        }
+    /// Keep explicit candidates even when TCC prevents fileExists from seeing them.
+    private static func cacheRoots(_ context: ScanContext) -> [URL] {
+        ProtectedPaths.safariCacheRelativeRoots.map { context.locations.url($0) }
     }
 }

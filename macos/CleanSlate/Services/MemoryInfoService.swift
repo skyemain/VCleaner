@@ -7,6 +7,10 @@ struct MemorySnapshot: Equatable, Sendable {
     var pressure: String
     var swapUsedBytes: UInt64?
     var explanation: String
+
+    var usageFraction: Double {
+        totalBytes > 0 ? min(1, Double(usedBytes) / Double(totalBytes)) : 0
+    }
 }
 
 enum MemoryInfoService {
@@ -26,7 +30,10 @@ enum MemoryInfoService {
             var pageSize: vm_size_t = 0
             host_page_size(mach_host_self(), &pageSize)
             let page = UInt64(pageSize)
-            used = (UInt64(stats.active_count) + UInt64(stats.wire_count) + UInt64(stats.compressor_page_count)) * page
+            // Exclude reclaimable file-backed and purgeable pages; include compressed memory.
+            let resident = Int64(stats.active_count) + Int64(stats.inactive_count) + Int64(stats.wire_count) + Int64(stats.compressor_page_count)
+            let reclaimable = Int64(stats.external_page_count) + Int64(stats.purgeable_count)
+            used = min(total, UInt64(max(0, resident - reclaimable)) * page)
         }
         return MemorySnapshot(
             totalBytes: total,

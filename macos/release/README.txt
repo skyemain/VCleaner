@@ -2,6 +2,8 @@
 It is not notarized. macOS will warn the first time you open it: right-click CleanSlate, choose Open, then Open again.
 Dragging the app to Applications does not need a developer account.
 
+This is a historical build and does not contain the latest source fixes. Download the latest successful macOS DMG workflow artifact for the current build.
+
 Later release builds that you sign with your own Developer ID replace this file. They are produced on a Mac with:
 
 On macOS, from the macos directory:

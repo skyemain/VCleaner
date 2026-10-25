@@ -16,14 +16,6 @@ enum KnownBrowsers {
         supportRelativePath: "Library/Application Support/Google/Chrome",
         cacheRelativePath: "Library/Caches/Google/Chrome"
     )
-    static let edge = BrowserDefinition(
-        id: "edge",
-        title: "EDGE",
-        bundleIdentifier: "com.microsoft.edgemac",
-        supportRelativePath: "Library/Application Support/Microsoft Edge",
-        cacheRelativePath: "Library/Caches/Microsoft Edge"
-    )
-
     static let cacheDirectoryNames: Set<String> = [
         "Cache", "Code Cache", "GPUCache", "DawnGraphiteCache", "DawnWebGPUCache", "ShaderCache", "GrShaderCache"
     ]

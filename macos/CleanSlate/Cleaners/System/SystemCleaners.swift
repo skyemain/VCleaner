@@ -17,14 +17,15 @@ enum SystemCleaners {
     }
 
     static func userCaches(_ context: ScanContext) -> ModuleEstimate {
-        let root = context.locations.url("Library/Caches/com.apple.helpd")
-        return estimate(
-            id: "user-cache",
-            title: "Supported user caches",
-            root: root,
-            context: context,
-            minimumAge: context.now.addingTimeInterval(-looseCacheAge)
-        )
+        let estimates = ProtectedPaths.systemCacheRelativeRoots.map { relative in
+            estimate(id: "user-cache", title: "Supported user caches", root: context.locations.url(relative),
+                     context: context, minimumAge: context.now.addingTimeInterval(-looseCacheAge))
+        }
+        return ModuleEstimate(id: "user-cache", title: "Supported user caches",
+            status: estimates.first(where: { $0.status != .ready })?.status ?? .ready,
+            fileCount: estimates.reduce(0) { $0 + $1.fileCount },
+            byteCount: estimates.reduce(0) { $0 + $1.byteCount },
+            samplePaths: Array(estimates.flatMap(\.samplePaths).prefix(20)))
     }
 
     static func looseCacheFiles(_ context: ScanContext) -> ModuleEstimate {
@@ -97,14 +98,18 @@ enum SystemCleaners {
     }
 
     static func cleanHelpCaches(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
-        clean(
-            idRoot: context.locations.url("Library/Caches/com.apple.helpd"),
-            context: context,
-            minimumAge: context.now.addingTimeInterval(-looseCacheAge),
-            allowXcode: false,
-            allowTrash: false,
-            cancel: cancel
-        )
+        var total = ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .ready)
+        for relative in ProtectedPaths.systemCacheRelativeRoots {
+            if cancel() { total.errors.append("Cancelled."); break }
+            let result = clean(idRoot: context.locations.url(relative), context: context,
+                minimumAge: context.now.addingTimeInterval(-looseCacheAge), allowXcode: false, allowTrash: false, cancel: cancel)
+            total.deletedCount += result.deletedCount
+            total.deletedBytes += result.deletedBytes
+            total.skippedCount += result.skippedCount
+            total.errors.append(contentsOf: result.errors)
+            if result.status != .ready { total.status = result.status }
+        }
+        return total
     }
 
     static func cleanLooseCaches(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
@@ -137,7 +142,7 @@ enum SystemCleaners {
     private static func clean(idRoot: URL, context: ScanContext, minimumAge: Date?, allowXcode: Bool, allowTrash: Bool, cancel: @escaping () -> Bool) -> ModuleCleanup {
         var service = SafeDeletionService(allowXcodeDerivedData: allowXcode, allowTrash: allowTrash)
         let outcome = service.deleteEligibleFiles(under: idRoot, context: context, minimumAge: minimumAge, shouldCancel: cancel)
-        return ModuleCleanup(deletedCount: outcome.deletedCount, deletedBytes: outcome.deletedBytes, skippedCount: outcome.skippedCount, errors: outcome.errors, status: .ready)
+        return ModuleCleanup(deletedCount: outcome.deletedCount, deletedBytes: outcome.deletedBytes, skippedCount: outcome.skippedCount, errors: outcome.errors, status: outcome.accessDenied ? .unavailable("macOS access restrictions") : .ready)
     }
 
     private static func cleanLoose(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {

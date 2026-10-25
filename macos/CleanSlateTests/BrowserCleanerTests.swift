@@ -17,9 +17,7 @@ final class BrowserCleanerTests: XCTestCase {
         let estimate = ChromiumCacheCleaner.estimate(KnownBrowsers.chrome, context: fixture.context())
         XCTAssertEqual(estimate.fileCount, 2)
         XCTAssertFalse(estimate.samplePaths.contains { $0.hasSuffix("Cookies") || $0.hasSuffix("History") || $0.hasSuffix("Bookmarks") })
-        let edge = ChromiumCacheCleaner.estimate(KnownBrowsers.edge, context: fixture.context())
-        XCTAssertEqual(edge.fileCount, 0)
-        XCTAssertNotEqual(estimate.id, edge.id)
+
     }
 
     func testSafariReportsAccessRestrictionsInsteadOfSuccess() throws {
@@ -51,6 +49,30 @@ final class BrowserCleanerTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: cached.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: cookies.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: history.path))
+    }
+
+    func testSafariContainerCacheIsCleanedButWebsiteStorageStays() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let cached = try fixture.write(relative: "Library/Containers/com.apple.Safari/Data/Library/Caches/com.apple.Safari/WebKit/NetworkCache/data", bytes: 128)
+        let storage = try fixture.write(relative: "Library/Containers/com.apple.Safari/Data/Library/Caches/Local Storage/site", bytes: 64)
+        let estimate = SafariCleaner.estimate(fixture.context())
+        XCTAssertEqual(estimate.byteCount, 128)
+        let cleanup = SafariCleaner.clean(fixture.context(), cancel: { false })
+        XCTAssertEqual(cleanup.deletedBytes, estimate.byteCount)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: cached.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: storage.path))
+    }
+
+    func testSafariNestedDeniedCacheIsReportedEvenWithReadableFiles() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        try fixture.write(relative: "Library/Caches/com.apple.Safari/readable", bytes: 12)
+        let hidden = try fixture.write(relative: "Library/Caches/com.apple.Safari/blocked/data", bytes: 12).deletingLastPathComponent()
+        chmod(hidden.path, 0)
+        defer { chmod(hidden.path, 0o755) }
+        let estimate = SafariCleaner.estimate(fixture.context())
+        XCTAssertEqual(estimate.status, .unavailable(SafariCleaner.unavailableMessage))
     }
 
     func testAMacCleanDoesNotIncludeEdge() async throws {

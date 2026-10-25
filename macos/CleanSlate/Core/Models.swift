@@ -68,9 +68,13 @@ struct ScanContext: Sendable {
     var mode: CleanMode
 
     func isExcluded(_ path: String) -> Bool {
-        let standard = URL(fileURLWithPath: path).standardizedFileURL.path
+        Self.isExcluded(path, exclusions: exclusions)
+    }
+
+    static func isExcluded(_ path: String, exclusions: [String]) -> Bool {
+        let standard = URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath().path
         return exclusions.contains { exclusion in
-            let root = URL(fileURLWithPath: exclusion).standardizedFileURL.path
+            let root = URL(fileURLWithPath: exclusion).standardizedFileURL.resolvingSymlinksInPath().path
             return standard == root || standard.hasPrefix(root + "/")
         }
     }

@@ -31,6 +31,23 @@ final class SystemCleanerTests: XCTestCase {
         XCTAssertEqual(estimate.fileCount, 0)
     }
 
+    func testSupportedServiceCachesRespectAgeExclusionsAndAllowlist() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let old = try fixture.write(relative: "Library/Caches/com.apple.parsecd/old", bytes: 20, age: -86_400 * 10)
+        let recent = try fixture.write(relative: "Library/Caches/com.apple.touristd/new", bytes: 30, age: -60)
+        let excluded = try fixture.write(relative: "Library/Caches/com.apple.helpd/keep", bytes: 40)
+        let unrelated = try fixture.write(relative: "Library/Caches/other.app/data", bytes: 50)
+        let context = fixture.context(exclusions: [excluded.path])
+        XCTAssertEqual(SystemCleaners.userCaches(context).byteCount, 20)
+        let cleanup = SystemCleaners.cleanHelpCaches(context, cancel: { false })
+        XCTAssertEqual(cleanup.deletedBytes, 20)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: old.path))
+        for kept in [recent, excluded, unrelated] {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: kept.path))
+        }
+    }
+
     func testThumbnailsStayUnsupported() {
         let estimate = SystemCleaners.thumbnails()
         guard case .unsupported = estimate.status else {

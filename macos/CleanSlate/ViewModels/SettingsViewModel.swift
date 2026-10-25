@@ -24,6 +24,9 @@ final class SettingsViewModel: ObservableObject {
     func update(_ body: (inout CleaningPreferences) -> Void) {
         let previousLogin = preferences.startAtLogin
         body(&preferences)
+        if previousLogin && !preferences.startAtLogin {
+            preferences.cleanAtLogin = false
+        }
         if preferences.cleanAtLogin {
             preferences.startAtLogin = true
         }

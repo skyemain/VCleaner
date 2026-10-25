@@ -44,7 +44,13 @@ final class MainViewModel: ObservableObject {
     @Published var trashPrompt = false
     @Published var freeingMemory = false
     @Published var memoryNote = ""
+    @Published var memory = MemoryInfoService.snapshot()
+
+    func refreshMemory() {
+        memory = MemoryInfoService.snapshot()
+    }
     private var pendingBrowserQuit = false
+    private var pendingReview = false
 
     let settings: SettingsViewModel
     private let engine: CleaningEngine
@@ -92,11 +98,13 @@ final class MainViewModel: ObservableObject {
             }.value
             freeingMemory = false
             memoryNote = outcome.message
+            refreshMemory()
         }
     }
 
     func cleanNow() {
         guard phase == .idle || phase == .completed || phase == .failed else { return }
+        pendingReview = false
         runTask = Task {
             if await browsersNeedQuitPrompt() {
                 browserPrompt = "Safari or Chrome is open. Quit it normally so the cache can be cleaned? CleanSlate will not force the browser to quit."
@@ -110,7 +118,9 @@ final class MainViewModel: ObservableObject {
         guard browserPrompt != nil else { return }
         browserPrompt = nil
         pendingBrowserQuit = allow
-        runTask = Task { await run(mode: .manual, fromReview: false) }
+        let fromReview = pendingReview
+        pendingReview = false
+        runTask = Task { await run(mode: .manual, fromReview: fromReview) }
     }
 
     func requestEmptyTrash() {
@@ -126,7 +136,15 @@ final class MainViewModel: ObservableObject {
     func cleanFromReview() {
         guard phase == .idle || phase == .completed else { return }
         showDetails = false
-        runTask = Task { await run(mode: .manual, fromReview: true) }
+        pendingReview = true
+        runTask = Task {
+            if await browsersNeedQuitPrompt() {
+                browserPrompt = "Safari or Chrome is open. Quit it normally so the cache can be cleaned? CleanSlate will not force the browser to quit."
+                return
+            }
+            pendingReview = false
+            await run(mode: .manual, fromReview: true)
+        }
     }
 
     func cancel() {

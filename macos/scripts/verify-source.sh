@@ -11,7 +11,6 @@ required=(
   CleanSlate/Services/SafeDeletionService.swift
   CleanSlate/Configuration/ProtectedPaths.swift
   CleanSlate/Cleaners/Chrome/ChromeCleaner.swift
-  CleanSlate/Cleaners/Edge/EdgeCleaner.swift
   CleanSlate/Cleaners/Safari/SafariCleaner.swift
   CleanSlate/Resources/Info.plist
   CleanSlate/Resources/CleanSlate.entitlements

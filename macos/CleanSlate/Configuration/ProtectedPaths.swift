@@ -35,6 +35,13 @@ enum ProtectedPaths {
         "Library/Containers/com.apple.WebKit.GPU/Data/Library/Caches"
     ]
 
+    /// Rebuildable Apple service caches only; never sweep all application caches.
+    static let systemCacheRelativeRoots = [
+        "Library/Caches/com.apple.helpd",
+        "Library/Caches/com.apple.parsecd",
+        "Library/Caches/com.apple.touristd"
+    ]
+
     /// Relative to the home directory. These trees are refused as approved roots.
     static let forbiddenRelativeRoots: [String] = [
         "Documents", "Desktop", "Downloads", "Pictures", "Movies", "Music",
@@ -87,12 +94,10 @@ enum ProtectedPaths {
         if allowTrash, path == trash || path.hasPrefix(trash + "/") {
             return true
         }
-        if isSpecificCache(path, home: home, prefix: "Library/Caches/com.apple.helpd") { return true }
+        if systemCacheRelativeRoots.contains(where: { isSpecificCache(path, home: home, prefix: $0) }) { return true }
         if isSpecificCache(path, home: home, prefix: "Library/Logs/DiagnosticReports") { return true }
         if chromiumCache(path, home: home, support: "Library/Application Support/Google/Chrome") { return true }
         if chromiumCache(path, home: home, support: "Library/Caches/Google/Chrome") { return true }
-        if chromiumCache(path, home: home, support: "Library/Application Support/Microsoft Edge") { return true }
-        if chromiumCache(path, home: home, support: "Library/Caches/Microsoft Edge") { return true }
         if allowXcodeDerivedData, isInside(path, home: home, relative: "Library/Developer/Xcode/DerivedData"), path != standardized(home.appendingPathComponent("Library/Developer/Xcode/DerivedData")) {
             return true
         }
