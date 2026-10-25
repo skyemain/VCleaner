@@ -17,11 +17,15 @@ public class FixtureDocumentsProvider extends DocumentsProvider {
     }
     @Override public boolean isChildDocument(String parent, String child) { return parent.equals("root") && child.matches("[a-z]+\\.txt"); }
     @Override public android.os.Bundle call(String method, String arg, android.os.Bundle extras) {
+        android.os.Bundle platformResult = super.call(method, arg, extras);
+        if (platformResult != null) return platformResult;
         android.os.Bundle state = new android.os.Bundle();
         File a = new File(root(), "a.txt"), b = new File(root(), "b.txt");
         try {
             if (method.equals("reset")) {
                 root().mkdirs();
+                getContext().grantUriPermission("com.skyemain.clenzy", DocumentsContract.buildTreeDocumentUri("com.skyemain.clenzy.test.documents", "root"),
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION | android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION | android.content.Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
                 java.nio.file.Files.write(a.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 java.nio.file.Files.write(b.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             } else if (method.equals("change")) {

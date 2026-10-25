@@ -12,7 +12,7 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class DocumentCleanupTest {
     @Test public void scansRealProviderDeletesOnlySelectedAndSkipsChangedFiles() throws Exception {
-        var context = InstrumentationRegistry.getInstrumentation().getContext();
+        var context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         var resolver = context.getContentResolver();
         var endpoint = Uri.parse("content://com.skyemain.clenzy.test.documents");
         try {

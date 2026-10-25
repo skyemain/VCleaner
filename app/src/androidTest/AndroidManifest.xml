@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
-        <provider android:name="com.skyemain.clenzy.FixtureDocumentsProvider" android:authorities="com.skyemain.clenzy.test.documents" android:exported="true" android:grantUriPermissions="true"/>
+        <provider android:name="com.skyemain.clenzy.FixtureDocumentsProvider" android:authorities="com.skyemain.clenzy.test.documents" android:permission="android.permission.MANAGE_DOCUMENTS" android:exported="true" android:grantUriPermissions="true"/>
     </application>
 </manifest>
