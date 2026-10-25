@@ -80,6 +80,7 @@ def main() -> None:
     add(test_frameworks, "{ isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; }")
 
     app_settings = """
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				CODE_SIGN_STYLE = Automatic;
