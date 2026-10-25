@@ -15,6 +15,7 @@ public class FixtureDocumentsProvider extends DocumentsProvider {
         if (!id.matches("[a-z]+\\.txt")) throw new FileNotFoundException();
         return new File(root(), id);
     }
+    @Override public boolean isChildDocument(String parent, String child) { return parent.equals("root") && child.matches("[a-z]+\\.txt"); }
     public boolean onCreate() { root().mkdirs(); return true; }
     public Cursor queryRoots(String[] projection) { return new MatrixCursor(new String[]{"root_id","document_id","title","flags"}); }
     private void add(MatrixCursor c, File f) {
