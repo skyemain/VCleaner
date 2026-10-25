@@ -1,2 +1,2 @@
-beda90515c0c87141e913b3341c64c76239b1d7b33af4d9db7455b3f96a9e50f  CleanSlate-1.0.5-mac-universal.dmg
-beda90515c0c87141e913b3341c64c76239b1d7b33af4d9db7455b3f96a9e50f  CleanSlate-latest-mac-universal.dmg
+e8825496bb3ddce5fb26b68464e8d8745fcedb452a13f503628cd5449125b5c6  CleanSlate-1.0.6-mac-universal.dmg
+e8825496bb3ddce5fb26b68464e8d8745fcedb452a13f503628cd5449125b5c6  CleanSlate-latest-mac-universal.dmg
