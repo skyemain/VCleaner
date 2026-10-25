@@ -107,8 +107,8 @@ public final class DocumentCleaner {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         try (InputStream stream = resolver.openInputStream(uri)) {
             if (stream == null) throw new IOException("Unreadable file");
-            byte[] buffer = new byte[64 * 1024]; int count;
-            while ((count = stream.read(buffer)) != -1) { cancel.throwIfCanceled(); digest.update(buffer, 0, count); }
+            byte[] buffer = new byte[64 * 1024]; int count; long read = 0;
+            while ((count = stream.read(buffer)) != -1) { cancel.throwIfCanceled(); read += count; if (read > 64L * 1024 * 1024) throw new IOException("File grew beyond hash limit"); digest.update(buffer, 0, count); }
         }
         StringBuilder text = new StringBuilder();
         for (byte b : digest.digest()) text.append(String.format(Locale.ROOT, "%02x", b & 255));
