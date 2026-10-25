@@ -27,8 +27,24 @@ public class DocumentCleanupTest {
         var context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         var resolver = context.getContentResolver();
         var endpoint = Uri.parse("content://com.skyemain.clenzy.test.documents");
-        try {
+        try (var scenario = androidx.test.core.app.ActivityScenario.launch(MainActivity.class)) {
             fixtureCall(resolver, endpoint, "reset");
+            var device = androidx.test.uiautomator.UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+            scenario.onActivity(activity -> {
+                var picker = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT_TREE);
+                picker.putExtra(DocumentsContract.EXTRA_INITIAL_URI, DocumentsContract.buildDocumentUri("com.skyemain.clenzy.test.documents", "root"));
+                picker.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION | android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION | android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                activity.startActivityForResult(picker, 10);
+            });
+            var useFolder = device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("Use this folder", java.util.regex.Pattern.CASE_INSENSITIVE))), 10000);
+            assertNotNull("Android folder picker did not show the fixture folder", useFolder);
+            useFolder.click();
+            var allow = device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("Allow", java.util.regex.Pattern.CASE_INSENSITIVE))), 5000);
+            if (allow != null) allow.click();
+            device.waitForIdle();
+            var grantedTree = DocumentsContract.buildTreeDocumentUri("com.skyemain.clenzy.test.documents", "root");
+            for (int attempt=0; attempt<30 && context.checkUriPermission(grantedTree, android.os.Process.myPid(), android.os.Process.myUid(), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) != android.content.pm.PackageManager.PERMISSION_GRANTED; attempt++) Thread.sleep(200);
+            assertEquals(android.content.pm.PackageManager.PERMISSION_GRANTED, context.checkUriPermission(grantedTree, android.os.Process.myPid(), android.os.Process.myUid(), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION));
             var cleaner = new DocumentCleaner(context.getContentResolver());
             Uri tree = DocumentsContract.buildTreeDocumentUri("com.skyemain.clenzy.test.documents", "root");
             var scan = cleaner.scan(tree, new CancellationSignal());

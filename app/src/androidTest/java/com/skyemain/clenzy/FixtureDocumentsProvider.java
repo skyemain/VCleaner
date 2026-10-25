@@ -24,8 +24,6 @@ public class FixtureDocumentsProvider extends DocumentsProvider {
         try {
             if (method.equals("reset")) {
                 root().mkdirs();
-                getContext().grantUriPermission("com.skyemain.clenzy", DocumentsContract.buildTreeDocumentUri("com.skyemain.clenzy.test.documents", "root"),
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION | android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION | android.content.Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
                 java.nio.file.Files.write(a.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 java.nio.file.Files.write(b.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             } else if (method.equals("change")) {
@@ -36,7 +34,11 @@ public class FixtureDocumentsProvider extends DocumentsProvider {
         return state;
     }
     public boolean onCreate() { root().mkdirs(); return true; }
-    public Cursor queryRoots(String[] projection) { return new MatrixCursor(new String[]{"root_id","document_id","title","flags"}); }
+    public Cursor queryRoots(String[] projection) {
+        MatrixCursor c = new MatrixCursor(new String[]{"root_id","document_id","title","flags","mime_types","available_bytes"});
+        c.addRow(new Object[]{"root", "root", "Clenzy test files", DocumentsContract.Root.FLAG_SUPPORTS_IS_CHILD, "*/*", 1048576L});
+        return c;
+    }
     private void add(MatrixCursor c, File f) {
         MatrixCursor.RowBuilder row = c.newRow();
         for (String name : c.getColumnNames()) {
