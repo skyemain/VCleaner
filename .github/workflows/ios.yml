@@ -1,0 +1,24 @@
+name: iOS candidate
+on:
+  push:
+    branches: [ios]
+  pull_request:
+    branches: [ios]
+  workflow_dispatch:
+jobs:
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate project
+        run: python3 scripts/generate-xcodeproj.py
+      - name: Test on available iPhone simulator
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import sys,json; d=json.load(sys.stdin); print(next(x["udid"] for group in d["devices"].values() for x in group if "iPhone" in x["name"]))')
+          xcodebuild -project Clenzy.xcodeproj -scheme Clenzy -destination "platform=iOS Simulator,id=$DEVICE" CODE_SIGNING_ALLOWED=NO test
+      - name: Build unsigned device archive
+        run: xcodebuild -project Clenzy.xcodeproj -scheme Clenzy -destination 'generic/platform=iOS' -archivePath build/Clenzy.xcarchive CODE_SIGNING_ALLOWED=NO archive
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Clenzy-iOS-unsigned-candidate
+          path: build/Clenzy.xcarchive

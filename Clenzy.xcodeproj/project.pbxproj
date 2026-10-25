@@ -1,0 +1,115 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+		6D81518CF11585869EB0F725 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClenzyApp.swift; sourceTree = "<group>"; };
+		D70D919D20368399A8B71D5D = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryModel.swift; sourceTree = "<group>"; };
+		5ED68F7B64C2760E37042AC8 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoScanner.swift; sourceTree = "<group>"; };
+		F4FA29A8A0C0C21AE4407E2F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewModels.swift; sourceTree = "<group>"; };
+		A2E4DDE56BEFEEA00F524E02 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewRulesTests.swift; sourceTree = "<group>"; };
+		A2A26DFFEDA45E149E0DFFF4 = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B6CDB6E5D160E013280D3C68 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Clenzy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E02A90D9643568EA39115CFB = { isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClenzyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2E9B443B29C9D12EAE909446 = { isa = PBXGroup; children = ( 2F3A0B3830C5D9850F835BDA, 6D81518CF11585869EB0F725, D70D919D20368399A8B71D5D, 5ED68F7B64C2760E37042AC8, F4FA29A8A0C0C21AE4407E2F ); path = Clenzy; sourceTree = "<group>"; };
+		2F3A0B3830C5D9850F835BDA = { isa = PBXGroup; children = ( A2A26DFFEDA45E149E0DFFF4 ); path = Resources; sourceTree = "<group>"; };
+		EEFE21A1443933CA4DE017DA = { isa = PBXGroup; children = ( A2E4DDE56BEFEEA00F524E02 ); path = ClenzyTests; sourceTree = "<group>"; };
+		00C45FD35CB0F9C5F764F070 = { isa = PBXGroup; children = ( B6CDB6E5D160E013280D3C68, E02A90D9643568EA39115CFB ); name = Products; sourceTree = "<group>"; };
+		ADCF10F76EBF2A74473E9DC4 = { isa = PBXGroup; children = ( 2E9B443B29C9D12EAE909446, EEFE21A1443933CA4DE017DA, 00C45FD35CB0F9C5F764F070 ); sourceTree = "<group>"; };
+		57B64EAC341BE52B9EC4AD55 = { isa = PBXBuildFile; fileRef = 6D81518CF11585869EB0F725; };
+		67F03FC1F8537E571130D13B = { isa = PBXBuildFile; fileRef = D70D919D20368399A8B71D5D; };
+		6F32ED49D997926F9F0FE71C = { isa = PBXBuildFile; fileRef = 5ED68F7B64C2760E37042AC8; };
+		B411028A56E35A63DD898B18 = { isa = PBXBuildFile; fileRef = F4FA29A8A0C0C21AE4407E2F; };
+		AEAABE83AC5CE4BA6EFF7903 = { isa = PBXBuildFile; fileRef = A2E4DDE56BEFEEA00F524E02; };
+		5D040BC3B38C902BE25CD74F = { isa = PBXBuildFile; fileRef = A2A26DFFEDA45E149E0DFFF4; };
+		1CDF2F71A52B082132B04DFF = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( 57B64EAC341BE52B9EC4AD55, 67F03FC1F8537E571130D13B, 6F32ED49D997926F9F0FE71C, B411028A56E35A63DD898B18 ); runOnlyForDeploymentPostprocessing = 0; };
+		C02F1309AF4906C92F1EAD44 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ( 5D040BC3B38C902BE25CD74F ); runOnlyForDeploymentPostprocessing = 0; };
+		CF5BDB0BEAFE176F9629192A = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
+		7841DBE1BAAF034D23036D63 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( AEAABE83AC5CE4BA6EFF7903 ); runOnlyForDeploymentPostprocessing = 0; };
+		F3BB5758E5F4E3B0CEACBF5B = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
+		754064D2901B6752E802BA06 = { isa = XCBuildConfiguration; buildSettings = {
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				CODE_SIGN_STYLE = Automatic;
+				SUPPORTS_MACCATALYST = NO;
+				CURRENT_PROJECT_VERSION = 1;
+
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Clenzy/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.Clenzy.ios;
+				PRODUCT_NAME = Clenzy;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				ENABLE_TESTABILITY = YES;
+				CODE_SIGN_IDENTITY = "-";
+			}; name = Debug; };
+		831F0B0E7AD0243B76867D45 = { isa = XCBuildConfiguration; buildSettings = {
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				CODE_SIGN_STYLE = Automatic;
+				SUPPORTS_MACCATALYST = NO;
+				CURRENT_PROJECT_VERSION = 1;
+
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Clenzy/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.Clenzy.ios;
+				PRODUCT_NAME = Clenzy;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+			}; name = Release; };
+		E8A7D59B347239969BCF4442 = { isa = XCBuildConfiguration; buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.Clenzy.iosTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Clenzy.app/Clenzy";
+			}; name = Debug; };
+		FB77EFCD69769151259EA1DF = { isa = XCBuildConfiguration; buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.Clenzy.iosTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Clenzy.app/Clenzy";
+			}; name = Release; };
+		62C0502E9DD2F4A0E153A290 = { isa = XCBuildConfiguration; buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				ONLY_ACTIVE_ARCH = YES;
+			}; name = Debug; };
+		A1076DB52F6D567F23A74575 = { isa = XCBuildConfiguration; buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				ONLY_ACTIVE_ARCH = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			}; name = Release; };
+		8A4C137FDF67CE32F42E0D24 = { isa = XCConfigurationList; buildConfigurations = ( 754064D2901B6752E802BA06, 831F0B0E7AD0243B76867D45 ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		CA25E31FA3A46B2171497E0D = { isa = XCConfigurationList; buildConfigurations = ( E8A7D59B347239969BCF4442, FB77EFCD69769151259EA1DF ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		6D6194B745F9FCF78E19905D = { isa = XCConfigurationList; buildConfigurations = ( 62C0502E9DD2F4A0E153A290, A1076DB52F6D567F23A74575 ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		29C7B681C8D62CBAC94D51C0 = { isa = PBXNativeTarget; buildConfigurationList = 8A4C137FDF67CE32F42E0D24; buildPhases = ( 1CDF2F71A52B082132B04DFF, CF5BDB0BEAFE176F9629192A, C02F1309AF4906C92F1EAD44 ); buildRules = ( ); dependencies = ( ); name = Clenzy; productName = Clenzy; productReference = B6CDB6E5D160E013280D3C68; productType = "com.apple.product-type.application"; };
+		D799BAE6088A90139B415FCC = { isa = PBXContainerItemProxy; containerPortal = 98F54143AB4E86B28C3AFEE0; proxyType = 1; remoteGlobalIDString = 29C7B681C8D62CBAC94D51C0; remoteInfo = Clenzy; };
+		DE58E2B17C19600779694943 = { isa = PBXTargetDependency; target = 29C7B681C8D62CBAC94D51C0; targetProxy = D799BAE6088A90139B415FCC; };
+		7EC8F98B7A265120217712DE = { isa = PBXNativeTarget; buildConfigurationList = CA25E31FA3A46B2171497E0D; buildPhases = ( 7841DBE1BAAF034D23036D63, F3BB5758E5F4E3B0CEACBF5B ); buildRules = ( ); dependencies = ( DE58E2B17C19600779694943 ); name = ClenzyTests; productName = ClenzyTests; productReference = E02A90D9643568EA39115CFB; productType = "com.apple.product-type.bundle.unit-test"; };
+		98F54143AB4E86B28C3AFEE0 = { isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = 1; LastUpgradeCheck = 1500; }; buildConfigurationList = 6D6194B745F9FCF78E19905D; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = ( en, Base ); mainGroup = ADCF10F76EBF2A74473E9DC4; productRefGroup = 00C45FD35CB0F9C5F764F070; projectDirPath = ""; projectRoot = ""; targets = ( 29C7B681C8D62CBAC94D51C0, 7EC8F98B7A265120217712DE ); };
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0;
+}

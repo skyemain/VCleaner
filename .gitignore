@@ -1,9 +1,8 @@
-.DS_Store
-*.log
-*.p12
-*.pfx
-*.key
-macos/build/
-macos/DerivedData/
+build/
+DerivedData/
 *.xcuserstate
 xcuserdata/
+.DS_Store
+*.ipa
+*.p12
+*.mobileprovision
