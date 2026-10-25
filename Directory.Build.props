@@ -12,10 +12,10 @@
     <VersionPrefix>$(BaseVersion)</VersionPrefix>
     <AssemblyVersion>$(BaseVersion).0</AssemblyVersion>
     <FileVersion>$(BaseVersion).$(BuildNumber)</FileVersion>
-    <Authors>CleanSlate</Authors>
-    <Company>CleanSlate</Company>
-    <Product>CleanSlate</Product>
-    <Copyright>Copyright (c) CleanSlate contributors. MIT License.</Copyright>
+    <Authors>Clenzy</Authors>
+    <Company>Clenzy</Company>
+    <Product>Clenzy</Product>
+    <Copyright>Copyright (c) Clenzy contributors. MIT License.</Copyright>
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>

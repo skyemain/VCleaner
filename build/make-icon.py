@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the CleanSlate application icon (multi-size PNG-in-ICO plus a 256px PNG) without third-party packages."""
+"""Generates the Clenzy application icon (multi-size PNG-in-ICO plus a 256px PNG) without third-party packages."""
 import math
 import struct
 import sys
@@ -69,7 +69,7 @@ def png(size, rgba):
 
 
 def main():
-    out = Path(sys.argv[1] if len(sys.argv) > 1 else "../src/CleanSlate.App/Assets")
+    out = Path(sys.argv[1] if len(sys.argv) > 1 else "../src/Clenzy.App/Assets")
     out.mkdir(parents=True, exist_ok=True)
     images = [(s, png(s, render(s))) for s in SIZES]
     header = struct.pack("<HHH", 0, 1, len(images))
@@ -80,9 +80,9 @@ def main():
         entries += struct.pack("<BBBBHHII", 0 if size >= 256 else size, 0 if size >= 256 else size, 0, 0, 1, 32, len(data), offset)
         offset += len(data)
         blobs += data
-    (out / "CleanSlate.ico").write_bytes(header + entries + blobs)
-    (out / "CleanSlate.png").write_bytes(images[-1][1])
-    print(f"wrote {out / 'CleanSlate.ico'}")
+    (out / "Clenzy.ico").write_bytes(header + entries + blobs)
+    (out / "Clenzy.png").write_bytes(images[-1][1])
+    print(f"wrote {out / 'Clenzy.ico'}")
 
 
 if __name__ == "__main__":

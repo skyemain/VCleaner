@@ -1,15 +1,15 @@
 <#
 .SYNOPSIS
-    Trusts the CleanSlate self-signed certificate for the CURRENT USER on this PC.
+    Trusts the Clenzy self-signed certificate for the CURRENT USER on this PC.
 
 .DESCRIPTION
-    Run once on every PC where you install CleanSlate by hand, using the CleanSlate-dev.cer that matches the .exe you copied.
+    Run once on every PC where you install Clenzy by hand, using the Clenzy-dev.cer that matches the .exe you copied.
     The certificate goes into Trusted Root Certification Authorities and Trusted Publishers for your user only (no admin needed).
     Windows shows a confirmation prompt for the root store; accept it. Remove it later with -Remove.
 #>
 [CmdletBinding()]
 param(
-    [string]$CertificatePath = (Join-Path $PSScriptRoot '..\artifacts\dev-cert\CleanSlate-dev.cer'),
+    [string]$CertificatePath = (Join-Path $PSScriptRoot '..\artifacts\dev-cert\Clenzy-dev.cer'),
     [switch]$Remove
 )
 

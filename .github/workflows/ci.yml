@@ -1,12 +1,13 @@
-name: ci
-
+name: Windows candidate
 on:
   push:
-    branches: [main]
-    tags: ['v*']
+    branches: [windows]
+    paths-ignore: ['release/**']
   pull_request:
+    branches: [windows]
   workflow_dispatch:
-
+permissions:
+  contents: write
 jobs:
   windows:
     runs-on: windows-latest
@@ -17,33 +18,24 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-
-      - name: Build, test (including Windows-only tests) and publish the single-file exe
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+      - name: Build, test and package
         shell: pwsh
-        run: ./build/publish.ps1
-
-      - name: Build a release version from a tag
-        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
-        shell: pwsh
-        run: |
-          $tagVersion = '${{ github.ref_name }}'.TrimStart('v')
-          $fileVersion = (Get-Content VERSION -Raw).Trim()
-          if ($tagVersion -ne $fileVersion) { throw "Tag $tagVersion does not match VERSION $fileVersion" }
-          ./build/publish.ps1 -Release
-
+        run: ./build/publish.ps1 -Release -ToRelease
       - uses: actions/upload-artifact@v4
         with:
-          name: CleanSlate-win-x64
-          path: |
-            artifacts/release/*.exe
-            artifacts/release/SHA256SUMS.txt
-
-  linux-portable-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
-      - run: dotnet test CleanSlate.sln -c Release --filter "FullyQualifiedName!~WindowsTests"
+          name: Clenzy-windows-candidate
+          path: artifacts/release/*
+          if-no-files-found: error
+      - name: Publish candidate to Windows branch
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        run: |
+          git fetch origin windows
+          if ((git rev-parse origin/windows) -ne '${{ github.sha }}') { exit 0 }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A release
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { exit 0 }
+          git commit -m 'Publish Windows candidate [skip ci]'
+          git push origin HEAD:windows

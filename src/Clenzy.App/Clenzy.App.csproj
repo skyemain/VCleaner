@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>Clenzy</AssemblyName>
+    <RootNamespace>Clenzy.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Clenzy.ico</ApplicationIcon>
+    <AssemblyTitle>Clenzy</AssemblyTitle>
+    <Description>Safe Windows cleanup for system junk, browser caches and broken registry entries</Description>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>$(NoWarn);CA1416;WFO0003</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Clenzy.Core\Clenzy.Core.csproj" />
+    <ProjectReference Include="..\Clenzy.Cleaners\Clenzy.Cleaners.csproj" />
+    <ProjectReference Include="..\Clenzy.Presentation\Clenzy.Presentation.csproj" />
+    <ProjectReference Include="..\Clenzy.Windows\Clenzy.Windows.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+  </ItemGroup>
+  <PropertyGroup>
+    <SigningCertificatePath Condition="Exists('$(MSBuildProjectDirectory)\..\..\artifacts\dev-cert\Clenzy-dev.cer')">$(MSBuildProjectDirectory)\..\..\artifacts\dev-cert\Clenzy-dev.cer</SigningCertificatePath>
+    <SigningCertificatePath Condition="'$(SigningCertificatePath)' == '' And Exists('$(MSBuildProjectDirectory)\..\..\release\Clenzy-dev.cer')">$(MSBuildProjectDirectory)\..\..\release\Clenzy-dev.cer</SigningCertificatePath>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(SigningCertificatePath)' != ''">
+    <EmbeddedResource Include="$(SigningCertificatePath)" LogicalName="Clenzy.SigningCertificate.cer" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\Clenzy.ico" />
+    <Resource Include="Assets\Clenzy.png" />
+  </ItemGroup>
+</Project>

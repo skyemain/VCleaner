@@ -1,37 +1,3 @@
-<#
-.SYNOPSIS
-    Builds, tests and publishes CleanSlate as a single self-contained Windows x64 .exe.
-
-.DESCRIPTION
-    Output: artifacts\release\CleanSlate-<version>-win-x64.exe (+ SHA256SUMS.txt). No .NET installation is needed on the target PC.
-    Development builds are versioned MAJOR.MINOR.PATCH-dev.<commit count>+<commit>; -Release drops the -dev suffix.
-    The base version comes from the VERSION file (change it with build\bump-version.ps1).
-
-.PARAMETER Release
-    Produce a release version (no -dev suffix). Use from a clean, tagged commit.
-
-.PARAMETER Sign
-    Authenticode-sign the .exe with build\sign.ps1 (see docs\SIGNING.md for the supported certificate sources).
-
-.PARAMETER Folder
-    Also keep the unpacked folder layout (artifacts\publish\win-x64). Starts faster than the single file, which unpacks native libraries on first run.
-
-.PARAMETER ReadyToRun
-    Precompile assemblies for faster startup (larger output).
-
-.PARAMETER Zip
-    Also create CleanSlate-<version>-win-x64.zip containing the .exe.
-
-.PARAMETER ToRelease
-    Also copy the .exe, the certificate (.cer, when signing) and checksums into the tracked release\ folder, replacing the previous CleanSlate-*.exe there.
-
-.PARAMETER SkipTests
-    Do not run the automated tests before publishing.
-
-.EXAMPLE
-    pwsh build\publish.ps1                    # development build
-    pwsh build\publish.ps1 -Release -Sign     # signed release build
-#>
 [CmdletBinding()]
 param(
     [string]$Configuration = 'Release',
@@ -49,8 +15,8 @@ Set-StrictMode -Version Latest
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $runtime = 'win-x64'
-$project = Join-Path $root 'src\CleanSlate.App\CleanSlate.App.csproj'
-$solution = Join-Path $root 'CleanSlate.sln'
+$project = Join-Path $root 'src\Clenzy.App\Clenzy.App.csproj'
+$solution = Join-Path $root 'Clenzy.sln'
 
 function Invoke-Dotnet {
     param([Parameter(Mandatory = $true)][string[]]$DotnetArguments)
@@ -60,7 +26,7 @@ function Invoke-Dotnet {
 }
 
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-    throw 'The .NET SDK (10.0 or newer) is required to build CleanSlate. Install it from https://dotnet.microsoft.com/download'
+    throw 'The .NET SDK (10.0 or newer) is required to build Clenzy. Install it from https://dotnet.microsoft.com/download'
 }
 
 Push-Location $root
@@ -104,8 +70,8 @@ try {
 
     $releaseDir = Join-Path $root 'artifacts\release'
     New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
-    $exe = Join-Path $releaseDir "CleanSlate-$version-$runtime.exe"
-    Copy-Item (Join-Path $work 'CleanSlate.exe') $exe -Force
+    $exe = Join-Path $releaseDir "Clenzy-$version-$runtime.exe"
+    Copy-Item (Join-Path $work 'Clenzy.exe') $exe -Force
 
     if ($Folder) {
         $folderOut = Join-Path $root "artifacts\publish\$runtime"
@@ -123,7 +89,7 @@ try {
 
     $files = @($exe)
     if ($Zip) {
-        $zipPath = Join-Path $releaseDir "CleanSlate-$version-$runtime.zip"
+        $zipPath = Join-Path $releaseDir "Clenzy-$version-$runtime.zip"
         if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
         Compress-Archive -Path $exe -DestinationPath $zipPath
         $files += $zipPath
@@ -135,10 +101,10 @@ try {
     if ($ToRelease) {
         $releaseFolder = Join-Path $root 'release'
         New-Item -ItemType Directory -Force -Path $releaseFolder | Out-Null
-        Get-ChildItem $releaseFolder -Filter 'CleanSlate-*.exe' | Remove-Item -Force
+        Get-ChildItem $releaseFolder -Filter 'Clenzy-*.exe' | Remove-Item -Force
         Copy-Item $exe $releaseFolder -Force
-        $cer = Join-Path $root 'artifacts\dev-cert\CleanSlate-dev.cer'
-        if ($Sign -and (Test-Path $cer)) { Copy-Item $cer (Join-Path $releaseFolder 'CleanSlate-dev.cer') -Force }
+        $cer = Join-Path $root 'artifacts\dev-cert\Clenzy-dev.cer'
+        if ($Sign -and (Test-Path $cer)) { Copy-Item $cer (Join-Path $releaseFolder 'Clenzy-dev.cer') -Force }
         "$((Get-FileHash (Join-Path $releaseFolder (Split-Path $exe -Leaf)) -Algorithm SHA256).Hash.ToLower())  $(Split-Path $exe -Leaf)" |
             Set-Content (Join-Path $releaseFolder 'SHA256SUMS.txt') -Encoding ascii
         Write-Host "Copied to $releaseFolder"

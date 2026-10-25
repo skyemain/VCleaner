@@ -40,7 +40,7 @@ if ($Tag) {
     try {
         git add VERSION CHANGELOG.md
         git commit -m "Release $next"
-        git tag -a "v$next" -m "CleanSlate $next"
+        git tag -a "v$next" -m "Clenzy $next"
         Write-Host "Created tag v$next (push with: git push origin main --tags)"
     }
     finally { Pop-Location }

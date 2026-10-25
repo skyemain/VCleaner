@@ -1,16 +1,16 @@
 <#
 .SYNOPSIS
-    Signs a Windows executable with the self-signed CleanSlate certificate (SHA-256, RFC 3161 timestamp) and verifies it.
+    Signs a Windows executable with the self-signed Clenzy certificate (SHA-256, RFC 3161 timestamp) and verifies it.
 
 .DESCRIPTION
-    Uses a PFX file. By default artifacts\dev-cert\CleanSlate-dev.pfx, created by build\new-dev-certificate.ps1.
+    Uses a PFX file. By default artifacts\dev-cert\Clenzy-dev.pfx, created by build\new-dev-certificate.ps1.
     Override with environment variables (secrets never go on the command line):
-        CLEANSLATE_SIGN_PFX            path to the .pfx
-        CLEANSLATE_SIGN_PFX_PASSWORD   its password (default for the generated certificate: cleanslate-dev)
-        CLEANSLATE_SIGN_TIMESTAMP_URL  timestamp server (default http://timestamp.digicert.com)
-        CLEANSLATE_SIGN_NO_TIMESTAMP=1 skip the timestamp (offline builds)
+        CLENZY_SIGN_PFX            path to the .pfx
+        CLENZY_SIGN_PFX_PASSWORD   its password (default for the generated certificate: clenzy-dev)
+        CLENZY_SIGN_TIMESTAMP_URL  timestamp server (default http://timestamp.digicert.com)
+        CLENZY_SIGN_NO_TIMESTAMP=1 skip the timestamp (offline builds)
 
-    A self-signed signature is valid only on PCs that trust the certificate; see docs\SIGNING.md.
+    A self-signed signature is valid only on PCs that trust the certificate; see README.md.
 
 .PARAMETER Path
     The .exe (or .dll/.msi) to sign.
@@ -28,14 +28,14 @@ function Get-Env([string]$name) { [Environment]::GetEnvironmentVariable($name) }
 if (-not (Test-Path $Path)) { throw "File not found: $Path" }
 $Path = (Resolve-Path $Path).Path
 
-$pfx = Get-Env 'CLEANSLATE_SIGN_PFX'
-if (-not $pfx) { $pfx = Join-Path $PSScriptRoot '..\artifacts\dev-cert\CleanSlate-dev.pfx' }
+$pfx = Get-Env 'CLENZY_SIGN_PFX'
+if (-not $pfx) { $pfx = Join-Path $PSScriptRoot '..\artifacts\dev-cert\Clenzy-dev.pfx' }
 if (-not (Test-Path $pfx)) {
-    throw "Signing certificate not found: $pfx. Run build\new-dev-certificate.ps1 first (see docs\SIGNING.md)."
+    throw "Signing certificate not found: $pfx. Run build\new-dev-certificate.ps1 first (see README.md)."
 }
 $pfx = (Resolve-Path $pfx).Path
-$password = Get-Env 'CLEANSLATE_SIGN_PFX_PASSWORD'
-if (-not $password) { $password = 'cleanslate-dev' }
+$password = Get-Env 'CLENZY_SIGN_PFX_PASSWORD'
+if (-not $password) { $password = 'clenzy-dev' }
 
 function Find-SignTool {
     $cmd = Get-Command signtool.exe -ErrorAction SilentlyContinue
@@ -50,9 +50,9 @@ function Find-SignTool {
 }
 
 $signtool = Find-SignTool
-$signArgs = @('sign', '/fd', 'SHA256', '/d', 'CleanSlate', '/f', $pfx, '/p', $password)
-if ((Get-Env 'CLEANSLATE_SIGN_NO_TIMESTAMP') -ne '1') {
-    $timestamp = Get-Env 'CLEANSLATE_SIGN_TIMESTAMP_URL'
+$signArgs = @('sign', '/fd', 'SHA256', '/d', 'Clenzy', '/f', $pfx, '/p', $password)
+if ((Get-Env 'CLENZY_SIGN_NO_TIMESTAMP') -ne '1') {
+    $timestamp = Get-Env 'CLENZY_SIGN_TIMESTAMP_URL'
     if (-not $timestamp) { $timestamp = 'http://timestamp.digicert.com' }
     $signArgs += @('/tr', $timestamp, '/td', 'SHA256')
 }
@@ -64,6 +64,6 @@ if ($LASTEXITCODE -ne 0) { throw "signtool sign failed with exit code $LASTEXITC
 # /pa checks the machine's trust store, so this reports an untrusted root until the certificate is trusted on this PC.
 & $signtool verify /pa /v $Path
 if ($LASTEXITCODE -ne 0) {
-    Write-Warning 'The file is signed, but this PC does not trust the certificate yet. Run build\new-dev-certificate.ps1 -Trust or import the .cer (docs\SIGNING.md).'
+    Write-Warning 'The file is signed, but this PC does not trust the certificate yet. Run build\new-dev-certificate.ps1 -Trust or import the .cer (README.md).'
 }
 Write-Host "Signed $Path" -ForegroundColor Green

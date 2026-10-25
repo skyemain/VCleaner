@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Clenzy.Presentation</RootNamespace>
+    <AssemblyName>Clenzy.Presentation</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Clenzy.Core\Clenzy.Core.csproj" />
+    <ProjectReference Include="..\Clenzy.Cleaners\Clenzy.Cleaners.csproj" />
+  </ItemGroup>
+</Project>
