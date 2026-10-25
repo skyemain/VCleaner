@@ -36,7 +36,7 @@ jobs:
           api-level: 35
           arch: x86_64
           script: |
-            gradle connectedDebugAndroidTest || { find app/build/outputs/androidTest-results -name '*.xml' -exec cat {} +; exit 1; }
+            gradle connectedDebugAndroidTest || { find app/build/outputs/androidTest-results -name '*.xml' -exec cat {} +; adb logcat -d -s AndroidRuntime System.err; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: Clenzy-Android-candidate

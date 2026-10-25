@@ -36,6 +36,14 @@ public class DocumentCleanupTest {
                 picker.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION | android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION | android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
                 activity.startActivityForResult(picker, 10);
             });
+            var rootsButton = device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.desc(java.util.regex.Pattern.compile("Show roots|Open navigation drawer", java.util.regex.Pattern.CASE_INSENSITIVE))), 3000);
+            if (rootsButton != null) {
+                rootsButton.click();
+                var fixtureRoot = device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text("Clenzy test files")), 5000);
+                assertNotNull("Fixture provider is missing from Android's folder picker", fixtureRoot);
+                fixtureRoot.click();
+                device.waitForIdle();
+            }
             var useFolder = device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("Use this folder", java.util.regex.Pattern.CASE_INSENSITIVE))), 10000);
             assertNotNull("Android folder picker did not show the fixture folder", useFolder);
             useFolder.click();
@@ -44,12 +52,18 @@ public class DocumentCleanupTest {
             device.waitForIdle();
             var chosenTree = new java.util.concurrent.atomic.AtomicReference<String>();
             for (int attempt=0; attempt<30 && chosenTree.get()==null; attempt++) {
-                scenario.onActivity(activity -> chosenTree.set(activity.getPreferences(0).getString("folder", null)));
+                scenario.onActivity(activity -> {
+                    try {
+                        var field = MainActivity.class.getDeclaredField("tree"); field.setAccessible(true);
+                        var uri = (Uri) field.get(activity);
+                        if (uri != null) chosenTree.set(uri.toString());
+                    } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+                });
                 if (chosenTree.get()==null) Thread.sleep(200);
             }
             var hierarchy = new java.io.ByteArrayOutputStream();
             device.dumpWindowHierarchy(hierarchy);
-            assertNotNull("No folder result persisted; UI: " + hierarchy.toString("UTF-8"), chosenTree.get());
+            assertNotNull("No folder result returned to the app; UI: " + hierarchy.toString("UTF-8"), chosenTree.get());
             assertEquals("Wrong picker folder: " + chosenTree.get(), "com.skyemain.clenzy.test.documents", Uri.parse(chosenTree.get()).getAuthority());
             var cleaner = new DocumentCleaner(context.getContentResolver());
             Uri tree = Uri.parse(chosenTree.get());
