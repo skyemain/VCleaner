@@ -77,8 +77,15 @@ public class DocumentCleanupTest {
             var cleaner = new DocumentCleaner(context.getContentResolver());
             Uri tree = Uri.parse(chosenTree.get());
             var scan = cleaner.scan(tree, new CancellationSignal());
+            assertEquals("Scan result: " + scan, 2, scan.files().size());
+            for (var file : scan.files()) {
+                try (var input = resolver.openInputStream(Uri.parse(file.uri()))) {
+                    assertNotNull("Cannot open fixture " + file, input);
+                    assertTrue("Empty fixture " + file, input.read() >= 0);
+                }
+            }
             var duplicates = ReviewRules.filter(scan.files(), ReviewRules.Category.DUPLICATES, System.currentTimeMillis());
-            assertEquals(2, duplicates.size());
+            assertEquals("Scan result: " + scan, 2, duplicates.size());
             var selected = duplicates.stream().filter(f -> f.name().equals("a.txt")).findFirst().get();
             var outcome = cleaner.delete(List.of(selected), new CancellationSignal());
             assertEquals(1, outcome.deleted());
