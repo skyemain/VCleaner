@@ -11,6 +11,7 @@ permissions:
 jobs:
   android:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -34,7 +35,8 @@ jobs:
         with:
           api-level: 35
           arch: x86_64
-          script: gradle connectedDebugAndroidTest
+          script: |
+            gradle connectedDebugAndroidTest || { find app/build/outputs/androidTest-results -name '*.xml' -exec cat {} +; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: Clenzy-Android-candidate

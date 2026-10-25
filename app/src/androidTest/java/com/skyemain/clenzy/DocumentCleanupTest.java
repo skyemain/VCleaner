@@ -11,13 +11,18 @@ import static org.junit.Assert.*;
 
 @RunWith(AndroidJUnit4.class)
 public class DocumentCleanupTest {
-    private android.os.Bundle fixtureCall(android.content.ContentResolver resolver, Uri endpoint, String method) {
+    private String fixtureCall(android.content.ContentResolver resolver, Uri endpoint, String method) throws Exception {
         var automation = InstrumentationRegistry.getInstrumentation().getUiAutomation();
-        automation.adoptShellPermissionIdentity("android.permission.MANAGE_DOCUMENTS");
-        try { return resolver.call(endpoint, method, null, null); }
-        finally { automation.dropShellPermissionIdentity(); }
+        var descriptor = automation.executeShellCommand("content call --uri content://com.skyemain.clenzy.test.documents --method " + method);
+        try (var stream = new android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor);
+             var output = new java.io.ByteArrayOutputStream()) {
+            byte[] buffer = new byte[1024]; int count;
+            while ((count = stream.read(buffer)) != -1) output.write(buffer, 0, count);
+            String result = output.toString("UTF-8");
+            assertFalse(result, result.contains("Error") || result.contains("Exception"));
+            return result;
+        }
     }
-
     @Test public void scansRealProviderDeletesOnlySelectedAndSkipsChangedFiles() throws Exception {
         var context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         var resolver = context.getContentResolver();
@@ -33,11 +38,11 @@ public class DocumentCleanupTest {
             var outcome = cleaner.delete(List.of(selected), new CancellationSignal());
             assertEquals(1, outcome.deleted());
             var state = fixtureCall(resolver, endpoint, "state");
-            assertFalse(state.getBoolean("a")); assertTrue(state.getBoolean("b"));
+            assertTrue(state, state.contains("a=false")); assertTrue(state, state.contains("b=true"));
             var stale = duplicates.stream().filter(f -> f.name().equals("b.txt")).findFirst().get();
             fixtureCall(resolver, endpoint, "change");
             assertEquals(1, cleaner.delete(List.of(stale), new CancellationSignal()).skipped());
-            assertTrue(fixtureCall(resolver, endpoint, "state").getBoolean("b"));
+            assertTrue(fixtureCall(resolver, endpoint, "state").contains("b=true"));
             assertEquals(1, cleaner.delete(List.of(new ReviewFile("content://elsewhere/not-scanned","x",1,1,null)), new CancellationSignal()).skipped());
         } finally { fixtureCall(resolver, endpoint, "clear"); }
     }
