@@ -42,11 +42,17 @@ public class DocumentCleanupTest {
             var allow = device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("Allow", java.util.regex.Pattern.CASE_INSENSITIVE))), 5000);
             if (allow != null) allow.click();
             device.waitForIdle();
-            var grantedTree = DocumentsContract.buildTreeDocumentUri("com.skyemain.clenzy.test.documents", "root");
-            for (int attempt=0; attempt<30 && context.checkUriPermission(grantedTree, android.os.Process.myPid(), android.os.Process.myUid(), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) != android.content.pm.PackageManager.PERMISSION_GRANTED; attempt++) Thread.sleep(200);
-            assertEquals(android.content.pm.PackageManager.PERMISSION_GRANTED, context.checkUriPermission(grantedTree, android.os.Process.myPid(), android.os.Process.myUid(), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION));
+            var chosenTree = new java.util.concurrent.atomic.AtomicReference<String>();
+            for (int attempt=0; attempt<30 && chosenTree.get()==null; attempt++) {
+                scenario.onActivity(activity -> chosenTree.set(activity.getPreferences(0).getString("folder", null)));
+                if (chosenTree.get()==null) Thread.sleep(200);
+            }
+            var hierarchy = new java.io.ByteArrayOutputStream();
+            device.dumpWindowHierarchy(hierarchy);
+            assertNotNull("No folder result persisted; UI: " + hierarchy.toString("UTF-8"), chosenTree.get());
+            assertEquals("Wrong picker folder: " + chosenTree.get(), "com.skyemain.clenzy.test.documents", Uri.parse(chosenTree.get()).getAuthority());
             var cleaner = new DocumentCleaner(context.getContentResolver());
-            Uri tree = DocumentsContract.buildTreeDocumentUri("com.skyemain.clenzy.test.documents", "root");
+            Uri tree = Uri.parse(chosenTree.get());
             var scan = cleaner.scan(tree, new CancellationSignal());
             var duplicates = ReviewRules.filter(scan.files(), ReviewRules.Category.DUPLICATES, System.currentTimeMillis());
             assertEquals(2, duplicates.size());
