@@ -60,11 +60,13 @@ struct HealthView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("[ SYSTEM HEALTH ]")
+                Text("[ SYSTEM OVERVIEW ]")
                     .font(.system(size: 12, weight: .semibold, design: .monospaced))
                     .foregroundStyle(OpsTheme.mint)
+                Text("A report to help you understand your Mac. It shows RAM, swap, available disk space and startup items that point to missing apps. Opening this page does not clean files or free RAM.")
+                    .font(.system(size: 12)).foregroundStyle(OpsTheme.secondary)
                 if let memory = model.health.memory {
-                    Text("Memory \(ByteFormat.string(from: Int64(memory.usedBytes))) used of \(ByteFormat.string(from: Int64(memory.totalBytes))). Pressure: \(memory.pressure).")
+                    Text("Memory \(ByteFormat.string(from: Int64(memory.usedBytes))) used of \(ByteFormat.string(from: Int64(memory.totalBytes))). Memory state: \(memory.pressure).")
                     Text(memory.explanation).foregroundStyle(OpsTheme.secondary)
                     if let swap = memory.swapUsedBytes {
                         Text("Swap in use: \(ByteFormat.string(from: Int64(swap)))").foregroundStyle(OpsTheme.secondary)
@@ -104,6 +106,12 @@ struct HealthView: View {
                 if let permissions = model.health.permissions {
                     Text(permissions.cachesReadable ? "User caches are readable." : "User caches are not readable.")
                     Text(permissions.fullDiskAccessNote).foregroundStyle(OpsTheme.secondary)
+                }
+                Text("Large downloads, Xcode archives, simulators and possible leftovers are reports only. Back up and disable is a separate action for one broken startup item.")
+                    .font(.caption).foregroundStyle(OpsTheme.secondary)
+                Button("Cleaning access guide") {
+                    dismiss()
+                    model.openAccessGuide()
                 }
                 Button("Close") { dismiss() }
             }

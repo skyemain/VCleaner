@@ -1,6 +1,6 @@
 # CleanSlate for macOS
 
-CleanSlate 1.0.3 is a native macOS cleaner. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes only cache and temporary files it can prove are disposable. It does not clean a registry, and Free RAM does not quit apps.
+CleanSlate 1.0.4 is a native macOS cleaner. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes only cache and temporary files it can prove are disposable. RAM management offers a normal quit only after you choose and confirm one app.
 
 GitHub Actions tests and builds the universal disk image when the `mac` branch is pushed, then commits the latest DMG and checksums to [`release/`](release/). Share [the stable latest download](https://github.com/skyemain/VCleaner/raw/refs/heads/mac/macos/release/CleanSlate-latest-mac-universal.dmg). The copy in that image is ad-hoc signed so it can launch; it is not notarized, so the first open is a right-click → Open. Xcode is required to build it locally.
 
@@ -24,7 +24,23 @@ Login cleaning runs the low-risk set only. It does not quit browsers, empty the 
 
 ## System health
 
-System Health shows memory pressure, swap, disk capacity, and the filesystem name, using system APIs. **Free RAM** briefly claims inactive and purgeable memory, up to 1 GB, then gives it back so macOS can drop cached pages. Open apps stay open. User LaunchAgents whose plist points at a missing absolute executable can be backed up and disabled after you confirm that one item. Shell-script agents are not flagged.
+System Overview explains RAM state, swap, disk capacity, and startup items that point to missing programs. Opening the report does not clean files or release memory. Downloads, Xcode archives, simulators and possible leftovers are reports only. A broken LaunchAgent can be backed up and disabled as a separate confirmed action.
+
+The home footer shows RAM usage plus the five largest readable foreground apps and their helper processes. Percentages use total physical RAM as the denominator and use per-process physical footprints; inaccessible processes and shared memory mean these estimates can differ from Activity Monitor.
+
+**Clean up RAM** opens a review of these apps. Each app has a **Quit…** action and a confirmation. CleanSlate requests a normal quit, allows save dialogs, never forces an app closed, and reports observed system RAM before and after. Other running apps affect that change, so it is not presented as a guaranteed amount recovered. The former allocation-based cache-reclamation method has been removed: macOS already manages caches, and an open app’s live memory cannot safely be erased.
+
+## First clean and Safari access
+
+The first manual Clean opens an access guide with a continue-with-available-access option. The header and blocked target rows reopen it. The guide links to Full Disk Access and shows current per-folder access checks. It cannot grant itself macOS privacy permission.
+
+1. Install CleanSlate in Applications, eject the DMG, and run the installed copy.
+2. For blocked Safari and other protected caches, open System Settings → Privacy & Security → Full Disk Access; add that installed copy and enable it.
+3. Quit and reopen CleanSlate, then recheck access in the guide.
+4. Quit Safari completely with ⌘Q, or approve the app’s normal browser-quit prompt, before cleaning.
+5. If access still fails after an update, remove the older privacy entry, re-add the installed copy, relaunch, and inspect the blocked folder paths. Some system-protected or other-user files remain inaccessible. No SIP changes, administrator access, Accessibility or Screen Recording permission are needed.
+
+Login-item approval and Downloads access apply only to their optional features. RAM monitoring and normal app quitting need no extra privacy permission. A missing cache directory is normal. Access probes check directory access, not the global Full Disk Access switch. One blocked system-cache folder no longer skips the other supported cache folders.
 
 ## Automatic cleaning at login
 
@@ -52,9 +68,9 @@ To sign, package, and notarize, using credentials that stay outside the reposito
 ```bash
 export DEVELOPER_ID_APPLICATION="Developer ID Application: Your Name (TEAMID)"
 scripts/sign.sh
-scripts/package-dmg.sh 1.0.3
+scripts/package-dmg.sh 1.0.4
 xcrun notarytool store-credentials cleanslate --apple-id you@example.com --team-id TEAMID
-NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.3-mac-universal.dmg
+NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.4-mac-universal.dmg
 scripts/verify-release.sh
 ```
 
@@ -64,7 +80,7 @@ The disk image contains `CleanSlate.app` and a shortcut to `/Applications`. Drag
 
 ## Tests
 
-The home footer samples RAM every two seconds and shows used/total memory, usage percentage and memory pressure, with **Clean up RAM** beside it. The result reports the measured change; macOS manages memory automatically and cached-memory release may be temporary.
+The home footer refreshes RAM and the top five apps every two seconds while visible. It does not show a memory-pressure label or cache-reclamation claims.
 
 Safari permission failures, including blocked subdirectories, are reported rather than shown as an empty cache. Give the installed app Full Disk Access when requested and relaunch it before retrying. Cleaning from the review screen now also offers to quit a running browser.
 

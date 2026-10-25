@@ -17,7 +17,7 @@ struct MainView: View {
         .onAppear { model.onAppear(arguments: CommandLine.arguments) }
         .task {
             while !Task.isCancelled {
-                model.refreshMemory()
+                await model.refreshMemory()
                 do { try await Task.sleep(nanoseconds: 2_000_000_000) }
                 catch { break }
             }
@@ -37,6 +37,12 @@ struct MainView: View {
         }
         .sheet(isPresented: $model.showDetails) {
             ScanDetailsView(model: model)
+        }
+        .sheet(isPresented: $model.showPermissions) {
+            AccessGuideView(model: model)
+        }
+        .sheet(isPresented: $model.showMemoryApps) {
+            MemoryAppsView(model: model)
         }
         .sheet(isPresented: $model.showHealth) {
             HealthView(model: model)
@@ -75,8 +81,6 @@ struct MainView: View {
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text("\(ByteFormat.string(from: Int64(model.memory.usedBytes))) / \(ByteFormat.string(from: Int64(model.memory.totalBytes)))")
-                    Text("Pressure: \(model.memory.pressure)")
-                        .foregroundStyle(OpsTheme.secondary)
                 }
                 .font(.system(size: 11, design: .monospaced))
                 Spacer()
@@ -86,9 +90,28 @@ struct MainView: View {
                     .disabled(model.freeingMemory || model.phase == .working || model.phase == .countingDown)
                     .help(MemoryInfoService.explanation)
             }
-            if !model.memoryNote.isEmpty {
-                Text(model.memoryNote).font(.caption).foregroundStyle(OpsTheme.secondary)
+            HStack(spacing: 10) {
+                Text("TOP APPS")
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(OpsTheme.secondary)
+                if model.topMemoryApps.isEmpty {
+                    Text("Reading app memory…").font(.caption).foregroundStyle(OpsTheme.secondary)
+                } else {
+                    ForEach(model.topMemoryApps) { app in
+                        HStack(spacing: 5) {
+                            Text(app.name).lineLimit(1).truncationMode(.tail)
+                            Spacer(minLength: 0)
+                            Text(app.percentText).foregroundStyle(OpsTheme.mint).monospacedDigit()
+                        }
+                        .font(.system(size: 10, weight: .medium))
+                        .padding(.horizontal, 8).padding(.vertical, 6)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
+                        .help("\(app.name): \(app.percentText) of total RAM. Includes readable helper processes; estimates may differ from Activity Monitor.")
+                    }
+                }
             }
+            .accessibilityElement(children: .contain)
         }
         .modifier(GlassCard())
     }
@@ -105,6 +128,10 @@ struct MainView: View {
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(OpsTheme.secondary)
             Spacer()
+            Button("Access guide") { model.openAccessGuide() }
+                .buttonStyle(.plain)
+                .font(.system(size: 11))
+                .foregroundStyle(OpsTheme.secondary)
             Button {
                 NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             } label: {
@@ -163,14 +190,11 @@ struct MainView: View {
                 .foregroundStyle(OpsTheme.mint)
             ForEach(model.rows) { row in
                 Button {
-                    if row.id == "health" {
-                        model.loadHealth()
-                        model.showHealth = true
-                    }
+                    model.selectTarget(row)
                 } label: {
                     HStack(spacing: 12) {
                         Circle()
-                            .fill(row.detail == "Ready" || row.detail == "Nothing to remove" ? OpsTheme.mint : OpsTheme.amber)
+                            .fill(row.needsAttention ? OpsTheme.amber : OpsTheme.mint)
                             .frame(width: 8, height: 8)
                             .shadow(color: OpsTheme.mint.opacity(0.8), radius: 4)
                         VStack(alignment: .leading, spacing: 2) {
@@ -182,6 +206,11 @@ struct MainView: View {
                                 .lineLimit(2)
                         }
                         Spacer()
+                        if row.needsAttention {
+                            Image(systemName: "questionmark.circle").foregroundStyle(OpsTheme.amber)
+                        } else if row.id == "health" {
+                            Image(systemName: "chevron.right").foregroundStyle(OpsTheme.secondary)
+                        }
                     }
                     .modifier(GlassCard())
                 }

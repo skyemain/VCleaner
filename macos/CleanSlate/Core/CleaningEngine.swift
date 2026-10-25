@@ -91,7 +91,7 @@ actor CleaningEngine {
             modules.append(SystemCleaners.temporaryFiles(context))
         }
         if categories.userCaches {
-            modules.append(SystemCleaners.userCaches(context))
+            modules.append(contentsOf: SystemCleaners.userCacheEstimates(context))
             modules.append(SystemCleaners.looseCacheFiles(context))
         }
         if categories.diagnosticReports {
@@ -177,6 +177,9 @@ actor CleaningEngine {
             break
         }
         let context = context(request)
+        if estimate.id.hasPrefix("user-cache-") {
+            return SystemCleaners.cleanUserCache(estimate.id, context: context, cancel: cancel)
+        }
         switch estimate.id {
         case "temp":
             return SystemCleaners.cleanTemporary(context, cancel: cancel)

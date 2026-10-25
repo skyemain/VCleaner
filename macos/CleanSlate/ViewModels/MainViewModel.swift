@@ -5,6 +5,7 @@ struct HomeRow: Identifiable, Equatable {
     var id: String
     var title: String
     var detail: String
+    var needsAttention = false
 }
 
 struct HealthSnapshot: Equatable {
@@ -45,9 +46,67 @@ final class MainViewModel: ObservableObject {
     @Published var freeingMemory = false
     @Published var memoryNote = ""
     @Published var memory = MemoryInfoService.snapshot()
+    @Published var topMemoryApps: [AppMemoryUsage] = []
+    @Published var showMemoryApps = false
+    @Published var showPermissions = false
+    @Published var permissionChecks: [PermissionService.Check] = []
+    @Published var checkingPermissions = false
+    private var cleanAfterGuide = false
+    private var permissionsAcknowledged = UserDefaults.standard.bool(forKey: "accessGuide.v1.acknowledged")
 
-    func refreshMemory() {
-        memory = MemoryInfoService.snapshot()
+    func refreshMemory() async {
+        let identities = AppMemoryService.identities()
+        let snapshot = await Task.detached(priority: .utility) {
+            let memory = MemoryInfoService.snapshot()
+            return (memory, AppMemoryService.sample(apps: identities, totalBytes: memory.totalBytes))
+        }.value
+        memory = snapshot.0
+        topMemoryApps = snapshot.1
+    }
+
+    func openAccessGuide(forClean: Bool = false) {
+        cleanAfterGuide = forClean
+        if showHealth || showDetails {
+            showHealth = false
+            showDetails = false
+            Task {
+                try? await Task.sleep(nanoseconds: 350_000_000)
+                showPermissions = true
+                await recheckPermissions()
+            }
+        } else {
+            showPermissions = true
+            Task { await recheckPermissions() }
+        }
+    }
+
+    func recheckPermissions() async {
+        guard !checkingPermissions else { return }
+        checkingPermissions = true
+        permissionChecks = await Task.detached(priority: .utility) {
+            PermissionService.checks(locations: .currentUser())
+        }.value
+        checkingPermissions = false
+    }
+
+    func continueFromAccessGuide() {
+        UserDefaults.standard.set(true, forKey: "accessGuide.v1.acknowledged")
+        permissionsAcknowledged = true
+        showPermissions = false
+        let shouldClean = cleanAfterGuide
+        cleanAfterGuide = false
+        if shouldClean { cleanNow() }
+    }
+
+    func selectTarget(_ row: HomeRow) {
+        if row.id == "health" {
+            loadHealth()
+            showHealth = true
+        } else if row.needsAttention {
+            openAccessGuide()
+        } else {
+            Task { await preview() }
+        }
     }
     private var pendingBrowserQuit = false
     private var pendingReview = false
@@ -90,20 +149,42 @@ final class MainViewModel: ObservableObject {
 
     func freeMemory() {
         guard !freeingMemory, phase != .working, phase != .countingDown else { return }
+        memoryNote = ""
+        showMemoryApps = true
+    }
+
+    /// Called only after the person confirms one named app in the RAM review.
+    func quitMemoryApp(_ candidate: AppMemoryUsage) {
+        guard !freeingMemory, candidate.pid != getpid(),
+              let app = NSRunningApplication(processIdentifier: candidate.pid),
+              app.bundleURL?.standardizedFileURL.resolvingSymlinksInPath().path == candidate.id else {
+            memoryNote = "This app is no longer available. Refresh the list."
+            return
+        }
         freeingMemory = true
-        memoryNote = "Releasing cached memory"
         Task {
-            let outcome = await Task.detached(priority: .utility) {
-                MemoryPurgeService.purge()
-            }.value
+            let before = memory.usedBytes
+            let sent = app.terminate()
+            for _ in 0..<20 {
+                if app.isTerminated || !sent { break }
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
+            await refreshMemory()
             freeingMemory = false
-            memoryNote = outcome.message
-            refreshMemory()
+            if app.isTerminated {
+                memoryNote = "\(candidate.name) closed. RAM used: \(ByteFormat.string(from: Int64(before))) → \(ByteFormat.string(from: Int64(memory.usedBytes))). Other apps also affect this reading."
+            } else {
+                memoryNote = "\(candidate.name) is still open. Save your work or respond to its quit dialog. No forced quit was attempted."
+            }
         }
     }
 
     func cleanNow() {
         guard phase == .idle || phase == .completed || phase == .failed else { return }
+        if !permissionsAcknowledged {
+            openAccessGuide(forClean: true)
+            return
+        }
         pendingReview = false
         runTask = Task {
             if await browsersNeedQuitPrompt() {
@@ -136,6 +217,10 @@ final class MainViewModel: ObservableObject {
     func cleanFromReview() {
         guard phase == .idle || phase == .completed else { return }
         showDetails = false
+        if !permissionsAcknowledged {
+            openAccessGuide(forClean: true)
+            return
+        }
         pendingReview = true
         runTask = Task {
             if await browsersNeedQuitPrompt() {
@@ -310,27 +395,32 @@ final class MainViewModel: ObservableObject {
 
     private func apply(_ outcome: CleanRunResult) {
         func detail(_ ids: [String], idle: String) -> String {
-            let matched = outcome.modules.filter { ids.contains($0.estimate.id) }
+            let matched = outcome.modules.filter { ids.contains($0.estimate.id) || ids.contains("user-cache") && $0.estimate.id.hasPrefix("user-cache-") }
             guard !matched.isEmpty else { return idle }
-            if let blocked = matched.first(where: {
-                if case .unavailable = $0.cleanup.status { return true }
-                if case .unsupported = $0.cleanup.status { return true }
-                if case .skipped = $0.cleanup.status { return true }
-                return false
-            }) {
-                switch blocked.cleanup.status {
-                case .unavailable(let text), .unsupported(let text), .skipped(let text): return text
-                case .ready: break
+            let blocked = matched.filter {
+                switch $0.cleanup.status {
+                case .ready: return false
+                default: return true
                 }
             }
             let bytes = matched.reduce(Int64(0)) { $0 + $1.cleanup.deletedBytes }
+            if !blocked.isEmpty {
+                return (bytes > 0 ? "\(ByteFormat.string(from: bytes)) cleaned · " : "") + "\(blocked.count) skipped — click for access guide"
+            }
             return bytes > 0 ? ByteFormat.string(from: bytes) : "Nothing to remove"
         }
+        func needsAccess(_ ids: [String]) -> Bool {
+            outcome.modules.contains { module in
+                guard ids.contains(module.estimate.id) || ids.contains("user-cache") && module.estimate.id.hasPrefix("user-cache-") else { return false }
+                if case .ready = module.cleanup.status { return false }
+                return true
+            }
+        }
         rows = [
-            HomeRow(id: "junk", title: "SYSTEM JUNK", detail: detail(["temp", "user-cache", "loose-cache", "diagnostics"], idle: "Ready")),
-            HomeRow(id: "safari", title: "SAFARI", detail: detail(["safari"], idle: "Ready")),
-            HomeRow(id: "chrome", title: "CHROME", detail: detail(["chrome"], idle: "Ready")),
-            HomeRow(id: "health", title: "SYSTEM HEALTH", detail: "Ready")
+            HomeRow(id: "junk", title: "SYSTEM JUNK", detail: detail(["temp", "user-cache", "loose-cache", "diagnostics"], idle: "Ready"), needsAttention: needsAccess(["temp", "user-cache", "loose-cache", "diagnostics"])),
+            HomeRow(id: "safari", title: "SAFARI", detail: detail(["safari"], idle: "Ready"), needsAttention: needsAccess(["safari"])),
+            HomeRow(id: "chrome", title: "CHROME", detail: detail(["chrome"], idle: "Ready"), needsAttention: needsAccess(["chrome"])),
+            HomeRow(id: "health", title: "SYSTEM OVERVIEW", detail: "Memory, disk space & startup checks")
         ]
     }
 
@@ -351,7 +441,7 @@ final class MainViewModel: ObservableObject {
         HomeRow(id: "junk", title: "SYSTEM JUNK", detail: "Ready"),
         HomeRow(id: "safari", title: "SAFARI", detail: "Ready"),
         HomeRow(id: "chrome", title: "CHROME", detail: "Ready"),
-        HomeRow(id: "health", title: "SYSTEM HEALTH", detail: "Ready")
+        HomeRow(id: "health", title: "SYSTEM OVERVIEW", detail: "Memory, disk space & startup checks")
     ]
 }
 

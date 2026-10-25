@@ -1,5 +1,13 @@
 # macOS changelog
 
+## 1.0.4
+
+- Replace the footer pressure label with five compact app memory percentages, including readable helpers.
+- Replace unreliable allocation-based RAM purging with a per-app, confirmed normal-quit review.
+- Add first-clean and on-demand access guidance, a Full Disk Access settings link and per-folder checks for Safari and system caches.
+- Clean accessible system-cache folders even if another cache is blocked.
+- Rename System Health to System Overview and explain its reports and actions.
+
 ## 1.0.3
 
 - Make the mac branch macOS-only, with native sources, tests, resources and packaging.

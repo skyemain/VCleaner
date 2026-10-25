@@ -16,6 +16,24 @@ enum SystemCleaners {
         )
     }
 
+    static func userCacheEstimates(_ context: ScanContext) -> [ModuleEstimate] {
+        ProtectedPaths.systemCacheRelativeRoots.enumerated().map { index, relative in
+            estimate(id: "user-cache-\(index)", title: "Cache: \(URL(fileURLWithPath: relative).lastPathComponent)",
+                root: context.locations.url(relative), context: context,
+                minimumAge: context.now.addingTimeInterval(-looseCacheAge))
+        }
+    }
+
+    static func cleanUserCache(_ id: String, context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
+        guard let index = Int(id.replacingOccurrences(of: "user-cache-", with: "")),
+              ProtectedPaths.systemCacheRelativeRoots.indices.contains(index) else {
+            return ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .unsupported("Unknown cache"))
+        }
+        return clean(idRoot: context.locations.url(ProtectedPaths.systemCacheRelativeRoots[index]),
+            context: context, minimumAge: context.now.addingTimeInterval(-looseCacheAge),
+            allowXcode: false, allowTrash: false, cancel: cancel)
+    }
+
     static func userCaches(_ context: ScanContext) -> ModuleEstimate {
         let estimates = ProtectedPaths.systemCacheRelativeRoots.map { relative in
             estimate(id: "user-cache", title: "Supported user caches", root: context.locations.url(relative),
@@ -30,6 +48,9 @@ enum SystemCleaners {
 
     static func looseCacheFiles(_ context: ScanContext) -> ModuleEstimate {
         let root = context.locations.url("Library/Caches")
+        if DirectoryWalker.isUnreadable(root) {
+            return ModuleEstimate(id: "loose-cache", title: "Loose cache files", status: .unavailable(PermissionService.accessHelp), fileCount: 0, byteCount: 0, samplePaths: [])
+        }
         var estimate = ModuleEstimate(id: "loose-cache", title: "Loose cache files", status: .ready, fileCount: 0, byteCount: 0, samplePaths: [])
         let fm = FileManager()
         guard let contents = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey, .contentModificationDateKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles]) else {
@@ -65,7 +86,7 @@ enum SystemCleaners {
             return ModuleEstimate(id: "diagnostics", title: "Diagnostic reports", status: .ready, fileCount: 0, byteCount: 0, samplePaths: [])
         }
         if DirectoryWalker.isUnreadable(root) {
-            return ModuleEstimate(id: "diagnostics", title: "Diagnostic reports", status: .unavailable("macOS access restrictions"), fileCount: 0, byteCount: 0, samplePaths: [])
+            return ModuleEstimate(id: "diagnostics", title: "Diagnostic reports", status: .unavailable(PermissionService.accessHelp), fileCount: 0, byteCount: 0, samplePaths: [])
         }
         let urls = (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey, .contentModificationDateKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles])) ?? []
         for url in urls {
@@ -133,16 +154,16 @@ enum SystemCleaners {
 
     private static func estimate(id: String, title: String, root: URL, context: ScanContext, minimumAge: Date?) -> ModuleEstimate {
         if DirectoryWalker.isUnreadable(root) {
-            return ModuleEstimate(id: id, title: title, status: .unavailable("macOS access restrictions"), fileCount: 0, byteCount: 0, samplePaths: [])
+            return ModuleEstimate(id: id, title: title, status: .unavailable(PermissionService.accessHelp), fileCount: 0, byteCount: 0, samplePaths: [])
         }
         let stats = DirectoryWalker.collect(root: root, minimumAge: minimumAge, exclusions: context.exclusions, fileManager: FileManager())
-        return ModuleEstimate(id: id, title: title, status: .ready, fileCount: stats.fileCount, byteCount: stats.byteCount, samplePaths: stats.samplePaths)
+        return ModuleEstimate(id: id, title: title, status: stats.accessDenied ? .unavailable(PermissionService.accessHelp) : .ready, fileCount: stats.fileCount, byteCount: stats.byteCount, samplePaths: stats.samplePaths)
     }
 
     private static func clean(idRoot: URL, context: ScanContext, minimumAge: Date?, allowXcode: Bool, allowTrash: Bool, cancel: @escaping () -> Bool) -> ModuleCleanup {
         var service = SafeDeletionService(allowXcodeDerivedData: allowXcode, allowTrash: allowTrash)
         let outcome = service.deleteEligibleFiles(under: idRoot, context: context, minimumAge: minimumAge, shouldCancel: cancel)
-        return ModuleCleanup(deletedCount: outcome.deletedCount, deletedBytes: outcome.deletedBytes, skippedCount: outcome.skippedCount, errors: outcome.errors, status: outcome.accessDenied ? .unavailable("macOS access restrictions") : .ready)
+        return ModuleCleanup(deletedCount: outcome.deletedCount, deletedBytes: outcome.deletedBytes, skippedCount: outcome.skippedCount, errors: outcome.errors, status: outcome.accessDenied ? .unavailable(PermissionService.accessHelp) : .ready)
     }
 
     private static func cleanLoose(_ context: ScanContext, cancel: @escaping () -> Bool) -> ModuleCleanup {
@@ -150,6 +171,10 @@ enum SystemCleaners {
         let cutoff = context.now.addingTimeInterval(-looseCacheAge)
         var cleanup = ModuleCleanup(deletedCount: 0, deletedBytes: 0, skippedCount: 0, errors: [], status: .ready)
         let fm = FileManager()
+        if DirectoryWalker.isUnreadable(root) {
+            cleanup.status = .unavailable(PermissionService.accessHelp)
+            return cleanup
+        }
         guard let contents = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey, .isSymbolicLinkKey, .fileSizeKey], options: [.skipsHiddenFiles]) else {
             return cleanup
         }

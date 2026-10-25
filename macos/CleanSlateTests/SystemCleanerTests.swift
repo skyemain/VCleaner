@@ -1,3 +1,4 @@
+import Darwin
 import XCTest
 @testable import CleanSlate
 
@@ -71,10 +72,49 @@ final class SystemCleanerTests: XCTestCase {
     }
 }
 
-final class MemoryPurgeTests: XCTestCase {
-    func testBudgetNeverAsksForMoreThanAGigabyteOrHalfOfPhysicalMemory() {
-        XCTAssertEqual(MemoryPurgeService.budget(inactive: 50_000_000, purgeable: 50_000_000, physical: 16_000_000_000), 0)
-        XCTAssertEqual(MemoryPurgeService.budget(inactive: 300_000_000, purgeable: 0, physical: 400_000_000), 200_000_000)
-        XCTAssertEqual(MemoryPurgeService.budget(inactive: 2_000_000_000, purgeable: 2_000_000_000, physical: 16_000_000_000), 1024 * 1024 * 1024)
+final class AppMemoryTests: XCTestCase {
+    func testRankingGroupsDuplicateBundlesUsesTotalRAMAndLimitsToFive() {
+        let apps = (0..<7).map { MemoryAppIdentity(path: "/Apps/App\($0).app", name: "App\($0)", pid: Int32($0 + 1)) }
+        let totals = Dictionary(uniqueKeysWithValues: apps.enumerated().map { ($0.element.path, UInt64(($0.offset + 1) * 100)) })
+        let ranked = AppMemoryService.ranked(apps: apps + [apps[6]], bytesByPath: totals, totalBytes: 10_000)
+        XCTAssertEqual(ranked.count, 5)
+        XCTAssertEqual(ranked[0].name, "App6")
+        XCTAssertEqual(ranked[0].percentText, "7.0%")
+        XCTAssertEqual(ranked[4].bytes, 300)
+    }
+
+    func testUnavailableAndZeroMemorySamplesAreNotInvented() {
+        let apps = [MemoryAppIdentity(path: "/Apps/App.app", name: "App", pid: 1)]
+        XCTAssertTrue(AppMemoryService.ranked(apps: apps, bytesByPath: [:], totalBytes: 100).isEmpty)
+        let sample = AppMemoryService.ranked(apps: apps, bytesByPath: [apps[0].path: 5], totalBytes: 0)
+        XCTAssertEqual(sample[0].percent, 0)
+    }
+
+    func testPermissionProbeDistinguishesMissingAndBlockedFolders() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        XCTAssertEqual(PermissionService.check(fixture.home.appendingPathComponent("missing")), .missing)
+        let file = try fixture.write(relative: "Library/Caches/com.apple.helpd/test")
+        let root = file.deletingLastPathComponent()
+        XCTAssertEqual(PermissionService.check(root), .available)
+        chmod(root.path, 0)
+        defer { chmod(root.path, 0o755) }
+        XCTAssertEqual(PermissionService.check(root), .blocked)
+    }
+
+    func testOneBlockedCacheDoesNotSkipOtherSystemCaches() async throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let blocked = try fixture.write(relative: "Library/Caches/com.apple.helpd/keep").deletingLastPathComponent()
+        let removable = try fixture.write(relative: "Library/Caches/com.apple.touristd/remove")
+        chmod(blocked.path, 0)
+        defer { chmod(blocked.path, 0o755) }
+        var categories = EnabledCategories()
+        categories.safari = false
+        categories.chrome = false
+        let result = try await CleaningEngine(locations: fixture.locations).clean(CleanRequest(mode: .manual,
+            dryRun: false, categories: categories, exclusions: [], allowBrowserQuit: false, emptyTrashConfirmed: false))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: removable.path))
+        XCTAssertTrue(result.modules.contains { if case .unavailable = $0.cleanup.status { return true }; return false })
     }
 }

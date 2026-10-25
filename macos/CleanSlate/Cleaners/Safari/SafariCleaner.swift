@@ -2,7 +2,7 @@ import Foundation
 
 enum SafariCleaner {
     static let bundleIdentifier = "com.apple.Safari"
-    static let unavailableMessage = "Safari cache is blocked. Turn on Full Disk Access for CleanSlate in System Settings, then clean again."
+    static let unavailableMessage = "Safari cache access was denied by macOS. Click Safari on the home screen for the access guide: add the installed CleanSlate app to Full Disk Access, quit and reopen it, then quit Safari and retry."
 
     static func estimate(_ context: ScanContext) -> ModuleEstimate {
         let totals = measure(context)
