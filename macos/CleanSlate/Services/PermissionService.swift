@@ -4,7 +4,7 @@ import Foundation
 
 enum PermissionService {
     enum Access: String, Equatable, Sendable {
-        case available = "Accessible"
+        case available = "Readable"
         case missing = "Not present"
         case blocked = "Access denied"
         case unknown = "Could not check"
@@ -15,6 +15,7 @@ enum PermissionService {
         var title: String
         var path: String
         var access: Access
+        var detail: String = ""
     }
 
     struct Status: Equatable, Sendable {
@@ -26,28 +27,48 @@ enum PermissionService {
 
     static let accessHelp = "macOS denied access to this folder. Full Disk Access may allow protected caches; files owned by another account, system-protected files and files in use can still be skipped. Click for the access guide."
 
-    static func canRead(_ url: URL) -> Bool { access(url.path, R_OK) == 0 }
-
-    /// Probe a directory by listing names, without reading or modifying its files.
-    static func check(_ root: URL) -> Access {
-        do {
-            _ = try FileManager().contentsOfDirectory(atPath: root.path)
-            return access(root.path, R_OK | W_OK | X_OK) == 0 ? .available : .blocked
-        } catch {
-            let error = error as NSError
-            if error.domain == NSCocoaErrorDomain {
-                if error.code == NSFileNoSuchFileError || error.code == NSFileReadNoSuchFileError { return .missing }
-                if error.code == NSFileReadNoPermissionError { return .blocked }
-            }
-            if error.domain == NSPOSIXErrorDomain {
-                if error.code == Int(ENOENT) { return .missing }
-                if [Int(EACCES), Int(EPERM)].contains(error.code) { return .blocked }
-            }
-            return .unknown
-        }
+    struct Probe: Equatable, Sendable {
+        var access: Access
+        var detail: String
     }
 
-    static func checks(locations: Locations) -> [Check] {
+    static func canRead(_ url: URL) -> Bool { probe(url).access == .available }
+    static func check(_ root: URL) -> Access { probe(root).access }
+
+    /// Test the operation we actually need, rather than rejecting the folder using access(2).
+    /// This checks directory enumeration only; each deletion still checks ownership, locks and permissions.
+    static func probe(_ root: URL) -> Probe {
+        do {
+            _ = try FileManager().contentsOfDirectory(atPath: root.path)
+            return Probe(access: .available, detail: "Folder listing succeeded. File deletion is checked during Clean.")
+        } catch { return classify(error as NSError) }
+    }
+
+    static func classify(_ error: NSError) -> Probe {
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            let cause = classify(underlying)
+            if cause.access != .unknown { return cause }
+        }
+        if error.domain == NSPOSIXErrorDomain {
+            switch error.code {
+            case Int(ENOENT): return Probe(access: .missing, detail: "Folder does not exist (ENOENT).")
+            case Int(EPERM): return Probe(access: .blocked, detail: "macOS privacy or protection denied the operation (EPERM / 1).")
+            case Int(EACCES): return Probe(access: .blocked, detail: "File permissions or an access-control rule denied the operation (EACCES / 13).")
+            default: break
+            }
+        }
+        if error.domain == NSCocoaErrorDomain {
+            if [NSFileNoSuchFileError, NSFileReadNoSuchFileError].contains(error.code) {
+                return Probe(access: .missing, detail: "Folder does not exist.")
+            }
+            if [NSFileReadNoPermissionError, NSFileWriteNoPermissionError].contains(error.code) {
+                return Probe(access: .blocked, detail: "macOS denied the operation (Cocoa \(error.code)).")
+            }
+        }
+        return Probe(access: .unknown, detail: "\(error.domain) / \(error.code): \(error.localizedDescription)")
+    }
+
+    static func roots(locations: Locations) -> [(String, URL)] {
         let roots: [(String, URL)] = [("Temporary files", locations.temporaryDirectory),
             ("User caches", locations.url("Library/Caches")),
             ("Trash", locations.url(".Trash")),
@@ -55,8 +76,14 @@ enum PermissionService {
             ("Diagnostic reports", locations.url("Library/Logs/DiagnosticReports"))]
             + ProtectedPaths.systemCacheRelativeRoots.map { ("System cache", locations.url($0)) }
             + ProtectedPaths.safariCacheRelativeRoots.map { ("Safari / WebKit cache", locations.url($0)) }
-        return roots.map { title, root in
-            Check(id: root.path, title: title, path: root.path.replacingOccurrences(of: locations.home.path, with: "~"), access: check(root))
+        return roots
+    }
+
+    static func checks(locations: Locations) -> [Check] {
+        roots(locations: locations).map { title, root in
+            let result = probe(root)
+            return Check(id: root.path, title: title, path: root.path.replacingOccurrences(of: locations.home.path, with: "~"),
+                access: result.access, detail: result.detail)
         }
     }
 

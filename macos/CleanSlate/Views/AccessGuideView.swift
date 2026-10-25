@@ -10,32 +10,27 @@ struct AccessGuideView: View {
         VStack(alignment: .leading, spacing: 16) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("A short setup for your first clean")
-                        .font(.title2.weight(.semibold))
-                    Text("Basic temporary and cache cleaning works with the access you already have. Trash and Safari’s protected caches may need Full Disk Access. Manual Clean includes permanent deletion of eligible Trash files; automatic login cleaning never touches Trash. macOS requires you to grant it yourself; CleanSlate cannot switch it on.")
-                    step("1", "Install the copy you will use", "Drag CleanSlate from the disk image to Applications, eject the disk image, and open Applications → CleanSlate. Grant access to that copy, not the one inside the disk image.")
-                    step("2", "Allow protected cache access", "Open System Settings → Privacy & Security → Full Disk Access. Use + to add Applications → CleanSlate, then turn its switch on. This permits access to sensitive files; CleanSlate restricts deletion to its cleanup allowlist and your home Trash.")
+                    Text("Allow cleaning access").font(.title2.weight(.semibold))
+                    Text("For each blocked folder, click Choose folder and approve that exact folder in the macOS picker. No files are deleted during setup. If macOS still denies access, use Full Disk Access below and restart the installed copy.")
+                        .font(.system(size: 12)).foregroundStyle(OpsTheme.secondary)
                     HStack {
                         Button("Open Full Disk Access") { PermissionService.openPrivacySettings() }
-                            .tint(OpsTheme.mint)
-                        Button("Show this app in Finder") {
-                            NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
-                        }
-                    }.buttonStyle(.bordered)
-                    step("3", "Quit and reopen CleanSlate", "After changing access, quit CleanSlate completely (⌘Q), reopen the installed copy, then click Recheck access here. A switch that is on is not proof that every folder is accessible.")
-                    step("4", "For Safari: quit the browser too", "Use Safari → Quit Safari (⌘Q), not just the red window button. Alternatively, approve Quit and clean when CleanSlate asks. If macOS asks whether CleanSlate may access another app’s data, allow it only if you want that cache cleaned.")
-                    Text("Still blocked?").font(.headline)
-                    Text("If Trash or Safari is still denied, remove the old CleanSlate entry from Full Disk Access, add the current installed copy again, and relaunch it. These builds are ad-hoc signed, so macOS may require access to be granted again after an update. Safari is limited to its own cache folders; shared WebKit containers used by other apps are not cleaned. Check the paths below. Ownership, files in use and macOS system protection can still prevent cleaning. Do not disable SIP or change folder permissions. You can continue and leave blocked items alone.")
-                    Text("Other features").font(.headline)
-                    Text("Start at login is optional: allow CleanSlate under General → Login Items if macOS requests approval. RAM monitoring and normal app quitting do not need Full Disk Access. Accessibility, Screen Recording and administrator access are not required for cache cleaning.")
-                    HStack {
-                        Text("Current folder access").font(.headline)
+                        Button("Show this app") { NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL]) }
                         Spacer()
-                        Button(model.checkingPermissions ? "Checking…" : "Recheck access") {
+                        Button(model.checkingPermissions ? "Checking…" : "Recheck") {
                             Task { await model.recheckPermissions() }
-                        }.disabled(model.checkingPermissions)
+                        }.disabled(model.checkingPermissions || model.grantingAccess)
+                    }.buttonStyle(.bordered)
+                    Text("Running copy: \(Bundle.main.bundleURL.path)")
+                        .font(.system(size: 10, design: .monospaced)).foregroundStyle(OpsTheme.secondary).textSelection(.enabled)
+                    if !InstallationService.isInstalledCopy {
+                        Text("Install this copy in Applications first. Quit this settings panel to use the installation prompt when opening the app from the DMG.")
+                            .font(.caption).foregroundStyle(OpsTheme.amber)
                     }
-                    Text("These checks list folder names and test access; they do not read browsing data or delete files. “Not present” is normal for unused cache locations. Nested files may have different access.")
+                    if !model.accessMessage.isEmpty {
+                        Text(model.accessMessage).font(.system(size: 12)).foregroundStyle(OpsTheme.mint).textSelection(.enabled)
+                    }
+                    Text("Folder checks list names only. A readable folder may still contain locked or protected files; deletion is checked separately.")
                         .font(.caption).foregroundStyle(OpsTheme.secondary)
                     ForEach(model.permissionChecks) { item in
                         HStack(alignment: .top, spacing: 12) {
@@ -45,10 +40,28 @@ struct AccessGuideView: View {
                                     .foregroundStyle(OpsTheme.secondary).textSelection(.enabled)
                             }
                             Spacer()
-                            Text(item.access.rawValue).font(.system(size: 11))
-                                .foregroundStyle(item.access == .blocked || item.access == .unknown ? OpsTheme.amber : OpsTheme.secondary)
+                            VStack(alignment: .trailing, spacing: 6) {
+                                Text(item.access.rawValue).font(.system(size: 11))
+                                    .foregroundStyle(item.access == .blocked || item.access == .unknown ? OpsTheme.amber : OpsTheme.secondary)
+                                if item.access == .blocked || item.access == .unknown {
+                                    Button("Choose folder…") { model.grantFolderAccess(item) }
+                                        .buttonStyle(.bordered).disabled(model.grantingAccess || model.checkingPermissions)
+                                }
+                            }
+                        }
+                        if item.access == .blocked || item.access == .unknown {
+                            Text(item.detail).font(.system(size: 10)).foregroundStyle(OpsTheme.amber).textSelection(.enabled)
                         }
                         Divider()
+                    }
+                    DisclosureGroup("Full Disk Access, Safari and reinstall help") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            step("1", "Install from the new DMG", "Open CleanSlate inside the downloaded DMG and choose Install & replace older versions. This quits old copies and replaces the installed app without merging old bundle files. User preferences and macOS privacy decisions are preserved.")
+                            step("2", "Allow the installed copy", "In System Settings → Privacy & Security → Full Disk Access, remove an older CleanSlate entry, add Applications → CleanSlate and enable it. Quit and reopen CleanSlate, then Recheck. These builds are ad-hoc signed; grants may need renewal after updates.")
+                            step("3", "For Safari", "Quit Safari with ⌘Q before cleaning. Allow the macOS prompt for Safari’s app data if you want its cache cleaned. Only the two cache folders above are targets, not cookies or history.")
+                            Text("An EPERM error can come from privacy or other macOS protection; EACCES points to file permissions or ACLs. A folder-picker grant cannot override every macOS protection. Do not change ownership, disable SIP or modify the privacy database. Manual Clean permanently deletes eligible Trash files. Login cleans leave Trash alone.")
+                                .font(.caption).foregroundStyle(OpsTheme.secondary)
+                        }.padding(.top, 8)
                     }
                 }
             }

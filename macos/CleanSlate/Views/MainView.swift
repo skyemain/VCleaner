@@ -29,6 +29,9 @@ struct MainView: View {
         } message: {
             Text(model.browserPrompt ?? "")
         }
+        .sheet(isPresented: $model.showInstallation) {
+            InstallationView(model: model)
+        }
         .sheet(isPresented: $model.showDetails) {
             ScanDetailsView(model: model)
         }

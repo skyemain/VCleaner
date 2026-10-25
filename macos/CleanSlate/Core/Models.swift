@@ -138,6 +138,19 @@ struct CleanRunResult: Equatable, Sendable {
     var modules: [ModuleCleanupReport]
     var record: SessionRecord
 
+    var blockedModuleCount: Int {
+        modules.filter { if case .unavailable = $0.cleanup.status { return true }; return false }.count
+    }
+    var incomplete: Bool {
+        blockedModuleCount > 0 || !record.errors.isEmpty || modules.contains {
+            if case .skipped = $0.cleanup.status { return true }
+            return false
+        }
+    }
+    var completionTitle: String {
+        if record.dryRun { return blockedModuleCount > 0 ? "Preview incomplete · access needed" : "Dry run" }
+        return incomplete ? "Clean finished with skipped items" : "Cleaning complete"
+    }
     var deletedBytes: Int64 { record.deletedBytes }
     var deletedCount: Int { record.deletedCount }
 }

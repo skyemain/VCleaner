@@ -1,6 +1,6 @@
 # CleanSlate for macOS
 
-CleanSlate 1.0.6 is a native macOS cleaner. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes allowlisted caches, stale temporary files and eligible home Trash files. Clean Up RAM asks smaller measured apps to quit normally, keeps the top five plus Finder and CleanSlate, then opens a top-app review. Apps may show save/cancel dialogs; no forced quits are used.
+CleanSlate 1.0.7 is a native macOS cleaner. It is a SwiftUI app for macOS 13 and newer, built as a universal binary (Apple silicon and Intel). It removes allowlisted caches, stale temporary files and eligible home Trash files. Clean Up RAM asks smaller measured apps to quit normally, keeps the top five plus Finder and CleanSlate, then opens a top-app review. Apps may show save/cancel dialogs; no forced quits are used.
 
 GitHub Actions tests and builds the universal disk image when the `mac` branch is pushed, then commits the latest DMG and checksums to [`release/`](release/). Share [the stable latest download](https://github.com/skyemain/VCleaner/raw/refs/heads/mac/macos/release/CleanSlate-latest-mac-universal.dmg). The copy in that image is ad-hoc signed so it can launch; it is not notarized, so the first open is a right-click → Open. Xcode is required to build it locally.
 
@@ -70,9 +70,9 @@ To sign, package, and notarize, using credentials that stay outside the reposito
 ```bash
 export DEVELOPER_ID_APPLICATION="Developer ID Application: Your Name (TEAMID)"
 scripts/sign.sh
-scripts/package-dmg.sh 1.0.6
+scripts/package-dmg.sh 1.0.7
 xcrun notarytool store-credentials cleanslate --apple-id you@example.com --team-id TEAMID
-NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.6-mac-universal.dmg
+NOTARY_KEYCHAIN_PROFILE=cleanslate scripts/notarize.sh release/CleanSlate-1.0.7-mac-universal.dmg
 scripts/verify-release.sh
 ```
 
@@ -94,3 +94,30 @@ xcodebuild -project CleanSlate.xcodeproj -scheme CleanSlate -destination 'platfo
 ```
 
 They were not run in the environment that added this project.
+
+## Install and repair access (1.0.7)
+
+Open CleanSlate from the new DMG and choose **Install & replace older versions**.
+The installer closes other CleanSlate processes normally, stages and checks the new
+bundle's signature, replaces `/Applications/CleanSlate.app` without merging files,
+and removes a validated legacy `~/Applications/CleanSlate.app` copy. If replacement
+fails, it restores the previous bundle. Settings and cleaning history stay. If
+Applications requires administrator approval, use Finder's drag-and-replace flow.
+Copies in Downloads or other arbitrary locations are not searched for or deleted.
+
+The installed copy opens Cleaning Access. **Choose folder** uses NSOpenPanel to ask
+for a specific target folder; parents, symlinks and unrelated folders are rejected.
+A successful folder selection is verified by actual directory enumeration. Where
+supported, a security-scoped bookmark is saved and restored on launch. Otherwise
+the UI explicitly reports session-only access. No files are deleted during setup.
+
+A folder grant cannot override every macOS protection. The checks expose underlying
+EPERM (privacy/protection) and EACCES (permissions/ACL) errors. Full Disk Access may
+still be needed. A clean with blocked targets is now marked incomplete. This build
+is ad-hoc signed, so it does not have a stable Developer ID identity across updates;
+reinstallation cannot reset TCC or guarantee permission persistence. Developer ID
+signing requires the maintainer's Apple certificate, which is not configured here.
+
+Research: [Apple's file-picker consent guidance](https://developer.apple.com/videos/play/wwdc2023/10053/),
+[Apple DTS on ad-hoc signing and privacy](https://developer.apple.com/forums/thread/125438),
+and [Apple's file-access error documentation](https://developer.apple.com/documentation/security/accessing-files-from-the-macos-app-sandbox).

@@ -1,5 +1,13 @@
 # macOS changelog
 
+## 1.0.7
+
+- Add an in-app install/repair flow when opened outside Applications: close old processes, stage and verify the new bundle, replace the old bundle with rollback, remove the legacy personal Applications copy, and open the installed app to Cleaning Access. No downgrade, unrelated bundle replacement, or settings deletion.
+- Add explicit, exact-folder permission requests using the macOS folder picker and restore saved security-scoped grants where supported. No cleaning occurs during permission setup.
+- Probe actual directory enumeration, show underlying EPERM/EACCES diagnostics, display the running app path, and provide a Safari data-access purpose string.
+- Show partial completion and a blocked-target count instead of a green success for access-denied cleanup targets.
+- Ad-hoc signing is still a distribution limitation: reinstalling does not clear or guarantee renewal of macOS privacy grants. A stable Developer ID signing identity is required for dependable app identity across updates.
+
 ## 1.0.6
 
 - Move live storage, battery time and battery health cards onto the home screen beside the RAM monitor; remove the separate System Overview sheet.

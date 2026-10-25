@@ -9,7 +9,7 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 2
 fi
 
-version="${1:-1.0.6}"
+version="${1:-1.0.7}"
 app="build/CleanSlate.app"
 if [[ ! -d "${app}" ]]; then
   echo "error: ${app} is missing. Run scripts/build.sh first." >&2
@@ -21,6 +21,18 @@ trap 'rm -rf "${stage}"; hdiutil detach "/Volumes/CleanSlate" >/dev/null 2>&1 ||
 mkdir -p "${stage}/.background"
 cp -R "${app}" "${stage}/CleanSlate.app"
 ln -s /Applications "${stage}/Applications"
+cat > "${stage}/Install CleanSlate.txt" <<'INSTALL'
+Open CleanSlate.app in this disk image and choose Install & replace older versions.
+It closes old copies, verifies and replaces the app in Applications, and opens the
+installed copy to Cleaning Access. User settings and history are preserved.
+
+For blocked Trash or Safari folders, choose each folder in the macOS picker.
+If macOS still denies access, enable Full Disk Access for the installed copy,
+quit and reopen CleanSlate, then recheck. Reinstalling cannot reset macOS privacy.
+
+This build is ad-hoc signed and not notarized. You may need right-click > Open.
+You can still drag the app to Applications if administrator approval is needed.
+INSTALL
 cp scripts/dmg-background.png "${stage}/.background/background.png"
 
 raw="build/CleanSlate-raw.dmg"

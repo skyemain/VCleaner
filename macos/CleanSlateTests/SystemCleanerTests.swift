@@ -164,3 +164,149 @@ final class BatteryInfoTests: XCTestCase {
         XCTAssertEqual(BatteryInfoService.fraction(50, 0), nil)
     }
 }
+
+final class AccessRepairTests: XCTestCase {
+    func testPermissionErrorsPreserveUnderlyingCause() {
+        let privacy = NSError(domain: NSCocoaErrorDomain, code: NSFileReadNoPermissionError,
+            userInfo: [NSUnderlyingErrorKey: NSError(domain: NSPOSIXErrorDomain, code: Int(EPERM))])
+        let absent = NSError(domain: NSCocoaErrorDomain, code: NSFileReadNoSuchFileError,
+            userInfo: [NSUnderlyingErrorKey: NSError(domain: NSOSStatusErrorDomain, code: -43)])
+        XCTAssertEqual(PermissionService.classify(absent).access, .missing)
+        XCTAssertEqual(PermissionService.classify(privacy).access, .blocked)
+        XCTAssertTrue(PermissionService.classify(privacy).detail.contains("EPERM"))
+        XCTAssertTrue(PermissionService.classify(NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))).detail.contains("EACCES"))
+        XCTAssertEqual(PermissionService.classify(NSError(domain: NSPOSIXErrorDomain, code: Int(ENOENT))).access, .missing)
+    }
+
+    func testFolderGrantCannotSelectParentDifferentFolderOrSymlink() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let expected = try fixture.write(relative: ".Trash/file").deletingLastPathComponent()
+        XCTAssertTrue(FolderAccessService.accepts(expected, expected: expected))
+        XCTAssertFalse(FolderAccessService.accepts(fixture.home, expected: expected))
+        XCTAssertFalse(FolderAccessService.accepts(fixture.temporary, expected: expected))
+        let link = fixture.home.appendingPathComponent("alias")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: expected)
+        XCTAssertFalse(FolderAccessService.accepts(link, expected: expected))
+        XCTAssertFalse(FolderAccessService.accepts(link, expected: link))
+    }
+
+    func testReadableReadOnlyFolderIsNotMisreportedAsPrivacyDenied() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let folder = try fixture.write(relative: "readonly/data").deletingLastPathComponent()
+        chmod(folder.path, 0o500)
+        defer { chmod(folder.path, 0o700) }
+        XCTAssertEqual(PermissionService.check(folder), .available)
+        XCTAssertEqual(DirectoryWalker.collect(root: folder, minimumAge: nil, exclusions: [], fileManager: FileManager()).fileCount, 1)
+    }
+
+    func testBlockedTargetsProducePartialCompletion() async throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let folder = try fixture.write(relative: ".Trash/data").deletingLastPathComponent()
+        chmod(folder.path, 0)
+        defer { chmod(folder.path, 0o700) }
+        var categories = EnabledCategories()
+        categories.emptyTrash = true
+        let result = try await CleaningEngine(locations: fixture.locations).clean(CleanRequest(mode: .manual,
+            dryRun: false, categories: categories, exclusions: [], allowBrowserQuit: false, emptyTrashConfirmed: true))
+        XCTAssertTrue(result.incomplete)
+        XCTAssertEqual(result.blockedModuleCount, 1)
+        XCTAssertEqual(result.completionTitle, "Clean finished with skipped items")
+    }
+}
+
+final class InstallationTests: XCTestCase {
+    private func bundle(_ path: URL, id: String = "com.skyemain.CleanSlate", version: String = "1.0.7") throws {
+        let contents = path.appendingPathComponent("Contents")
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        let data = try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": id,
+            "CFBundlePackageType": "APPL", "CFBundleShortVersionString": version], format: .xml, options: 0)
+        try data.write(to: contents.appendingPathComponent("Info.plist"))
+    }
+
+    func testCleanInstallReplacesWholeBundleAndRemovesLegacyCopy() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let source = fixture.root.appendingPathComponent("New.app")
+        let installed = fixture.root.appendingPathComponent("CleanSlate.app")
+        let legacy = fixture.root.appendingPathComponent("Legacy.app")
+        try bundle(source)
+        try bundle(installed, version: "1.0.6")
+        try bundle(legacy, version: "1.0.5")
+        try Data("old-only".utf8).write(to: installed.appendingPathComponent("Contents/stale-file"))
+        let preferences = fixture.root.appendingPathComponent("settings.json")
+        try Data("keep".utf8).write(to: preferences)
+        _ = try InstallationService.replaceBundle(source: source, destination: installed, legacy: legacy, verify: { _ in })
+        XCTAssertTrue(FileManager.default.fileExists(atPath: installed.appendingPathComponent("Contents/Info.plist").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: installed.appendingPathComponent("Contents/stale-file").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: legacy.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+        XCTAssertEqual(try String(contentsOf: preferences, encoding: .utf8), "keep")
+    }
+
+    func testFailedStagedVerificationKeepsOldApp() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let source = fixture.root.appendingPathComponent("New.app")
+        let installed = fixture.root.appendingPathComponent("CleanSlate.app")
+        try bundle(source)
+        try bundle(installed, version: "1.0.6")
+        let marker = installed.appendingPathComponent("Contents/old")
+        try Data().write(to: marker)
+        do {
+            _ = try InstallationService.replaceBundle(source: source, destination: installed, legacy: nil, verify: { url in
+                if url != source { throw NSError(domain: "test", code: 1) }
+            })
+            XCTFail("Installation should have failed")
+        } catch {}
+        XCTAssertTrue(FileManager.default.fileExists(atPath: marker.path))
+        let remaining = try FileManager.default.contentsOfDirectory(atPath: fixture.root.path)
+        XCTAssertFalse(remaining.contains { $0.hasPrefix(".CleanSlate-install-") })
+    }
+
+    func testReplacementFailureRollsBackPreviousBundle() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let source = fixture.root.appendingPathComponent("New.app")
+        let installed = fixture.root.appendingPathComponent("CleanSlate.app")
+        try bundle(source)
+        try bundle(installed, version: "1.0.6")
+        let marker = installed.appendingPathComponent("Contents/old")
+        try Data().write(to: marker)
+        do {
+            _ = try InstallationService.replaceBundle(source: source, destination: installed, legacy: nil,
+                fileManager: FailingInstallFileManager(), verify: { _ in })
+            XCTFail("Replacement should fail")
+        } catch {}
+        XCTAssertTrue(FileManager.default.fileExists(atPath: marker.path))
+    }
+
+    func testInstallerRefusesUnrelatedAppAndDowngrade() throws {
+        let fixture = try Fixture()
+        defer { fixture.destroy() }
+        let source = fixture.root.appendingPathComponent("New.app")
+        let unrelated = fixture.root.appendingPathComponent("Other.app")
+        let newer = fixture.root.appendingPathComponent("Newer.app")
+        try bundle(source)
+        try bundle(unrelated, id: "com.example.other")
+        try bundle(newer, version: "1.0.9")
+        for target in [unrelated, newer] {
+            do {
+                _ = try InstallationService.replaceBundle(source: source, destination: target, legacy: nil, verify: { _ in })
+                XCTFail("Installation should have been refused")
+            } catch {}
+            XCTAssertTrue(FileManager.default.fileExists(atPath: target.path))
+        }
+    }
+}
+
+final class FailingInstallFileManager: FileManager, @unchecked Sendable {
+    override func moveItem(at srcURL: URL, to dstURL: URL) throws {
+        if srcURL.lastPathComponent.hasPrefix(".CleanSlate-install-") {
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))
+        }
+        try super.moveItem(at: srcURL, to: dstURL)
+    }
+}

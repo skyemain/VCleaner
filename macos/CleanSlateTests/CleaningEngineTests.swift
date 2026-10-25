@@ -127,7 +127,8 @@ final class LoginAndSettingsTests: XCTestCase {
             history: HistoryStore(fileURL: fixture.root.appendingPathComponent("history.json")),
             sleep: { _ in box.model?.cancel() },
             closeApp: {},
-            loginLaunchDetector: { false }
+            loginLaunchDetector: { false },
+            offerInstallation: false
         )
         box.model = model
         model.onAppear(arguments: ["--login-clean"])

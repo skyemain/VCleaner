@@ -47,6 +47,44 @@ final class MainViewModel: ObservableObject {
     enum SettingsTab: Hashable { case preferences, access }
     @Published var permissionChecks: [PermissionService.Check] = []
     @Published var checkingPermissions = false
+    @Published var grantingAccess = false
+    @Published var accessMessage = ""
+    @Published var showInstallation = false
+    @Published var installing = false
+    @Published var installationMessage = ""
+    private let folderAccess = FolderAccessService()
+    private var installationOffered = false
+    private let offerInstallation: Bool
+
+    func grantFolderAccess(_ check: PermissionService.Check) {
+        guard !grantingAccess, phase != .working else { return }
+        grantingAccess = true
+        Task {
+            accessMessage = await folderAccess.choose(check)
+            await recheckPermissions()
+            grantingAccess = false
+        }
+    }
+
+    func installApp() {
+        guard !installing else { return }
+        installing = true
+        installationMessage = "Closing older copies and verifying the new app…"
+        Task {
+            do {
+                let installed = try await InstallationService.install()
+                let configuration = NSWorkspace.OpenConfiguration()
+                configuration.arguments = ["--installation-complete"]
+                configuration.createsNewApplicationInstance = true
+                _ = try await NSWorkspace.shared.openApplication(at: installed, configuration: configuration)
+                NSApp.terminate(nil)
+            } catch {
+                installationMessage = error.localizedDescription
+                installing = false
+            }
+        }
+    }
+
     private var cleanAfterGuide = false
     private var permissionsAcknowledged = UserDefaults.standard.bool(forKey: "accessGuide.v1.acknowledged")
 
@@ -137,9 +175,11 @@ final class MainViewModel: ObservableObject {
         },
         closeApp: @escaping () -> Void = { NSApp.terminate(nil) },
         loginLaunchDetector: @escaping () -> Bool = LoginLaunchDetection.current,
-        accessGuideAcknowledged: Bool? = nil
+        accessGuideAcknowledged: Bool? = nil,
+        offerInstallation: Bool = true
     ) {
         self.settings = settings
+        self.offerInstallation = offerInstallation
         if let accessGuideAcknowledged { permissionsAcknowledged = accessGuideAcknowledged }
         self.engine = engine ?? CleaningEngine(locations: .currentUser(), applications: MacApplicationController())
         self.history = history
@@ -150,6 +190,17 @@ final class MainViewModel: ObservableObject {
     }
 
     func onAppear(arguments: [String]) {
+        if offerInstallation, !installationOffered, Bundle.main.bundleIdentifier == InstallationService.bundleID {
+            installationOffered = true
+            if !InstallationService.isInstalledCopy {
+                showInstallation = true
+                return
+            }
+            if arguments.contains("--installation-complete") {
+                openAccessGuide()
+                return
+            }
+        }
         let forced = arguments.contains("--login-clean")
         guard forced || (loginLaunchDetector() && settings.preferences.cleanAtLogin) else { return }
         guard runTask == nil else { return }
@@ -335,7 +386,7 @@ final class MainViewModel: ObservableObject {
             AppLog.finished(outcome.record)
             apply(outcome)
             phase = .completed
-            statusText = outcome.record.dryRun ? "Dry run" : "Cleaning complete"
+            statusText = outcome.completionTitle
             recoveredText = (outcome.record.dryRun ? "Would recover: " : "Recovered space: ") + ByteFormat.string(from: outcome.record.deletedBytes)
             refreshLastCleaned()
         } catch CleanEngineError.alreadyRunning {

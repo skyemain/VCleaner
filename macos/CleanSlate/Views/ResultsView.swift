@@ -6,13 +6,18 @@ struct ResultsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(OpsTheme.mint)
-                Text(result.record.dryRun ? "Dry run" : "Cleaning complete")
+                Image(systemName: result.incomplete ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+                    .foregroundStyle(result.incomplete ? OpsTheme.amber : OpsTheme.mint)
+                Text(result.completionTitle)
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
                 Text(ByteFormat.string(from: result.record.deletedBytes))
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundStyle(OpsTheme.mint)
+            }
+            if result.blockedModuleCount > 0 {
+                Text("\(result.blockedModuleCount) cleaning targets blocked · open Settings → Cleaning access")
+                    .font(.system(size: 11)).foregroundStyle(OpsTheme.amber)
             }
             HStack(spacing: 12) {
                 Text("\(result.record.deletedCount) files")
