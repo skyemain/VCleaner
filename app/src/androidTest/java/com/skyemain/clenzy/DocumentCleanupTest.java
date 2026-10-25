@@ -18,7 +18,7 @@ public class DocumentCleanupTest {
         var root = new File(context.getCacheDir(), "provider-fixtures"); root.mkdirs();
         var a = new File(root,"a.txt"); var b = new File(root,"b.txt");
         try {
-            Files.writeString(a.toPath(), "same bytes"); Files.writeString(b.toPath(), "same bytes");
+            Files.write(a.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8)); Files.write(b.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             var cleaner = new DocumentCleaner(context.getContentResolver());
             Uri tree = DocumentsContract.buildTreeDocumentUri("com.skyemain.clenzy.test.documents", "root");
             var scan = cleaner.scan(tree, new CancellationSignal());
@@ -28,7 +28,7 @@ public class DocumentCleanupTest {
             var outcome = cleaner.delete(List.of(selected), new CancellationSignal());
             assertEquals(1, outcome.deleted()); assertFalse(a.exists()); assertTrue(b.exists());
             var stale = duplicates.stream().filter(f -> f.name().equals("b.txt")).findFirst().get();
-            Files.writeString(b.toPath(), "changed content");
+            Files.write(b.toPath(), "changed content".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             assertEquals(1, cleaner.delete(List.of(stale), new CancellationSignal()).skipped());
             assertTrue(b.exists());
             assertEquals(1, cleaner.delete(List.of(new ReviewFile("content://elsewhere/not-scanned","x",1,1,null)), new CancellationSignal()).skipped());
