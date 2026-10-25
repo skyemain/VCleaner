@@ -5,15 +5,15 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 required=(
-  CleanSlate.xcodeproj/project.pbxproj
-  CleanSlate/App/CleanSlateApp.swift
-  CleanSlate/Core/CleaningEngine.swift
-  CleanSlate/Services/SafeDeletionService.swift
-  CleanSlate/Configuration/ProtectedPaths.swift
-  CleanSlate/Cleaners/Chrome/ChromeCleaner.swift
-  CleanSlate/Cleaners/Safari/SafariCleaner.swift
-  CleanSlate/Resources/Info.plist
-  CleanSlate/Resources/CleanSlate.entitlements
+  Clenzy.xcodeproj/project.pbxproj
+  Clenzy/App/ClenzyApp.swift
+  Clenzy/Core/CleaningEngine.swift
+  Clenzy/Services/SafeDeletionService.swift
+  Clenzy/Configuration/ProtectedPaths.swift
+  Clenzy/Cleaners/Chrome/ChromeCleaner.swift
+  Clenzy/Cleaners/Safari/SafariCleaner.swift
+  Clenzy/Resources/Info.plist
+  Clenzy/Resources/Clenzy.entitlements
   scripts/build.sh
   scripts/package-dmg.sh
   scripts/sign.sh
@@ -24,7 +24,7 @@ for path in "${required[@]}"; do
   test -f "${path}" || { echo "missing ${path}" >&2; exit 1; }
 done
 
-if grep -R -n -E 'rm -rf|sudo |SIGKILL|forceTerminate|tccutil|csrutil' --include='*.swift' CleanSlate CleanSlateTests; then
+if grep -R -n -E 'rm -rf|sudo |SIGKILL|forceTerminate|tccutil|csrutil' --include='*.swift' Clenzy ClenzyTests; then
   echo "error: a Swift file contains a forbidden cleanup or security bypass." >&2
   exit 1
 fi

@@ -9,7 +9,7 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 2
 fi
 
-app="${1:-build/CleanSlate.app}"
+app="${1:-build/Clenzy.app}"
 if [[ ! -d "${app}" ]]; then
   echo "error: ${app} does not exist, so there is nothing to verify." >&2
   exit 1
@@ -20,9 +20,9 @@ version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${pli
 identifier="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${plist}")"
 echo "Bundle ${identifier} version ${version}"
 test "${identifier}" = "com.skyemain.CleanSlate"
-test -x "${app}/Contents/MacOS/CleanSlate"
+test -x "${app}/Contents/MacOS/Clenzy"
 
-archs="$(lipo -archs "${app}/Contents/MacOS/CleanSlate")"
+archs="$(lipo -archs "${app}/Contents/MacOS/Clenzy")"
 echo "Architectures: ${archs}"
 [[ "${archs}" == *arm64* && "${archs}" == *x86_64* ]] || {
   echo "error: the executable is not a universal arm64 and x86_64 binary (${archs})." >&2
@@ -36,13 +36,13 @@ else
   echo "Signature: unsigned local build. This is not a notarized release."
 fi
 
-dmg="$(ls release/CleanSlate-*-mac-universal.dmg 2>/dev/null | head -1 || true)"
+dmg="$(ls release/Clenzy-*-mac-universal.dmg 2>/dev/null | head -1 || true)"
 if [[ -n "${dmg}" ]]; then
   mount="$(mktemp -d)"
   hdiutil attach "${dmg}" -mountpoint "${mount}" -nobrowse >/dev/null
-  test -d "${mount}/CleanSlate.app"
+  test -d "${mount}/Clenzy.app"
   test -L "${mount}/Applications"
-  echo "DMG contains CleanSlate.app and the Applications shortcut: ${dmg}"
+  echo "DMG contains Clenzy.app and the Applications shortcut: ${dmg}"
   hdiutil detach "${mount}" >/dev/null
 else
   echo "No DMG is in release/. Run scripts/package-dmg.sh to create one."

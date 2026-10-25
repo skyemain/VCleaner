@@ -1,5 +1,5 @@
 #!/bin/bash
-# Signs build/CleanSlate.app with a Developer ID Application certificate.
+# Signs build/Clenzy.app with a Developer ID Application certificate.
 # The identity comes from the environment. Nothing private is stored in the repository.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -18,14 +18,14 @@ if [[ -z "${identity}" ]]; then
   exit 2
 fi
 
-app="build/CleanSlate.app"
+app="build/Clenzy.app"
 if [[ ! -d "${app}" ]]; then
   echo "error: ${app} is missing. Run scripts/build.sh first." >&2
   exit 1
 fi
 
 codesign --force --options runtime --timestamp \
-  --entitlements CleanSlate/Resources/CleanSlate.entitlements \
+  --entitlements Clenzy/Resources/Clenzy.entitlements \
   --sign "${identity}" \
   "${app}"
 codesign --verify --deep --strict --verbose=2 "${app}"

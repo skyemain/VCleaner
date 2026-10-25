@@ -29,7 +29,7 @@ jobs:
 
       - name: Test native macOS app
         working-directory: macos
-        run: xcodebuild -project CleanSlate.xcodeproj -scheme CleanSlate -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
+        run: xcodebuild -project Clenzy.xcodeproj -scheme Clenzy -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
 
       - name: Build unsigned universal app
         working-directory: macos
@@ -38,18 +38,18 @@ jobs:
       - name: Ad-hoc sign so the app can launch locally
         working-directory: macos
         run: |
-          codesign --force --deep --sign - build/CleanSlate.app
-          codesign --verify --verbose=2 build/CleanSlate.app
-          lipo -archs build/CleanSlate.app/Contents/MacOS/CleanSlate
+          codesign --force --deep --sign - build/Clenzy.app
+          codesign --verify --verbose=2 build/Clenzy.app
+          lipo -archs build/Clenzy.app/Contents/MacOS/Clenzy
 
       - name: Package drag-and-drop disk image
         working-directory: macos
-        run: scripts/package-dmg.sh 1.0.8
+        run: scripts/package-dmg.sh 1.0
 
       - uses: actions/upload-artifact@v4
         with:
-          name: CleanSlate-1.0.8-mac-universal
-          path: macos/release/CleanSlate-1.0.8-mac-universal.dmg
+          name: Clenzy-1.0-mac-universal
+          path: macos/release/Clenzy-1.0-mac-universal.dmg
           if-no-files-found: error
 
       - name: Keep the latest DMG in the mac branch
@@ -63,20 +63,21 @@ jobs:
             echo "A newer source commit exists; its workflow will publish the latest DMG."
             exit 0
           fi
-          find macos/release -maxdepth 1 -name '*.dmg' ! -name 'CleanSlate-1.0.8-mac-universal.dmg' -delete
-          cp macos/release/CleanSlate-1.0.8-mac-universal.dmg macos/release/CleanSlate-latest-mac-universal.dmg
+          find macos/release -maxdepth 1 -name '*.dmg' ! -name 'Clenzy-1.0-mac-universal.dmg' -delete
+          cp macos/release/Clenzy-1.0-mac-universal.dmg macos/release/Clenzy-latest-mac-universal.dmg
           (cd macos/release && shasum -a 256 *.dmg > SHA256SUMS.txt)
           cat > macos/release/README.txt <<EOF
-          CleanSlate 1.0.8 for macOS 13 and newer (Apple silicon and Intel).
+          Clenzy 1.0 for macOS 13 and newer (Apple silicon and Intel).
 
-          Share CleanSlate-latest-mac-universal.dmg for the latest successful build.
-          CleanSlate-1.0.8-mac-universal.dmg is the same build with its version in the filename.
+          Share Clenzy-latest-mac-universal.dmg for the latest successful build.
+          Clenzy-1.0-mac-universal.dmg is the same build with its version in the filename.
           Verify downloads against SHA256SUMS.txt.
 
           Source commit: $SOURCE_SHA
           Build: $RUN_URL
 
-          Quit CleanSlate, drag the app to Applications and choose Replace.
+          Quit CleanSlate or Clenzy, then drag Clenzy to Applications.
+          Replace an existing Clenzy; remove an old CleanSlate.app separately.
           Eject the DMG and open the installed copy. No setup wizard is required.
           This build is ad-hoc signed, not notarized;
           macOS may require right-click > Open on first launch.

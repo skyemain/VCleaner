@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds a universal CleanSlate.app. Signing is intentionally off here; use sign.sh afterwards.
+# Builds a universal Clenzy.app. Signing is intentionally off here; use sign.sh afterwards.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -13,8 +13,8 @@ if ! command -v xcodebuild >/dev/null; then
 fi
 
 xcodebuild \
-  -project CleanSlate.xcodeproj \
-  -scheme CleanSlate \
+  -project Clenzy.xcodeproj \
+  -scheme Clenzy \
   -configuration Release \
   -destination 'generic/platform=macOS' \
   ARCHS='arm64 x86_64' \
@@ -23,12 +23,12 @@ xcodebuild \
   -derivedDataPath build/DerivedData \
   build
 
-app="$(find build/DerivedData -path '*Build/Products/Release/CleanSlate.app' -type d | head -1)"
+app="$(find build/DerivedData -path '*Build/Products/Release/Clenzy.app' -type d | head -1)"
 if [[ -z "${app}" ]]; then
-  echo "error: Xcode did not produce CleanSlate.app." >&2
+  echo "error: Xcode did not produce Clenzy.app." >&2
   exit 1
 fi
-rm -rf build/CleanSlate.app
-cp -R "${app}" build/CleanSlate.app
-echo "Built unsigned build/CleanSlate.app (universal if both architectures were available)."
+rm -rf build/Clenzy.app
+cp -R "${app}" build/Clenzy.app
+echo "Built unsigned build/Clenzy.app (universal if both architectures were available)."
 echo "This is a local development build. It is not signed or notarized."
