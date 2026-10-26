@@ -10,6 +10,7 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 @RunWith(AndroidJUnit4.class)
+@androidx.test.filters.SdkSuppress(minSdkVersion = 34)
 public class DocumentCleanupTest {
     private boolean clickWhenReady(androidx.test.uiautomator.UiDevice device, androidx.test.uiautomator.BySelector selector, long timeout) throws Exception {
         if (!device.wait(androidx.test.uiautomator.Until.hasObject(selector), timeout)) return false;
@@ -24,16 +25,23 @@ public class DocumentCleanupTest {
         return false;
     }
 
+    @android.annotation.TargetApi(34)
     private String fixtureCall(android.content.ContentResolver resolver, Uri endpoint, String method) throws Exception {
         var automation = InstrumentationRegistry.getInstrumentation().getUiAutomation();
-        var descriptor = automation.executeShellCommand("content call --uri content://com.skyemain.clenzy.test.documents --method " + method);
+        var descriptors = automation.executeShellCommandRwe("content call --user 0 --uri content://com.skyemain.clenzy.test.documents --method " + method);
+        descriptors[1].close();
+        String result = readDescriptor(descriptors[0]);
+        String errors = readDescriptor(descriptors[2]);
+        assertTrue("Fixture command failed: " + errors, errors.isBlank());
+        assertFalse("Fixture command returned no state", result.isBlank());
+        return result;
+    }
+    private String readDescriptor(android.os.ParcelFileDescriptor descriptor) throws Exception {
         try (var stream = new android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor);
              var output = new java.io.ByteArrayOutputStream()) {
             byte[] buffer = new byte[1024]; int count;
             while ((count = stream.read(buffer)) != -1) output.write(buffer, 0, count);
-            String result = output.toString("UTF-8");
-            assertFalse(result, result.contains("Error") || result.contains("Exception"));
-            return result;
+            return output.toString("UTF-8");
         }
     }
     @Test public void scansRealProviderDeletesOnlySelectedAndSkipsChangedFiles() throws Exception {
