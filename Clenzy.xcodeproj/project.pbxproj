@@ -6,28 +6,52 @@
 	objectVersion = 56;
 	objects = {
 		6D81518CF11585869EB0F725 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClenzyApp.swift; sourceTree = "<group>"; };
+		E88BA4CDE8C23478E7193686 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
+		3BCE8109BD9471259703432D = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryCard.swift; sourceTree = "<group>"; };
+		2AFBCF3163C1EEC25466690D = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTheme.swift; sourceTree = "<group>"; };
+		88729775D4D86BEEFEB3EB09 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		4FC5A778F281285D9B4285F0 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
+		21D05ED94853CB450EA87440 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewResultsView.swift; sourceTree = "<group>"; };
+		E5A95E112EDA1F939E987CFE = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanPreviewCard.swift; sourceTree = "<group>"; };
+		B1D7683FE380C618BF85F8FC = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageCard.swift; sourceTree = "<group>"; };
 		D70D919D20368399A8B71D5D = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryModel.swift; sourceTree = "<group>"; };
 		5ED68F7B64C2760E37042AC8 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoScanner.swift; sourceTree = "<group>"; };
+		A504477A28776D0961D7C4D5 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosReviewView.swift; sourceTree = "<group>"; };
 		F4FA29A8A0C0C21AE4407E2F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewModels.swift; sourceTree = "<group>"; };
+		6E47DF3A9B185D518028013D = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModelTests.swift; sourceTree = "<group>"; };
 		A2E4DDE56BEFEEA00F524E02 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewRulesTests.swift; sourceTree = "<group>"; };
+		C6F55066C585EFDAA75FA3F3 = { isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A2A26DFFEDA45E149E0DFFF4 = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B6CDB6E5D160E013280D3C68 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Clenzy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E02A90D9643568EA39115CFB = { isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClenzyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		2E9B443B29C9D12EAE909446 = { isa = PBXGroup; children = ( 2F3A0B3830C5D9850F835BDA, 6D81518CF11585869EB0F725, D70D919D20368399A8B71D5D, 5ED68F7B64C2760E37042AC8, F4FA29A8A0C0C21AE4407E2F ); path = Clenzy; sourceTree = "<group>"; };
-		2F3A0B3830C5D9850F835BDA = { isa = PBXGroup; children = ( A2A26DFFEDA45E149E0DFFF4 ); path = Resources; sourceTree = "<group>"; };
-		EEFE21A1443933CA4DE017DA = { isa = PBXGroup; children = ( A2E4DDE56BEFEEA00F524E02 ); path = ClenzyTests; sourceTree = "<group>"; };
+		2E9B443B29C9D12EAE909446 = { isa = PBXGroup; children = ( FD4859E6A07051F3B69149EC, 3F0207C855800503127055D8, 2F3A0B3830C5D9850F835BDA, 6D81518CF11585869EB0F725, D70D919D20368399A8B71D5D, 5ED68F7B64C2760E37042AC8, A504477A28776D0961D7C4D5, F4FA29A8A0C0C21AE4407E2F ); path = Clenzy; sourceTree = "<group>"; };
+		FD4859E6A07051F3B69149EC = { isa = PBXGroup; children = ( E88BA4CDE8C23478E7193686 ); path = Device; sourceTree = "<group>"; };
+		3F0207C855800503127055D8 = { isa = PBXGroup; children = ( 3BCE8109BD9471259703432D, 2AFBCF3163C1EEC25466690D, 88729775D4D86BEEFEB3EB09, 4FC5A778F281285D9B4285F0, 21D05ED94853CB450EA87440, E5A95E112EDA1F939E987CFE, B1D7683FE380C618BF85F8FC ); path = Home; sourceTree = "<group>"; };
+		2F3A0B3830C5D9850F835BDA = { isa = PBXGroup; children = ( A2A26DFFEDA45E149E0DFFF4, C6F55066C585EFDAA75FA3F3 ); path = Resources; sourceTree = "<group>"; };
+		EEFE21A1443933CA4DE017DA = { isa = PBXGroup; children = ( 6E47DF3A9B185D518028013D, A2E4DDE56BEFEEA00F524E02 ); path = ClenzyTests; sourceTree = "<group>"; };
 		00C45FD35CB0F9C5F764F070 = { isa = PBXGroup; children = ( B6CDB6E5D160E013280D3C68, E02A90D9643568EA39115CFB ); name = Products; sourceTree = "<group>"; };
 		ADCF10F76EBF2A74473E9DC4 = { isa = PBXGroup; children = ( 2E9B443B29C9D12EAE909446, EEFE21A1443933CA4DE017DA, 00C45FD35CB0F9C5F764F070 ); sourceTree = "<group>"; };
 		57B64EAC341BE52B9EC4AD55 = { isa = PBXBuildFile; fileRef = 6D81518CF11585869EB0F725; };
+		AC1AB5E96DAAA89BB29866F3 = { isa = PBXBuildFile; fileRef = E88BA4CDE8C23478E7193686; };
+		ADED0B00F802C8307E8A4474 = { isa = PBXBuildFile; fileRef = 3BCE8109BD9471259703432D; };
+		4011B055A8B6AA509DCF988E = { isa = PBXBuildFile; fileRef = 2AFBCF3163C1EEC25466690D; };
+		529E8FB7E8DD7AEAA05EE243 = { isa = PBXBuildFile; fileRef = 88729775D4D86BEEFEB3EB09; };
+		81930EA1911FD5252CF150F7 = { isa = PBXBuildFile; fileRef = 4FC5A778F281285D9B4285F0; };
+		79C017F6B8FDCA9C5701E735 = { isa = PBXBuildFile; fileRef = 21D05ED94853CB450EA87440; };
+		4C538B69BAA80D7ADF9067C1 = { isa = PBXBuildFile; fileRef = E5A95E112EDA1F939E987CFE; };
+		9FBEEE5AAE9744C3E05479F5 = { isa = PBXBuildFile; fileRef = B1D7683FE380C618BF85F8FC; };
 		67F03FC1F8537E571130D13B = { isa = PBXBuildFile; fileRef = D70D919D20368399A8B71D5D; };
 		6F32ED49D997926F9F0FE71C = { isa = PBXBuildFile; fileRef = 5ED68F7B64C2760E37042AC8; };
+		FAA2047549B6F62819EF53E9 = { isa = PBXBuildFile; fileRef = A504477A28776D0961D7C4D5; };
 		B411028A56E35A63DD898B18 = { isa = PBXBuildFile; fileRef = F4FA29A8A0C0C21AE4407E2F; };
+		FCAE66C35A8E7EA3E5689745 = { isa = PBXBuildFile; fileRef = 6E47DF3A9B185D518028013D; };
 		AEAABE83AC5CE4BA6EFF7903 = { isa = PBXBuildFile; fileRef = A2E4DDE56BEFEEA00F524E02; };
 		5D040BC3B38C902BE25CD74F = { isa = PBXBuildFile; fileRef = A2A26DFFEDA45E149E0DFFF4; };
-		1CDF2F71A52B082132B04DFF = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( 57B64EAC341BE52B9EC4AD55, 67F03FC1F8537E571130D13B, 6F32ED49D997926F9F0FE71C, B411028A56E35A63DD898B18 ); runOnlyForDeploymentPostprocessing = 0; };
-		C02F1309AF4906C92F1EAD44 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ( 5D040BC3B38C902BE25CD74F ); runOnlyForDeploymentPostprocessing = 0; };
+		F797531E9AD5F218C8179617 = { isa = PBXBuildFile; fileRef = C6F55066C585EFDAA75FA3F3; };
+		1CDF2F71A52B082132B04DFF = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( 57B64EAC341BE52B9EC4AD55, AC1AB5E96DAAA89BB29866F3, ADED0B00F802C8307E8A4474, 4011B055A8B6AA509DCF988E, 529E8FB7E8DD7AEAA05EE243, 81930EA1911FD5252CF150F7, 79C017F6B8FDCA9C5701E735, 4C538B69BAA80D7ADF9067C1, 9FBEEE5AAE9744C3E05479F5, 67F03FC1F8537E571130D13B, 6F32ED49D997926F9F0FE71C, FAA2047549B6F62819EF53E9, B411028A56E35A63DD898B18 ); runOnlyForDeploymentPostprocessing = 0; };
+		C02F1309AF4906C92F1EAD44 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ( 5D040BC3B38C902BE25CD74F, F797531E9AD5F218C8179617 ); runOnlyForDeploymentPostprocessing = 0; };
 		CF5BDB0BEAFE176F9629192A = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
-		7841DBE1BAAF034D23036D63 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( AEAABE83AC5CE4BA6EFF7903 ); runOnlyForDeploymentPostprocessing = 0; };
+		7841DBE1BAAF034D23036D63 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( FCAE66C35A8E7EA3E5689745, AEAABE83AC5CE4BA6EFF7903 ); runOnlyForDeploymentPostprocessing = 0; };
 		F3BB5758E5F4E3B0CEACBF5B = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
 		754064D2901B6752E802BA06 = { isa = XCBuildConfiguration; buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -35,7 +59,7 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				CODE_SIGN_STYLE = Automatic;
 				SUPPORTS_MACCATALYST = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Clenzy/Resources/Info.plist;
@@ -54,7 +78,7 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				CODE_SIGN_STYLE = Automatic;
 				SUPPORTS_MACCATALYST = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Clenzy/Resources/Info.plist;

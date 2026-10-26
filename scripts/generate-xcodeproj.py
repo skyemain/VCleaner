@@ -45,6 +45,8 @@ def main() -> None:
     for path in swift_app + swift_tests:
         relative = path.relative_to(ROOT)
         add(file_ref(relative), "{ isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = %s; sourceTree = \"<group>\"; }" % path.name)
+    privacy = Path("Clenzy/Resources/PrivacyInfo.xcprivacy")
+    add(file_ref(privacy), '{ isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; }')
     assets = Path("Clenzy/Resources/Assets.xcassets")
     add(file_ref(assets), '{ isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; }')
     add(app_product, '{ isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Clenzy.app; sourceTree = BUILT_PRODUCTS_DIR; }')
@@ -54,7 +56,7 @@ def main() -> None:
         children = [group_id[child] for child in sorted(parents) if child.parent == directory]
         children.extend(file_ref(path.relative_to(ROOT)) for path in swift_app if path.relative_to(ROOT).parent == directory)
         if directory == Path("Clenzy/Resources"):
-            children.append(file_ref(assets))
+            children.extend([file_ref(assets), file_ref(privacy)])
         body = ", ".join(children) if children else ""
         add(group_id[directory], '{ isa = PBXGroup; children = ( %s ); path = %s; sourceTree = "<group>"; }' % (body, directory.name))
 
@@ -68,13 +70,15 @@ def main() -> None:
         add(build_ref(relative), "{ isa = PBXBuildFile; fileRef = %s; }" % file_ref(relative))
     add(build_ref(assets), "{ isa = PBXBuildFile; fileRef = %s; }" % file_ref(assets))
 
+    add(build_ref(privacy), "{ isa = PBXBuildFile; fileRef = %s; }" % file_ref(privacy))
+
     sources = uid("phase:sources")
     resources = uid("phase:resources")
     frameworks = uid("phase:frameworks")
     test_sources = uid("phase:testsources")
     test_frameworks = uid("phase:testframeworks")
     add(sources, "{ isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( %s ); runOnlyForDeploymentPostprocessing = 0; }" % ", ".join(build_ref(path.relative_to(ROOT)) for path in swift_app))
-    add(resources, "{ isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ( %s ); runOnlyForDeploymentPostprocessing = 0; }" % build_ref(assets))
+    add(resources, "{ isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ( %s ); runOnlyForDeploymentPostprocessing = 0; }" % (build_ref(assets) + ", " + build_ref(privacy)))
     add(frameworks, "{ isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; }")
     add(test_sources, "{ isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( %s ); runOnlyForDeploymentPostprocessing = 0; }" % ", ".join(build_ref(path.relative_to(ROOT)) for path in swift_tests))
     add(test_frameworks, "{ isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; }")
@@ -85,7 +89,7 @@ def main() -> None:
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				CODE_SIGN_STYLE = Automatic;
 				SUPPORTS_MACCATALYST = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Clenzy/Resources/Info.plist;

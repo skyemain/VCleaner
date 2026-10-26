@@ -5,9 +5,13 @@ on:
   pull_request:
     branches: [ios]
   workflow_dispatch:
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   ios:
     runs-on: macos-15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - name: Generate project
@@ -15,7 +19,17 @@ jobs:
       - name: Test on available iPhone simulator
         run: |
           DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import sys,json; d=json.load(sys.stdin); print(next(x["udid"] for group in d["devices"].values() for x in group if "iPhone" in x["name"]))')
-          xcodebuild -project Clenzy.xcodeproj -scheme Clenzy -destination "platform=iOS Simulator,id=$DEVICE" CODE_SIGNING_ALLOWED=NO test
+          echo "IOS_SIMULATOR_ID=$DEVICE" >> "$GITHUB_ENV"
+          xcodebuild -project Clenzy.xcodeproj -scheme Clenzy -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test
+      - name: Capture native home dashboard
+        run: |
+          xcrun simctl launch "$IOS_SIMULATOR_ID" com.skyemain.Clenzy.ios
+          sleep 2
+          xcrun simctl io "$IOS_SIMULATOR_ID" screenshot build/Clenzy-home.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Clenzy-iOS-dashboard-screenshot
+          path: build/Clenzy-home.png
       - name: Build unsigned device archive
         run: xcodebuild -project Clenzy.xcodeproj -scheme Clenzy -destination 'generic/platform=iOS' -archivePath build/Clenzy.xcarchive CODE_SIGNING_ALLOWED=NO archive
       - uses: actions/upload-artifact@v4
