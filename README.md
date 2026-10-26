@@ -21,3 +21,5 @@ Unsigned candidates can show SmartScreen warnings. `build/sign.ps1` accepts a ma
 Projects: App (WPF), Presentation, Core (engine and safe deletion), Cleaners, Windows (native APIs). Keep tests, assets, manifests and build/signing scripts. Keep this as the only Markdown reference. Safety/API comments explain non-obvious behavior and should remain; no disabled/commented-out code is required. Retain path guards, cancellation, dry-run support, exclusions, registry backup checks and normal browser quit behavior.
 
 Version 1.4.0 was renamed to Clenzy without changing cleaner rules. All supported build paths are PowerShell on Windows; obsolete shell wrappers and duplicate documentation were removed. Candidate files remain on windows; main is the approved production catalog.
+
+Validation: [Native Windows build](https://github.com/skyemain/VCleaner/actions/runs/40237228726) passed all 197 tests (111 unit, 71 integration, 15 Windows) and published the renamed self-contained executable. The logger test reads active streams with Windows-compatible sharing. The app remains a development candidate.
