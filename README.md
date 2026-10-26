@@ -27,3 +27,13 @@ HomeView uses NavigationStack, SF Symbols, ultraThinMaterial cards, gradients, a
 Time remaining is explicitly an illustrative 15-hour-at-100% model, not a measured runtime prediction. Clean Storage runs a cancellable preview animation and opens clearly labeled sample results; no files are scanned/deleted and no reclaimed space is claimed. The separate Review Photos route retains real PhotoKit review/deletion. Reduced Motion avoids the radar sweep. The privacy manifest declares on-device disk-space display (85F4.1).
 
 Tests cover filesystem bounds/unknown values, unknown battery levels, the illustrative formula, refreshed hardware snapshots, preview completion and cancellation. Full Xcode/CI is required for native verification. iOS remains a development candidate; main production builds are unchanged.
+
+## Install on your own iPhone with a free Personal Team
+
+Requires an iPhone on iOS 17+ and full Xcode on a Mac. Download the ios branch source ZIP and open Clenzy.xcodeproj. In Xcode Settings > Apple Accounts, sign in with your Apple Account. Connect and unlock the iPhone, accept Trust, and select it as the run destination so Xcode can pair it. Enable Developer Mode in iPhone Settings > Privacy & Security when requested, restart and confirm.
+
+Select the Clenzy app target > Signing & Capabilities. Enable Automatically manage signing, select your Personal Team and use a unique bundle identifier. Choose your connected iPhone (not a simulator) and press Run. Xcode creates the development provisioning profile and installs the app. The inherited Debug ad-hoc identity override was removed so Xcode can select Apple Development signing.
+
+Apple's free Personal Team profiles expire after seven days; rebuild/reinstall through Xcode when needed. Source: [Apple Personal Team limits](https://developer.apple.com/help/account/basics/about-your-developer-account), [device setup and running](https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices), [Developer Mode](https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device). The existing CI archive remains unsigned and is not a directly installable public IPA.
+
+Once installed, Clean Storage is the labeled scanning/results preview. Review Photos opens the real PhotoKit cleanup flow.
