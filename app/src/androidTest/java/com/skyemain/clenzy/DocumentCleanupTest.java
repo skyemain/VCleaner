@@ -10,7 +10,6 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 @RunWith(AndroidJUnit4.class)
-@androidx.test.filters.SdkSuppress(minSdkVersion = 34)
 public class DocumentCleanupTest {
     private boolean clickWhenReady(androidx.test.uiautomator.UiDevice device, androidx.test.uiautomator.BySelector selector, long timeout) throws Exception {
         if (!device.wait(androidx.test.uiautomator.Until.hasObject(selector), timeout)) return false;
@@ -25,32 +24,11 @@ public class DocumentCleanupTest {
         return false;
     }
 
-    @android.annotation.TargetApi(34)
-    private String fixtureCall(android.content.ContentResolver resolver, Uri endpoint, String method) throws Exception {
-        var automation = InstrumentationRegistry.getInstrumentation().getUiAutomation();
-        var descriptors = automation.executeShellCommandRwe("content call --user 0 --uri content://com.skyemain.clenzy.test.documents --method " + method);
-        descriptors[1].close();
-        String result = readDescriptor(descriptors[0]);
-        String errors = readDescriptor(descriptors[2]);
-        assertTrue("Fixture command failed: " + errors, errors.isBlank());
-        assertFalse("Fixture command returned no state", result.isBlank());
-        return result;
-    }
-    private String readDescriptor(android.os.ParcelFileDescriptor descriptor) throws Exception {
-        try (var stream = new android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor);
-             var output = new java.io.ByteArrayOutputStream()) {
-            byte[] buffer = new byte[1024]; int count;
-            while ((count = stream.read(buffer)) != -1) output.write(buffer, 0, count);
-            return output.toString("UTF-8");
-        }
-    }
     @Test public void scansRealProviderDeletesOnlySelectedAndSkipsChangedFiles() throws Exception {
         var context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         var resolver = context.getContentResolver();
-        var endpoint = Uri.parse("content://com.skyemain.clenzy.test.documents");
+        var granted = new java.util.concurrent.atomic.AtomicReference<Uri>();
         try (var scenario = androidx.test.core.app.ActivityScenario.launch(MainActivity.class)) {
-            String resetState = fixtureCall(resolver, endpoint, "reset");
-            assertTrue("Fixture creation failed: " + resetState, resetState.contains("a=true") && resetState.contains("b=true"));
             var device = androidx.test.uiautomator.UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
             scenario.onActivity(activity -> {
                 var picker = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT_TREE);
@@ -85,8 +63,13 @@ public class DocumentCleanupTest {
             assertEquals("Wrong picker folder: " + chosenTree.get(), "com.skyemain.clenzy.test.documents", Uri.parse(chosenTree.get()).getAuthority());
             var cleaner = new DocumentCleaner(context.getContentResolver());
             Uri tree = Uri.parse(chosenTree.get());
+            granted.set(tree);
+            var initialState = resolver.call(tree, "state", null, null);
+            assertNotNull(initialState);
+            assertTrue("Fixture a missing", initialState.getBoolean("a"));
+            assertTrue("Fixture b missing", initialState.getBoolean("b"));
             var scan = cleaner.scan(tree, new CancellationSignal());
-            assertEquals("Tree: " + tree + "; provider: " + fixtureCall(resolver, endpoint, "state") + "; scan: " + scan, 2, scan.files().size());
+            assertEquals("Tree: " + tree + "; provider: " + resolver.call(tree, "state", null, null) + "; scan: " + scan, 2, scan.files().size());
             for (var file : scan.files()) {
                 try (var input = resolver.openInputStream(Uri.parse(file.uri()))) {
                     assertNotNull("Cannot open fixture " + file, input);
@@ -98,13 +81,18 @@ public class DocumentCleanupTest {
             var selected = duplicates.stream().filter(f -> f.name().equals("a.txt")).findFirst().get();
             var outcome = cleaner.delete(List.of(selected), new CancellationSignal());
             assertEquals(1, outcome.deleted());
-            var state = fixtureCall(resolver, endpoint, "state");
-            assertTrue(state, state.contains("a=false")); assertTrue(state, state.contains("b=true"));
+            var state = resolver.call(tree, "state", null, null);
+            assertFalse(state.getBoolean("a")); assertTrue(state.getBoolean("b"));
             var stale = duplicates.stream().filter(f -> f.name().equals("b.txt")).findFirst().get();
-            fixtureCall(resolver, endpoint, "change");
+            resolver.call(tree, "change", null, null);
             assertEquals(1, cleaner.delete(List.of(stale), new CancellationSignal()).skipped());
-            assertTrue(fixtureCall(resolver, endpoint, "state").contains("b=true"));
+            assertTrue(resolver.call(tree, "state", null, null).getBoolean("b"));
             assertEquals(1, cleaner.delete(List.of(new ReviewFile("content://elsewhere/not-scanned","x",1,1,null)), new CancellationSignal()).skipped());
-        } finally { fixtureCall(resolver, endpoint, "clear"); }
+        } finally {
+            if (granted.get() != null) {
+                try { resolver.call(granted.get(), "clear", null, null); }
+                catch (SecurityException ignored) { }
+            }
+        }
     }
 }

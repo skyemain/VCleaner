@@ -9,7 +9,7 @@ import java.io.*;
 
 public class FixtureDocumentsProvider extends DocumentsProvider {
     private static final String[] COLUMNS = {"document_id","_display_name","mime_type","_size","last_modified","flags"};
-    private File root() { return new File(getContext().getCacheDir(), "provider-fixtures"); }
+    private File root() { return new File(getContext().getFilesDir(), "provider-fixtures"); }
     private File file(String id) throws FileNotFoundException {
         if (id.equals("root")) return root();
         if (!id.matches("[a-z]+\\.txt")) throw new FileNotFoundException();
@@ -22,18 +22,21 @@ public class FixtureDocumentsProvider extends DocumentsProvider {
         android.os.Bundle state = new android.os.Bundle();
         File a = new File(root(), "a.txt"), b = new File(root(), "b.txt");
         try {
-            if (method.equals("reset")) {
-                root().mkdirs();
-                java.nio.file.Files.write(a.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                java.nio.file.Files.write(b.toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            } else if (method.equals("change")) {
+            if (method.equals("change")) {
                 java.nio.file.Files.write(b.toPath(), "changed content".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             } else if (method.equals("clear")) { a.delete(); b.delete(); root().delete(); }
         } catch (IOException e) { throw new IllegalStateException(e); }
         state.putBoolean("a", a.exists()); state.putBoolean("b", b.exists());
         return state;
     }
-    public boolean onCreate() { root().mkdirs(); return true; }
+    public boolean onCreate() {
+        root().mkdirs();
+        try {
+            java.nio.file.Files.write(new File(root(), "a.txt").toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            java.nio.file.Files.write(new File(root(), "b.txt").toPath(), "same bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return true;
+        } catch (IOException e) { throw new IllegalStateException("Fixture initialization failed", e); }
+    }
     public Cursor queryRoots(String[] projection) {
         MatrixCursor c = new MatrixCursor(new String[]{"root_id","document_id","title","flags","mime_types","available_bytes"});
         c.addRow(new Object[]{"root", "root", "Clenzy test files", DocumentsContract.Root.FLAG_SUPPORTS_IS_CHILD, "*/*", 1048576L});
