@@ -22,4 +22,11 @@ public class ReviewRulesTest {
         assertEquals(List.of(large), ReviewRules.filter(List.of(large,unknown), ReviewRules.Category.LARGE,0));
         assertEquals(List.of(large), ReviewRules.filter(List.of(large,unknown), ReviewRules.Category.OLD, 40L*24*60*60*1000));
     }
+    @org.junit.Test public void duplicateGroupsWarnWhenEveryCopyIsSelected() {
+        var a = new ReviewFile("a", "first", 10, 100, "same");
+        var b = new ReviewFile("b", "second", 10, 200, "same");
+        org.junit.Assert.assertEquals("a", ReviewRules.group(java.util.List.of(b,a),"same").get(0).uri());
+        org.junit.Assert.assertTrue(ReviewRules.selectsEveryCopy(java.util.List.of(a,b),java.util.Set.of("a","b")));
+        org.junit.Assert.assertFalse(ReviewRules.selectsEveryCopy(java.util.List.of(a,b),java.util.Set.of("b")));
+    }
 }

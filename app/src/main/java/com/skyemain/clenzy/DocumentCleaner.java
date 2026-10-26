@@ -16,18 +16,20 @@ public final class DocumentCleaner {
         DocumentsContract.Document.COLUMN_MIME_TYPE, DocumentsContract.Document.COLUMN_SIZE,
         DocumentsContract.Document.COLUMN_LAST_MODIFIED, DocumentsContract.Document.COLUMN_FLAGS
     };
-    public record Scan(List<ReviewFile> files, int skipped, boolean truncated) {}
+    public record Scan(List<ReviewFile> files, int skipped, boolean truncated, int hashed, int notHashed) {}
     public record Outcome(int deleted, int skipped, long bytes) {}
     private record Metadata(String id, String name, String type, long bytes, long modified, int flags) {}
     private final Map<String, Metadata> observed = new HashMap<>();
     private Uri tree;
+    private long hashLimit = 64L * 1024 * 1024;
     private int skipped;
     private boolean truncated;
     private int entries;
 
     public DocumentCleaner(ContentResolver resolver) { this.resolver = resolver; }
 
-    public Scan scan(Uri selectedTree, CancellationSignal cancel) throws Exception {
+    public Scan scan(Uri selectedTree, CancellationSignal cancel) throws Exception { return scan(selectedTree, cancel, false); }
+    public Scan scan(Uri selectedTree, CancellationSignal cancel, boolean deep) throws Exception {
         tree = selectedTree;
         observed.clear(); skipped = 0; truncated = false; entries = 0;
         List<ReviewFile> files = new ArrayList<>();
@@ -35,11 +37,13 @@ public final class DocumentCleaner {
         Map<Long, Integer> sizes = new HashMap<>();
         for (ReviewFile f : files) if (f.bytes() > 0) sizes.merge(f.bytes(), 1, Integer::sum);
         List<ReviewFile> measured = new ArrayList<>();
-        long hashBudget = 512L * 1024 * 1024;
+        long hashBudget = (deep ? 4096L : 512L) * 1024 * 1024;
+        hashLimit = (deep ? 1024L : 64L) * 1024 * 1024;
+        int hashed = 0;
         for (ReviewFile file : files) {
             cancel.throwIfCanceled();
             String hash = null;
-            if (file.bytes() > 0 && file.bytes() <= 64L * 1024 * 1024 && file.bytes() <= hashBudget && sizes.get(file.bytes()) > 1) {
+            if (file.bytes() > 0 && file.bytes() <= hashLimit && file.bytes() <= hashBudget && sizes.get(file.bytes()) > 1) {
                 try {
                     hashBudget -= file.bytes();
                     hash = hash(Uri.parse(file.uri()), cancel);
@@ -47,9 +51,10 @@ public final class DocumentCleaner {
                     if (!file.matches(after.bytes, after.modified)) hash = null;
                 } catch (Exception e) { if (cancel.isCanceled()) throw e; skipped++; }
             }
+            if (hash != null) hashed++;
             measured.add(new ReviewFile(file.uri(), file.name(), file.bytes(), file.modified(), hash));
         }
-        return new Scan(List.copyOf(measured), skipped, truncated);
+        return new Scan(List.copyOf(measured), skipped, truncated, hashed, files.size() - hashed);
     }
 
     private void walk(String id, int depth, Set<String> visited, List<ReviewFile> files, CancellationSignal cancel) throws Exception {
@@ -111,7 +116,7 @@ public final class DocumentCleaner {
         try (InputStream stream = resolver.openInputStream(uri)) {
             if (stream == null) throw new IOException("Unreadable file");
             byte[] buffer = new byte[64 * 1024]; int count; long read = 0;
-            while ((count = stream.read(buffer)) != -1) { cancel.throwIfCanceled(); read += count; if (read > 64L * 1024 * 1024) throw new IOException("File grew beyond hash limit"); digest.update(buffer, 0, count); }
+            while ((count = stream.read(buffer)) != -1) { cancel.throwIfCanceled(); read += count; if (read > hashLimit) throw new IOException("File grew beyond hash limit"); digest.update(buffer, 0, count); }
         }
         StringBuilder text = new StringBuilder();
         for (byte b : digest.digest()) text.append(String.format(Locale.ROOT, "%02x", b & 255));

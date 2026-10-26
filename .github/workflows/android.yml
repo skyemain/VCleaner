@@ -28,8 +28,22 @@ jobs:
         with:
           gradle-version: '8.11.1'
           cache-read-only: false
+      - name: Restore release signing identity
+        env:
+          KEYSTORE: ${{ secrets.CLENZY_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.CLENZY_STORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE" ] && [ -n "$STORE_PASSWORD" ]; then
+            umask 077
+            printf '%s' "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/clenzy-release.p12"
+            echo "CLENZY_KEYSTORE=$RUNNER_TEMP/clenzy-release.p12" >> "$GITHUB_ENV"
+          else
+            echo 'Release signing secrets not configured; unsigned release retained for local signing.'
+          fi
       - name: Build and test
-        run: gradle testDebugUnitTest lintDebug assembleDebug assembleRelease assembleDebugAndroidTest
+        env:
+          CLENZY_STORE_PASSWORD: ${{ secrets.CLENZY_STORE_PASSWORD }}
+        run: gradle testDebugUnitTest lintDebug assembleDebug assembleRelease bundleRelease assembleDebugAndroidTest
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -42,21 +56,34 @@ jobs:
           arch: x86_64
           script: |
             gradle connectedDebugAndroidTest || { find app/build/outputs/androidTest-results -name '*.xml' -exec cat {} +; adb logcat -d -s AndroidRuntime System.err; exit 1; }
+            adb shell am force-stop com.skyemain.clenzy
+            adb shell am start -n com.skyemain.clenzy/.MainActivity
+            sleep 3
+            mkdir -p screenshots
+            adb exec-out screencap -p > screenshots/Clenzy-Android-home.png
+            adb pull /sdcard/Android/data/com.skyemain.clenzy/files/Clenzy-Android-review.png screenshots/Clenzy-Android-review.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Clenzy-Android-screenshots
+          path: screenshots/
       - uses: actions/upload-artifact@v4
         with:
           name: Clenzy-Android-candidate
-          path: app/build/outputs/apk/
-      - name: Publish installable debug candidate
-        if: github.event_name != 'pull_request'
+          path: |
+            app/build/outputs/apk/
+            app/build/outputs/bundle/
+      - name: Publish signed release candidate
+        if: github.event_name != 'pull_request' && env.CLENZY_KEYSTORE != ''
         run: |
           git fetch origin android
           if [ "$(git rev-parse origin/android)" != "${{ github.sha }}" ]; then exit 0; fi
           mkdir -p release
-          cp app/build/outputs/apk/debug/app-debug.apk release/Clenzy-1.0-android-candidate.apk
+          rm -f release/Clenzy-1.0-android-candidate.apk
+          cp app/build/outputs/apk/release/app-release.apk release/Clenzy-1.1-android-candidate.apk
           (cd release && sha256sum *.apk > SHA256SUMS.txt)
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add release
           git diff --cached --quiet && exit 0
-          git commit -m 'Publish Android debug candidate [skip ci]'
+          git commit -m 'Publish signed Android candidate [skip ci]'
           git push origin HEAD:android
