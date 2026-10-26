@@ -2,7 +2,6 @@ import SwiftUI
 
 struct BatteryCard: View {
     let battery: DeviceBattery
-    let illustrativeMinutes: Int?
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
@@ -29,22 +28,6 @@ struct BatteryCard: View {
             } else {
                 Text("Battery readings may be unavailable in the simulator.").font(.caption).foregroundStyle(HomeTheme.muted)
             }
-            Divider()
-            HStack(alignment: .top, spacing: 16) {
-                Image(systemName: "clock").font(.title3).foregroundStyle(HomeTheme.mint).padding(.top, 2)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Time remaining").font(.subheadline.weight(.medium))
-                    Text("Illustrative estimate").font(.caption).foregroundStyle(HomeTheme.muted)
-                }
-                Spacer()
-                Text(timeText).font(.system(.title3, design: .rounded, weight: .semibold)).monospacedDigit()
-            }
-            Text("15-hour model at 100% · not a live battery prediction\(battery.state == .charging || battery.state == .full ? " · assumes unplugged" : "")")
-                .font(.caption2).foregroundStyle(HomeTheme.muted).fixedSize(horizontal: false, vertical: true)
         }.glassCard().accessibilityIdentifier("batteryCard")
-    }
-    private var timeText: String {
-        guard let minutes = illustrativeMinutes else { return "—" }
-        return minutes >= 60 ? "\(minutes / 60)h \(minutes % 60)m" : "\(minutes)m"
     }
 }

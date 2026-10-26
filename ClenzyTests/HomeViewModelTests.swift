@@ -28,15 +28,6 @@ final class HomeViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testIllustrativeTimeUsesFifteenHoursWithoutInventingUnknownReadings() {
-        XCTAssertEqual(HomeViewModel.illustrativeMinutes(batteryFraction: 1), 900)
-        XCTAssertEqual(HomeViewModel.illustrativeMinutes(batteryFraction: 0.5), 450)
-        XCTAssertEqual(HomeViewModel.illustrativeMinutes(batteryFraction: 0), 0)
-        XCTAssertNil(HomeViewModel.illustrativeMinutes(batteryFraction: nil))
-        XCTAssertNil(HomeViewModel.illustrativeMinutes(batteryFraction: .nan))
-    }
-
-    @MainActor
     func testRefreshUsesNewHardwareSnapshot() {
         let hardware = FakeDevice()
         let model = HomeViewModel(hardware: hardware)
@@ -45,35 +36,26 @@ final class HomeViewModelTests: XCTestCase {
         hardware.value.battery = DeviceBattery(level: -1, state: .unknown)
         model.refreshDevice()
         XCTAssertNil(model.device.storage)
-        XCTAssertNil(model.batteryTimeMinutes)
     }
 
     @MainActor
-    func testPreviewCompletesOnceAndDoesNotAlterHardwareOrClaimDeletion() async throws {
+    func testCleanActionNavigatesToRealPhotosOnlyOnce() {
         let hardware = FakeDevice()
-        let before = hardware.value
-        let model = HomeViewModel(hardware: hardware, stepDelay: 1)
-        model.startScanPreview()
-        model.startScanPreview()
-        for _ in 0..<500 {
-            if model.scanState == .complete { break }
-            try await Task.sleep(nanoseconds: 2_000_000)
-        }
-        XCTAssertEqual(model.scanState, .complete)
-        XCTAssertEqual(model.scanProgress, 1)
-        XCTAssertEqual(model.navigationPath, [.previewResults])
-        XCTAssertEqual(hardware.value, before)
-        XCTAssertEqual(model.device, before)
+        let model = HomeViewModel(hardware: hardware)
+        model.openPhotos()
+        model.openPhotos()
+        XCTAssertEqual(model.navigationPath, [.photos])
+        XCTAssertEqual(model.device, hardware.value)
     }
 
-    @MainActor
-    func testCancelledPreviewCannotNavigateLater() async throws {
-        let model = HomeViewModel(hardware: FakeDevice(), stepDelay: 1_000_000)
-        model.startScanPreview()
-        model.cancelScanPreview()
-        try await Task.sleep(nanoseconds: 100_000_000)
-        XCTAssertEqual(model.scanState, .idle)
-        XCTAssertEqual(model.scanProgress, 0)
-        XCTAssertTrue(model.navigationPath.isEmpty)
+    func testCancellationBeforeResourceIdentifierIsRetained() {
+        let request = ResourceRequest()
+        request.cancel()
+        XCTAssertThrowsError(try request.result(error: nil)) { XCTAssertTrue($0 is CancellationError) }
+    }
+    func testOversizedResourceNeverProducesDuplicateDigest() {
+        let request = ResourceRequest()
+        request.append(Data(repeating: 1, count: 11), limit: 10)
+        XCTAssertThrowsError(try request.result(error: nil))
     }
 }

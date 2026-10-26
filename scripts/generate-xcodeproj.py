@@ -89,7 +89,7 @@ def main() -> None:
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				CODE_SIGN_STYLE = Automatic;
 				SUPPORTS_MACCATALYST = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Clenzy/Resources/Info.plist;

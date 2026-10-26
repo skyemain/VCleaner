@@ -37,3 +37,9 @@ Select the Clenzy app target > Signing & Capabilities. Enable Automatically mana
 Apple's free Personal Team profiles expire after seven days; rebuild/reinstall through Xcode when needed. Source: [Apple Personal Team limits](https://developer.apple.com/help/account/basics/about-your-developer-account), [device setup and running](https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices), [Developer Mode](https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device). The existing CI archive remains unsigned and is not a directly installable public IPA.
 
 Once installed, Clean Storage is the labeled scanning/results preview. Review Photos opens the real PhotoKit cleanup flow.
+
+## Real cleanup update (build 3)
+
+Clean Storage opens a real Photos scan. No simulated scan/results or battery lifetime predictions remain. Standard scans review up to 1,000 recent accessible assets and read up to 512 MiB (128 MiB per resource); the opt-in deep scan allows 10,000 assets / 4 GiB / 1 GiB per resource. Oversized and cloud resources remain unmeasured, never exact duplicates. Limits are conservative, with up to one Photos callback chunk of overrun. Cancellation cancels the active Photos request.
+
+Duplicate groups suggest the oldest copy to keep but never auto-select. Selecting every copy produces an explicit warning. Photos changes clear selection and require a rescan; modified/unavailable assets are checked again before deletion. Video previews do not download cloud originals. Both dashboards use DeviceManager for storage. Deleted photos stay in Recently Deleted, and measured bytes do not promise immediate device-space recovery.

@@ -3,7 +3,6 @@ import UIKit
 
 struct HomeView: View {
     @Bindable var model: HomeViewModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack(path: $model.navigationPath) {
@@ -11,13 +10,13 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     header
                     StorageCard(storage: model.device.storage)
-                    BatteryCard(battery: model.device.battery, illustrativeMinutes: model.batteryTimeMinutes)
+                    BatteryCard(battery: model.device.battery)
                     Button(action: model.openPhotos) {
                         HStack(spacing: 14) {
                             Image(systemName: "photo.on.rectangle.angled").font(.title2).foregroundStyle(HomeTheme.mint)
                             VStack(alignment: .leading, spacing: 5) {
                                 Text("Review Photos").font(.headline).foregroundStyle(.white)
-                                Text("Real cleanup, with your approval").font(.caption).foregroundStyle(HomeTheme.muted)
+                                Text("Screenshots · videos · duplicates").font(.caption).foregroundStyle(HomeTheme.muted)
                             }
                             Spacer()
                             Image(systemName: "arrow.up.right").foregroundStyle(HomeTheme.muted)
@@ -29,25 +28,17 @@ struct HomeView: View {
             }
             .background(HomeTheme.background)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                Group {
-                    if model.isScanning {
-                        ScanPreviewCard(progress: model.scanProgress, caption: model.scanCaption, reduceMotion: reduceMotion, cancel: model.cancelScanPreview)
-                    } else {
-                        cleanButton
-                    }
-                }.padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 8)
+                cleanButton.padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 8)
                     .background(.ultraThinMaterial)
             }
             .toolbar(.hidden, for: .navigationBar)
             .refreshable { model.refreshDevice() }
             .navigationDestination(for: HomeViewModel.Destination.self) { destination in
                 switch destination {
-                case .previewResults: PreviewResultsView(openPhotos: model.openPhotos)
                 case .photos: PhotosReviewView()
                 }
             }
             .onAppear { model.refreshDevice() }
-            .onDisappear { model.cancelScanPreview() }
             .onReceive(NotificationCenter.default.publisher(for: UIDevice.batteryLevelDidChangeNotification)) { _ in model.refreshDevice() }
             .onReceive(NotificationCenter.default.publisher(for: UIDevice.batteryStateDidChangeNotification)) { _ in model.refreshDevice() }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in model.refreshDevice() }
@@ -72,7 +63,7 @@ struct HomeView: View {
 
     private var cleanButton: some View {
         VStack(spacing: 10) {
-            Button(action: model.startScanPreview) {
+            Button(action: model.openPhotos) {
                 HStack(spacing: 12) {
                     Image(systemName: "sparkles")
                     Text("Clean Storage").fontWeight(.semibold)
@@ -82,7 +73,7 @@ struct HomeView: View {
                     .background(LinearGradient(colors: [HomeTheme.mint, Color(red: 0.29, green: 0.88, blue: 0.88)], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .shadow(color: HomeTheme.mint.opacity(0.13), radius: 20, y: 7)
             }.buttonStyle(.plain).accessibilityIdentifier("cleanStorageButton")
-            Text("Try the scanning preview. No files will be changed.").font(.caption).foregroundStyle(HomeTheme.muted)
+            Text("Scan your Photos. Review before anything is removed.").font(.caption).foregroundStyle(HomeTheme.muted)
         }.padding(.vertical, 3)
     }
 }
