@@ -12,13 +12,13 @@ An ordinary iOS app cannot clean Safari/other apps' private caches, force-quit o
 
 Open Clenzy.xcodeproj in full Xcode. Select an iPhone simulator and run. On your own iPhone select your signing team and a unique bundle identifier, then run through Xcode. Grant Photos access when Scan Photos is tapped. Denied access can be changed through Open Clenzy Settings. A free personal team can support local development subject to Apple's limits; App Store/TestFlight distribution requires a developer membership and signing. No installable public IPA is provided.
 
-Regenerate with `python3 scripts/generate-xcodeproj.py`. CI runs native XCTest on an available iPhone simulator and builds an unsigned device archive. Tests use synthetic review metadata only; real library authorization, deletion, limited access and iCloud behavior require testing on a device before approval. Cancel stops after the current local resource request completes.
+Regenerate with `python3 scripts/generate-xcodeproj.py`. CI runs native XCTest on an available iPhone simulator and builds an unsigned device archive. Tests use synthetic review metadata and injected hardware readings; real library authorization, deletion, limited access and iCloud behavior require testing on a device before approval. Cancel stops after the current local resource request completes.
 
 ## Maintainer reference
 
 SwiftUI dashboard, LibraryModel for explicit authorization/deletion, PhotoScanner for bounded resource scans and ReviewRules for pure filtering. Keep one Markdown file. Platform docs: [Photo library authorization/change requests](https://developer.apple.com/documentation/photos/phphotolibrary), [local resource access](https://developer.apple.com/documentation/photos/phassetresourcerequestoptions/isnetworkaccessallowed). Main contains only separately approved production builds. Before promotion test duplicate edge cases (edits/Live Photos), cancellations, system deletion rejection and large real libraries.
 
-Validation: [iOS simulator tests and unsigned device archive](https://github.com/skyemain/VCleaner/actions/runs/40237187888) passed. The two metadata tests do not delete real photos; device Photos permissions, deletion and iCloud behavior still need manual validation before production approval.
+Validation: [Build 2 native tests, screenshot and unsigned device archive](https://github.com/skyemain/VCleaner/actions/runs/40253636560) passed all eight tests. The simulator screenshot was visually reviewed and card spacing refined so storage, battery and time information fit above the fixed Clean button. Simulator battery readings can be unavailable; the app keeps them unknown instead of supplying fabricated percentages. Tests do not delete real photos; device Photos permissions, deletion and iCloud behavior still need manual validation before production approval.
 
 ## Native dashboard (build 2)
 
