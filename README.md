@@ -17,3 +17,5 @@ Regenerate with `python3 scripts/generate-xcodeproj.py`. CI runs native XCTest o
 ## Maintainer reference
 
 SwiftUI dashboard, LibraryModel for explicit authorization/deletion, PhotoScanner for bounded resource scans and ReviewRules for pure filtering. Keep one Markdown file. Platform docs: [Photo library authorization/change requests](https://developer.apple.com/documentation/photos/phphotolibrary), [local resource access](https://developer.apple.com/documentation/photos/phassetresourcerequestoptions/isnetworkaccessallowed). Main contains only separately approved production builds. Before promotion test duplicate edge cases (edits/Live Photos), cancellations, system deletion rejection and large real libraries.
+
+Validation: [iOS simulator tests and unsigned device archive](https://github.com/skyemain/VCleaner/actions/runs/40237187888) passed. The two metadata tests do not delete real photos; device Photos permissions, deletion and iCloud behavior still need manual validation before production approval.
