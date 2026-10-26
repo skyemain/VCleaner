@@ -8,7 +8,7 @@ struct HomeView: View {
     var body: some View {
         NavigationStack(path: $model.navigationPath) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 16) {
                     header
                     StorageCard(storage: model.device.storage)
                     BatteryCard(battery: model.device.battery, illustrativeMinutes: model.batteryTimeMinutes)
@@ -61,13 +61,13 @@ struct HomeView: View {
                     Image(systemName: "sparkle").foregroundStyle(HomeTheme.mint)
                     Text("CLENZY").tracking(4).font(.system(.caption, design: .rounded, weight: .bold)).foregroundStyle(HomeTheme.mint)
                 }
-                Text("A little lighter.").font(.system(size: 34, weight: .semibold, design: .rounded)).tracking(-1)
+                Text("A little lighter.").font(.system(size: 30, weight: .semibold, design: .rounded)).tracking(-1)
                 Text("A clear view of your device.").font(.subheadline).foregroundStyle(HomeTheme.muted)
             }
             Spacer(minLength: 4)
             Image(systemName: "iphone.gen3").font(.system(size: 24, weight: .light)).foregroundStyle(HomeTheme.mint)
                 .frame(width: 52, height: 52).background(.ultraThinMaterial, in: Circle()).overlay(Circle().stroke(.white.opacity(0.1)))
-        }.padding(.top, 26).padding(.bottom, 6)
+        }.padding(.top, 12).padding(.bottom, 6)
     }
 
     private var cleanButton: some View {
@@ -78,7 +78,7 @@ struct HomeView: View {
                     Text("Clean Storage").fontWeight(.semibold)
                     Spacer()
                     Image(systemName: "arrow.right")
-                }.font(.headline).foregroundStyle(HomeTheme.ink).padding(22).frame(maxWidth: .infinity)
+                }.font(.headline).foregroundStyle(HomeTheme.ink).padding(18).frame(maxWidth: .infinity)
                     .background(LinearGradient(colors: [HomeTheme.mint, Color(red: 0.29, green: 0.88, blue: 0.88)], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .shadow(color: HomeTheme.mint.opacity(0.13), radius: 20, y: 7)
             }.buttonStyle(.plain).accessibilityIdentifier("cleanStorageButton")

@@ -3,14 +3,14 @@ import SwiftUI
 struct StorageCard: View {
     let storage: DeviceStorage?
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             CardHeading(title: "Storage", symbol: "internaldrive")
             if let storage {
-                HStack(spacing: 24) {
+                HStack(spacing: 18) {
                     MetricRing(fraction: storage.usedFraction, title: "\(Int((storage.usedFraction * 100).rounded()))%", subtitle: "used")
-                        .frame(width: 130, height: 130)
+                        .frame(width: 108, height: 108)
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(format(storage.freeBytes)).font(.system(.largeTitle, design: .rounded, weight: .semibold)).minimumScaleFactor(0.55).lineLimit(1)
+                        Text(format(storage.freeBytes)).font(.system(.title, design: .rounded, weight: .semibold)).minimumScaleFactor(0.55).lineLimit(1)
                         Text("free to make more memories").font(.subheadline).foregroundStyle(HomeTheme.muted).fixedSize(horizontal: false, vertical: true)
                     }
                 }

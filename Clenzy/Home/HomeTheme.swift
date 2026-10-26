@@ -17,10 +17,10 @@ enum HomeTheme {
 struct GlassCard: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding(22)
+            .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(LinearGradient(colors: [.white.opacity(0.18), .white.opacity(0.035)], startPoint: .topLeading, endPoint: .bottomTrailing)))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(LinearGradient(colors: [.white.opacity(0.18), .white.opacity(0.035)], startPoint: .topLeading, endPoint: .bottomTrailing)))
             .shadow(color: .black.opacity(0.12), radius: 20, y: 12)
     }
 }

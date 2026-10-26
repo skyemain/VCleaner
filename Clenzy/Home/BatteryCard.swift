@@ -4,7 +4,7 @@ struct BatteryCard: View {
     let battery: DeviceBattery
     let illustrativeMinutes: Int?
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
                 CardHeading(title: "Battery", symbol: "battery.75percent")
                 Spacer()
@@ -12,11 +12,11 @@ struct BatteryCard: View {
                     .font(.caption.weight(.medium)).foregroundStyle(HomeTheme.mint)
             }
             HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(battery.percentage.map(String.init) ?? "—").font(.system(size: 48, weight: .semibold, design: .rounded)).monospacedDigit()
+                Text(battery.percentage.map(String.init) ?? "—").font(.system(size: 40, weight: .semibold, design: .rounded)).monospacedDigit()
                 Text("%").font(.title2).foregroundStyle(HomeTheme.muted)
                 Spacer()
                 Image(systemName: battery.state == .charging || battery.state == .full ? "bolt.batteryblock.fill" : "battery.75percent")
-                    .font(.system(size: 35, weight: .light)).foregroundStyle(HomeTheme.mint)
+                    .font(.system(size: 29, weight: .light)).foregroundStyle(HomeTheme.mint)
             }
             if let fraction = battery.fraction {
                 GeometryReader { geometry in

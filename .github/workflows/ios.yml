@@ -23,8 +23,13 @@ jobs:
           xcodebuild -project Clenzy.xcodeproj -scheme Clenzy -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test
       - name: Capture native home dashboard
         run: |
-          xcrun simctl boot "$IOS_SIMULATOR_ID" || true
-          xcrun simctl bootstatus "$IOS_SIMULATOR_ID" -b
+          BOOTED=$(xcrun simctl list devices booted -j | python3 -c 'import sys,json; d=json.load(sys.stdin); print(next((x["udid"] for group in d["devices"].values() for x in group if "iPhone" in x["name"]), ""))')
+          if [ -n "$BOOTED" ]; then
+            IOS_SIMULATOR_ID="$BOOTED"
+          else
+            xcrun simctl boot "$IOS_SIMULATOR_ID" || true
+            xcrun simctl bootstatus "$IOS_SIMULATOR_ID" -b
+          fi
           xcrun simctl install "$IOS_SIMULATOR_ID" build/DerivedData/Build/Products/Debug-iphonesimulator/Clenzy.app
           xcrun simctl status_bar "$IOS_SIMULATOR_ID" override --time '9:41'
           xcrun simctl launch "$IOS_SIMULATOR_ID" com.skyemain.Clenzy.ios
