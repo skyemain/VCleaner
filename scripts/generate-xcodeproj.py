@@ -119,7 +119,7 @@ def main() -> None:
     debug_app, release_app = uid("cfg:app:debug"), uid("cfg:app:release")
     debug_test, release_test = uid("cfg:test:debug"), uid("cfg:test:release")
     debug_proj, release_proj = uid("cfg:proj:debug"), uid("cfg:proj:release")
-    add(debug_app, "{ isa = XCBuildConfiguration; buildSettings = { %s\n\t\t\t\tENABLE_TESTABILITY = YES;\n\t\t\t\tCODE_SIGN_IDENTITY = \"-\";\n\t\t\t}; name = Debug; }" % app_settings)
+    add(debug_app, "{ isa = XCBuildConfiguration; buildSettings = { %s\n\t\t\t\tENABLE_TESTABILITY = YES;\n\t\t\t}; name = Debug; }" % app_settings)
     add(release_app, "{ isa = XCBuildConfiguration; buildSettings = { %s\n\t\t\t}; name = Release; }" % app_settings)
     add(debug_test, "{ isa = XCBuildConfiguration; buildSettings = { %s\n\t\t\t}; name = Debug; }" % test_settings)
     add(release_test, "{ isa = XCBuildConfiguration; buildSettings = { %s\n\t\t\t}; name = Release; }" % test_settings)
