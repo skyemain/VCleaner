@@ -44,6 +44,9 @@ jobs:
         env:
           CLENZY_STORE_PASSWORD: ${{ secrets.CLENZY_STORE_PASSWORD }}
         run: gradle testDebugUnitTest lintDebug assembleDebug assembleRelease bundleRelease assembleDebugAndroidTest
+      - name: Verify release signature
+        if: env.CLENZY_KEYSTORE != ''
+        run: '"$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk'
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -52,8 +55,11 @@ jobs:
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
-          profile: pixel_7_pro
+          profile: pixel_5
           arch: x86_64
+          cores: 2
+          ram-size: 2048M
+          disable-animations: true
           script: |
             gradle connectedDebugAndroidTest || { find app/build/outputs/androidTest-results -name '*.xml' -exec cat {} +; adb logcat -d -s AndroidRuntime System.err; exit 1; }
             adb shell am force-stop com.skyemain.clenzy

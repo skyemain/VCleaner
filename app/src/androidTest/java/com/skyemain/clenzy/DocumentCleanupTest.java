@@ -30,6 +30,10 @@ public class DocumentCleanupTest {
         var granted = new java.util.concurrent.atomic.AtomicReference<Uri>();
         try (var scenario = androidx.test.core.app.ActivityScenario.launch(MainActivity.class)) {
             var device = androidx.test.uiautomator.UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+            var launcherAnr = androidx.test.uiautomator.By.text("Quickstep isn't responding");
+            if (device.hasObject(launcherAnr)) {
+                clickWhenReady(device, androidx.test.uiautomator.By.text("Close app"), 3000);
+            }
             scenario.onActivity(activity -> {
                 var picker = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT_TREE);
                 picker.putExtra(DocumentsContract.EXTRA_INITIAL_URI, DocumentsContract.buildDocumentUri("com.skyemain.clenzy.test.documents", "root"));

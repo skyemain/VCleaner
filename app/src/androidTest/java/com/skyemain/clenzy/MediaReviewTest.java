@@ -22,19 +22,29 @@ public class MediaReviewTest {
         List<Uri> created = new ArrayList<>();
         try {
             for (String name : List.of("Screenshot-Clenzy-A.png", "Screenshot-Clenzy-B.png")) {
-                ContentValues values = new ContentValues(); values.put(MediaStore.Images.Media.DISPLAY_NAME, name); values.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
+                ContentValues values = new ContentValues(); values.put(MediaStore.Images.Media.DISPLAY_NAME, name); values.put(MediaStore.Images.Media.MIME_TYPE, "image/png"); values.put(MediaStore.Images.Media.IS_PENDING, 1);
                 Uri uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values); assertNotNull(uri); created.add(uri);
                 try (var output = resolver.openOutputStream(uri)) {
                     Bitmap bitmap = Bitmap.createBitmap(400,400,Bitmap.Config.ARGB_8888);
                     Canvas canvas = new Canvas(bitmap); canvas.drawColor(Color.rgb(18,54,46)); Paint paint = new Paint(); paint.setColor(Color.rgb(68,239,196)); canvas.drawCircle(200,200,110,paint);
                     bitmap.compress(Bitmap.CompressFormat.PNG,100,output); bitmap.recycle();
                 }
+                ContentValues ready = new ContentValues(); ready.put(MediaStore.Images.Media.IS_PENDING, 0); resolver.update(uri, ready, null, null);
+                boolean settled = false;
+                for (int attempt = 0; attempt < 50; attempt++) {
+                    try (var cursor = resolver.query(uri, new String[]{"_size", "date_modified"}, null, null, null)) {
+                        settled = cursor != null && cursor.moveToFirst() && cursor.getLong(0) > 0 && cursor.getLong(1) > 0;
+                    }
+                    if (settled) break;
+                    Thread.sleep(100);
+                }
+                assertTrue("Fixture metadata did not settle", settled);
             }
             MediaCleaner cleaner = new MediaCleaner(resolver);
             var result = cleaner.scan(new CancellationSignal(), false);
             var matches = ReviewRules.filter(result.files(), ReviewRules.Category.DUPLICATES, System.currentTimeMillis());
-            assertTrue(matches.stream().anyMatch(f -> f.uri().equals(created.get(0).toString())));
-            assertTrue(matches.stream().anyMatch(f -> f.uri().equals(created.get(1).toString())));
+            assertTrue("Scan: " + result + "; created: " + created, matches.stream().anyMatch(f -> f.uri().equals(created.get(0).toString())));
+            assertTrue("Scan: " + result + "; created: " + created, matches.stream().anyMatch(f -> f.uri().equals(created.get(1).toString())));
             var original = matches.stream().filter(f -> f.uri().equals(created.get(0).toString())).findFirst().get();
             assertEquals(1, cleaner.eligible(List.of(original), new CancellationSignal(), false).size());
             assertTrue(cleaner.eligible(List.of(new ReviewFile("content://unscanned/x", "x", 1,1,null)), new CancellationSignal(), false).isEmpty());
