@@ -1,45 +1,29 @@
 # Clenzy for iOS
 
-Development candidate for iPhone/iPad, iOS 17+. Not approved for production. Only iOS source, project, tests and CI live on this branch.
+Version 1.0, build 3. Native iPhone/iPad app for iOS 17+. Development candidate; not approved for production. This branch contains only iOS source, tests, project and CI. Main remains the catalog of separately approved production builds.
 
-## What it actually cleans
+## What works
 
-Clenzy reviews Photos screenshots, local videos at least 100 MiB, and exact matching original/adjustment resource hashes. It streams local resources with SHA-256, without downloading iCloud originals, and scans at most the 1,000 newest accessible items per pass. Limited Photos access is honored. Unknown sizes/hashes are omitted from duplicate and large-video matches. Both originals remain visible; nothing is preselected. Tap a thumbnail to review, select individual items, then explicitly confirm deletion through PhotoKit. Deletion affects iCloud Photos and synced devices. Photos retains Recently Deleted items, so space may not be reclaimed immediately. Storage usage is read from the device.
+Clean Storage and Review Photos open the real PhotoKit scan/review flow. Screenshots, videos (including unmeasured videos) and exact duplicates are available. SHA-256 compares complete original/adjustment resources, never partial hashes. Duplicate groups show copies side by side and suggest the oldest item to keep. Nothing is preselected; selecting every copy generates a warning. Photos deletion is explicitly confirmed and also affects iCloud Photos and synced devices. Items remain in Recently Deleted, so selected source bytes do not guarantee immediate device-space recovery.
 
-An ordinary iOS app cannot clean Safari/other apps' private caches, force-quit other apps or purge system RAM. This app makes no such claims. It has no analytics, ads or network requests of its own. No deletion happens in tests or on launch.
+Standard scans review up to 1,000 recent accessible assets and read up to 512 MiB, with a 128 MiB resource limit. Optional deep scans allow 10,000 assets / 4 GiB / 1 GiB per resource. Limits are conservative, with up to one Photos callback chunk of overrun. Oversized/unavailable resources remain unmeasured, never exact duplicates. Results disclose coverage. Active Photos resource requests are cancelled when the user cancels. Cloud originals are not downloaded automatically.
 
-## Setup, build and test
+Limited Photos access is honored, with a picker to share more photos. Library changes clear selection and require a rescan; modification dates and availability are rechecked before deletion. Image previews and local video playback are supported. A cloud placeholder directs the user to download originals in Photos when needed.
 
-Open Clenzy.xcodeproj in full Xcode. Select an iPhone simulator and run. On your own iPhone select your signing team and a unique bundle identifier, then run through Xcode. Grant Photos access when Scan Photos is tapped. Denied access can be changed through Open Clenzy Settings. A free personal team can support local development subject to Apple's limits; App Store/TestFlight distribution requires a developer membership and signing. No installable public IPA is provided.
+The SwiftUI home uses NavigationStack, SF Symbols, material cards, gradients and a storage ring. DeviceManager enables battery monitoring and queries filesystem total/free bytes; HomeViewModel uses @Observable. Storage and battery readings refresh on foreground/battery events. Unknown readings stay unavailable. Filesystem capacity can differ from Settings accounting. There are no simulated cleanup results or battery-time predictions. The privacy manifest declares disk-space display reason 85F4.1.
 
-Regenerate with `python3 scripts/generate-xcodeproj.py`. CI runs native XCTest on an available iPhone simulator and builds an unsigned device archive. Tests use synthetic review metadata and injected hardware readings; real library authorization, deletion, limited access and iCloud behavior require testing on a device before approval. Cancel stops after the current local resource request completes.
+Clenzy does not clean other apps' private caches, force-quit apps or purge system RAM. It has no analytics, ads or network requests of its own.
 
-## Maintainer reference
+## Build and install
 
-SwiftUI dashboard, LibraryModel for explicit authorization/deletion, PhotoScanner for bounded resource scans and ReviewRules for pure filtering. Keep one Markdown file. Platform docs: [Photo library authorization/change requests](https://developer.apple.com/documentation/photos/phphotolibrary), [local resource access](https://developer.apple.com/documentation/photos/phassetresourcerequestoptions/isnetworkaccessallowed). Main contains only separately approved production builds. Before promotion test duplicate edge cases (edits/Live Photos), cancellations, system deletion rejection and large real libraries.
+Open Clenzy.xcodeproj in full Xcode. Choose an iPhone simulator and Run. Regenerate the project after adding/removing Swift files with `python3 scripts/generate-xcodeproj.py`. CI runs XCTest, captures the native home screen and builds an unsigned iPhone/iPad archive.
 
-Validation: [Build 2 native tests, screenshot and unsigned device archive](https://github.com/skyemain/VCleaner/actions/runs/40253636560) passed all eight tests. The simulator screenshot was visually reviewed and card spacing refined so storage, battery and time information fit above the fixed Clean button. Simulator battery readings can be unavailable; the app keeps them unknown instead of supplying fabricated percentages. Tests do not delete real photos; device Photos permissions, deletion and iCloud behavior still need manual validation before production approval.
+For your own iPhone: sign in under Xcode Settings > Apple Accounts, connect/unlock/trust the device, enable Developer Mode under iPhone Settings > Privacy & Security when prompted and restart/confirm. In the Clenzy target's Signing & Capabilities choose automatic signing, your Personal Team and a unique bundle identifier. Select the connected phone and Run. Free Personal Team provisioning expires after seven days; rebuild/reinstall as needed. App Store/TestFlight distribution requires paid membership and signing. The CI archive is unsigned and is not a directly installable public IPA.
 
-## Native dashboard (build 2)
+References: [Personal Team limits](https://developer.apple.com/help/account/basics/about-your-developer-account), [running on devices](https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices), [PhotoKit](https://developer.apple.com/documentation/photos/phphotolibrary).
 
-HomeView uses NavigationStack, SF Symbols, ultraThinMaterial cards, gradients, a storage ring and an always-visible Clean Storage action. StorageCard and BatteryCard are separate files. DeviceManager is a main-actor singleton behind DeviceReading; it enables UIDevice battery monitoring and reads total/free filesystem bytes with FileManager.attributesOfFileSystem, deriving used bytes. Unknown readings stay unavailable. Storage is filesystem capacity and may differ from Settings accounting. Battery notifications and foreground events refresh readings. HomeViewModel uses @Observable; dashboard/card views receive their data and keep no independent hardware/scanning state.
+## Validation and maintainer reference
 
-Time remaining is explicitly an illustrative 15-hour-at-100% model, not a measured runtime prediction. Clean Storage runs a cancellable preview animation and opens clearly labeled sample results; no files are scanned/deleted and no reclaimed space is claimed. The separate Review Photos route retains real PhotoKit review/deletion. Reduced Motion avoids the radar sweep. The privacy manifest declares on-device disk-space display (85F4.1).
+[Build 3 validation](https://github.com/skyemain/VCleaner/actions/runs/40408029608) passed eight native tests and the unsigned device archive. Tests cover hardware bounds/unknown readings, real-clean navigation, cancellation/budget guards, duplicate groups/all-copy warnings and video filtering. The native home screenshot was visually reviewed. No user photos are deleted by tests. Actual Photos permission prompts, system deletion cancellation, iCloud, edits/Live Photos, accessibility sizes and large libraries still require physical-device testing before production approval.
 
-Tests cover filesystem bounds/unknown values, unknown battery levels, the illustrative formula, refreshed hardware snapshots, preview completion and cancellation. Full Xcode/CI is required for native verification. iOS remains a development candidate; main production builds are unchanged.
-
-## Install on your own iPhone with a free Personal Team
-
-Requires an iPhone on iOS 17+ and full Xcode on a Mac. Download the ios branch source ZIP and open Clenzy.xcodeproj. In Xcode Settings > Apple Accounts, sign in with your Apple Account. Connect and unlock the iPhone, accept Trust, and select it as the run destination so Xcode can pair it. Enable Developer Mode in iPhone Settings > Privacy & Security when requested, restart and confirm.
-
-Select the Clenzy app target > Signing & Capabilities. Enable Automatically manage signing, select your Personal Team and use a unique bundle identifier. Choose your connected iPhone (not a simulator) and press Run. Xcode creates the development provisioning profile and installs the app. The inherited Debug ad-hoc identity override was removed so Xcode can select Apple Development signing.
-
-Apple's free Personal Team profiles expire after seven days; rebuild/reinstall through Xcode when needed. Source: [Apple Personal Team limits](https://developer.apple.com/help/account/basics/about-your-developer-account), [device setup and running](https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices), [Developer Mode](https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device). The existing CI archive remains unsigned and is not a directly installable public IPA.
-
-Once installed, Clean Storage is the labeled scanning/results preview. Review Photos opens the real PhotoKit cleanup flow.
-
-## Real cleanup update (build 3)
-
-Clean Storage opens a real Photos scan. No simulated scan/results or battery lifetime predictions remain. Standard scans review up to 1,000 recent accessible assets and read up to 512 MiB (128 MiB per resource); the opt-in deep scan allows 10,000 assets / 4 GiB / 1 GiB per resource. Oversized and cloud resources remain unmeasured, never exact duplicates. Limits are conservative, with up to one Photos callback chunk of overrun. Cancellation cancels the active Photos request.
-
-Duplicate groups suggest the oldest copy to keep but never auto-select. Selecting every copy produces an explicit warning. Photos changes clear selection and require a rescan; modified/unavailable assets are checked again before deletion. Video previews do not download cloud originals. Both dashboards use DeviceManager for storage. Deleted photos stay in Recently Deleted, and measured bytes do not promise immediate device-space recovery.
+HomeView receives observable state; cards remain modular. LibraryModel owns authorization/selection/deletion and library changes; PhotoScanner owns bounded resource IO; ReviewRules owns pure grouping/filtering. Keep this as the only Markdown file and never commit signing credentials.
