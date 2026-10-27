@@ -6,7 +6,7 @@ android {
         applicationId 'com.skyemain.clenzy'
         minSdk 26
         targetSdk 35
-        versionCode (System.getenv("GITHUB_RUN_NUMBER") ?: "2").toInteger() + 100
+        versionCode = ((System.getenv("GITHUB_RUN_NUMBER") ?: "2").toInteger() + 100)
         versionName '1.1'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
