@@ -121,7 +121,15 @@ public class MainActivity extends ComponentActivity {
         if (request != 10 || result != RESULT_OK || data == null || data.getData() == null) return;
         tree = data.getData();
         int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        try { getContentResolver().takePersistableUriPermission(tree, flags); } catch (SecurityException ignored) { }
+        try {
+            if ((flags & Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0) {
+                if ((flags & Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0) {
+                    getContentResolver().takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                } else {
+                    getContentResolver().takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                }
+            }
+        } catch (SecurityException ignored) { }
         model.folder(tree);
     }
     private void preview(ReviewFile file) {
