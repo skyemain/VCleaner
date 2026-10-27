@@ -61,7 +61,7 @@ jobs:
           ram-size: 2048M
           disable-animations: true
           script: |
-            gradle connectedDebugAndroidTest || { find app/build/outputs/androidTest-results -name '*.xml' -exec cat {} +; adb logcat -d -s AndroidRuntime System.err; exit 1; }
+            gradle connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true || { find app/build/outputs/androidTest-results -name '*.xml' -exec cat {} +; adb logcat -d -s AndroidRuntime System.err; exit 1; }
             adb shell am force-stop com.skyemain.clenzy
             adb shell am start -n com.skyemain.clenzy/.MainActivity
             sleep 3
