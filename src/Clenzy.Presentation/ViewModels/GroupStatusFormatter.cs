@@ -92,7 +92,6 @@ public static class GroupStatusFormatter
             var results = clean.Modules.Where(m => m.Group == group).ToList();
             var bytes = results.Sum(r => r.BytesRecovered);
             var cleaned = results.Sum(r => r.ItemsCleaned);
-            var skipped = results.Sum(r => r.ItemsSkipped);
             var errors = results.Sum(r => r.Errors);
 
             if (results.Count == 0)
@@ -103,17 +102,12 @@ public static class GroupStatusFormatter
             var text = bytes > 0 ? $"Cleaned {ByteFormatter.Format(bytes)}"
                 : cleaned > 0 ? (group == CleanerGroup.Privacy ? $"Cleared {cleaned:N0} entries" : $"Completed ({cleaned:N0} items)")
                 : "Nothing cleaned";
-            if (skipped > 0)
-            {
-                text += $" · {skipped:N0} skipped";
-            }
-
             if (errors > 0)
             {
                 text += $" · {errors:N0} error{(errors == 1 ? string.Empty : "s")}";
             }
 
-            return (text, errors > 0 ? RowKind.Error : skipped > 0 ? RowKind.Warning : RowKind.Success);
+            return (text, errors > 0 ? RowKind.Error : RowKind.Success);
         }
 
         return DescribeScanOnly(actionable, skipReasons, needsAdmin, active);
@@ -130,7 +124,7 @@ public static class GroupStatusFormatter
 
             if (needsAdmin > 0 && active.All(m => m.Status == ModuleScanStatus.Skipped))
             {
-                return ("Skipped: requires administrator", RowKind.Warning);
+                return ("Requires administrator", RowKind.Warning);
             }
 
             return (active.FirstOrDefault(m => m.Message is not null && m.Status == ModuleScanStatus.Completed)?.Message ?? "Nothing to clean", RowKind.Success);

@@ -38,6 +38,7 @@ public sealed class MainViewModelTests
         Assert.Equal("Clean Again", h.Main.PrimaryButtonText);
         Assert.Contains("2.93 KB", h.Main.Headline);
         Assert.Contains("2 items removed", h.Main.Detail);
+        Assert.DoesNotContain("skipped", h.Main.Detail, StringComparison.OrdinalIgnoreCase);
         Assert.False(File.Exists(TempFile(h, "a.tmp")));
         Assert.True(File.Exists(TempFile(h, "fresh.tmp")));
         var system = h.Main.Rows.Single(r => r.Group == CleanerGroup.SystemJunk);

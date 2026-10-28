@@ -658,7 +658,7 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    private const string SkippedForReviewNote = " Items that need your confirmation were skipped; run Clenzy yourself to review them.";
+    private const string SkippedForReviewNote = " Some items need your confirmation; open Clenzy to review them.";
 
     private void CompleteWithoutCleaning(ScanReport scan, PlanMode mode, bool skippedForReview = false)
     {
@@ -682,7 +682,7 @@ public sealed class MainViewModel : ObservableObject
         Headline = clean.WasCanceled
             ? $"Canceled · recovered {ByteFormatter.Format(clean.BytesRecovered)} before stopping"
             : clean.BytesRecovered > 0 ? $"Recovered {ByteFormatter.Format(clean.BytesRecovered)}" : "Cleanup finished";
-        Detail = $"{clean.ItemsCleaned:N0} items removed · {clean.ItemsSkipped:N0} skipped · {clean.Errors:N0} error{(clean.Errors == 1 ? string.Empty : "s")} · {clean.Duration.TotalSeconds:0.0} s";
+        Detail = $"{clean.ItemsCleaned:N0} items removed · {clean.Errors:N0} error{(clean.Errors == 1 ? string.Empty : "s")} · {clean.Duration.TotalSeconds:0.0} s";
         if (clean.Errors > 0)
         {
             Detail += ". Open details to see what could not be cleaned.";

@@ -23,3 +23,5 @@ Projects: App (WPF), Presentation, Core (engine and safe deletion), Cleaners, Wi
 Version 1.4.0 was renamed to Clenzy without changing cleaner rules. All supported build paths are PowerShell on Windows; obsolete shell wrappers and duplicate documentation were removed. Candidate files remain on windows; main is the approved production catalog.
 
 Validation: [Native Windows build](https://github.com/skyemain/VCleaner/actions/runs/40237228726) passed all 197 tests (111 unit, 71 integration, 15 Windows) and published the renamed self-contained executable. The logger test reads active streams with Windows-compatible sharing. The app remains a development candidate.
+
+Version 1.4.1 removes routine skipped-file counts and skip-only warning colors from completion rows and notifications. Detailed results retain all safety diagnostics; actual errors and permissions remain visible. The executable is also published as a GitHub prerelease, pending production approval.

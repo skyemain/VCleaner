@@ -32,6 +32,7 @@ jobs:
         run: |
           git fetch origin windows
           if ((git rev-parse origin/windows) -ne '${{ github.sha }}') { exit 0 }
+          'RELEASE_READY=true' >> $env:GITHUB_ENV
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A release
@@ -39,3 +40,12 @@ jobs:
           if ($LASTEXITCODE -eq 0) { exit 0 }
           git commit -m 'Publish Windows candidate [skip ci]'
           git push origin HEAD:windows
+
+      - name: Publish GitHub prerelease
+        if: github.event_name != 'pull_request' && env.RELEASE_READY == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create windows-v1.4.1 release/Clenzy-1.4.1-win-x64.exe release/SHA256SUMS.txt --target '${{ github.sha }}' --title 'Clenzy 1.4.1 for Windows' --prerelease --latest=false --notes 'Routine skipped-file counts no longer clutter completion rows and notifications. Detailed diagnostics and real errors remain available. Self-contained Windows x64 candidate; unsigned and not yet approved for production.'
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
