@@ -31,6 +31,12 @@ jobs:
         working-directory: macos
         run: xcodebuild -project Clenzy.xcodeproj -scheme Clenzy -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
 
+      - name: Verify quitting with an open settings-style sheet
+        working-directory: macos
+        run: |
+          swiftc -parse-as-library Clenzy/Services/RelaunchService.swift scripts/verify-lifecycle.swift -o /tmp/clenzy-lifecycle-test
+          /tmp/clenzy-lifecycle-test
+
       - name: Build unsigned universal app
         working-directory: macos
         run: scripts/build.sh
@@ -44,12 +50,12 @@ jobs:
 
       - name: Package drag-and-drop disk image
         working-directory: macos
-        run: scripts/package-dmg.sh 1.0.1
+        run: scripts/package-dmg.sh 1.0.2
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Clenzy-1.0.1-mac-universal
-          path: macos/release/Clenzy-1.0.1-mac-universal.dmg
+          name: Clenzy-1.0.2-mac-universal
+          path: macos/release/Clenzy-1.0.2-mac-universal.dmg
           if-no-files-found: error
 
       - name: Keep the latest DMG in the mac branch
@@ -63,14 +69,15 @@ jobs:
             echo "A newer source commit exists; its workflow will publish the latest DMG."
             exit 0
           fi
-          find macos/release -maxdepth 1 -name '*.dmg' ! -name 'Clenzy-1.0.1-mac-universal.dmg' -delete
-          cp macos/release/Clenzy-1.0.1-mac-universal.dmg macos/release/Clenzy-latest-mac-universal.dmg
+          echo "RELEASE_READY=true" >> "$GITHUB_ENV"
+          find macos/release -maxdepth 1 -name '*.dmg' ! -name 'Clenzy-1.0.2-mac-universal.dmg' -delete
+          cp macos/release/Clenzy-1.0.2-mac-universal.dmg macos/release/Clenzy-latest-mac-universal.dmg
           (cd macos/release && shasum -a 256 *.dmg > SHA256SUMS.txt)
           cat > macos/release/README.txt <<EOF
-          Clenzy 1.0.1 for macOS 13 and newer (Apple silicon and Intel).
+          Clenzy 1.0.2 for macOS 13 and newer (Apple silicon and Intel).
 
           Share Clenzy-latest-mac-universal.dmg for the latest successful build.
-          Clenzy-1.0.1-mac-universal.dmg is the same build with its version in the filename.
+          Clenzy-1.0.2-mac-universal.dmg is the same build with its version in the filename.
           Verify downloads against SHA256SUMS.txt.
 
           Source commit: $SOURCE_SHA
@@ -88,3 +95,10 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Publish latest macOS DMG [skip ci]"
           git push origin HEAD:mac
+
+      - name: Publish GitHub release
+        if: github.event_name != 'pull_request' && env.RELEASE_READY == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create mac-v1.0.2 macos/release/Clenzy-1.0.2-mac-universal.dmg macos/release/SHA256SUMS.txt --target '${{ github.sha }}' --title 'Clenzy 1.0.2 for macOS' --latest --notes 'Fixes quitting and restarting with Cleaning Access open. Routine skipped-file counts no longer clutter completion results; permission issues and errors remain visible. Universal macOS 13+ DMG, ad-hoc signed and not notarized.'

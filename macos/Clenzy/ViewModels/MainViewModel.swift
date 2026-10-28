@@ -387,7 +387,7 @@ final class MainViewModel: ObservableObject {
             }
             let bytes = matched.reduce(Int64(0)) { $0 + $1.cleanup.deletedBytes }
             if !blocked.isEmpty {
-                return (bytes > 0 ? "\(ByteFormat.string(from: bytes)) cleaned · " : "") + "\(blocked.count) skipped — click for access guide"
+                return (bytes > 0 ? "\(ByteFormat.string(from: bytes)) cleaned · " : "") + "Access needed — open settings"
             }
             return bytes > 0 ? ByteFormat.string(from: bytes) : "Nothing to remove"
         }

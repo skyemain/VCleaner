@@ -1,4 +1,4 @@
-# Clenzy — macOS version 1.0.1
+# Clenzy — macOS version 1.0.2
 
 Native SwiftUI cleaner for macOS 13+, Apple silicon and Intel. Work only on the `mac` branch of `skyemain/VCleaner`.
 
@@ -29,11 +29,13 @@ scripts/verify-source.sh
 xcodebuild -project Clenzy.xcodeproj -scheme Clenzy -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
 scripts/build.sh
 codesign --force --deep --sign - build/Clenzy.app
-scripts/package-dmg.sh 1.0.1
+scripts/package-dmg.sh 1.0.2
 ```
 
 The GitHub macOS workflow tests, builds both architectures, signs ad-hoc, packages, and commits the versioned DMG, stable latest DMG and checksums to `macos/release/`. It refuses to publish stale source commits. For future releases update the generator marketing/build versions, workflow and package default; regenerate the project. Keep this as the only Markdown reference; retain source, tests, assets, license and build/signing scripts.
 
 Version 1.0 renames CleanSlate to Clenzy, selects exactly up to five lowest-memory Dock apps instead of protecting the top five, and removes unused report code and duplicate documentation. Local test runs use temporary fixture files only and never close real user apps. Full native tests and universal packaging run in GitHub Actions.
 
-Mac 1.0.1 candidate: explicit Restart Clenzy action prepares a bounded helper, quits normally, waits for exit, and reopens the exact bundle without triggering cleanup. The app delegate accepts OS quit requests immediately. Native tests exercise only a fixture child and fake opener. Main distributes this tested maintenance fix for the approved Mac platform.
+Mac 1.0.2 candidate: explicit Restart Clenzy action prepares a bounded helper, quits normally, waits for exit, and reopens the exact bundle without triggering cleanup. The app delegate accepts OS quit requests immediately. Native tests exercise only a fixture child and fake opener. Main distributes this tested maintenance fix for the approved Mac platform.
+
+Version 1.0.2 fixes the modal-sheet quit blocker: AppKit checks `preventsApplicationTerminationWhenModal` before consulting the delegate. Settings, review and memory sheets now allow termination. A native lifecycle fixture verifies quitting while a real sheet remains open. Skipped-file counts remain in diagnostics/history, not the normal completion card. Access problems and actual errors remain visible. GitHub Releases also receives the tested DMG.

@@ -30,13 +30,13 @@ struct MainView: View {
             Text(model.browserPrompt ?? "")
         }
         .sheet(isPresented: $model.showDetails) {
-            ScanDetailsView(model: model)
+            ScanDetailsView(model: model).background(QuitFriendlyWindow())
         }
         .sheet(isPresented: $model.showSettings) {
-            SettingsPanelView(model: model).environmentObject(settings)
+            SettingsPanelView(model: model).environmentObject(settings).background(QuitFriendlyWindow())
         }
         .sheet(isPresented: $model.showMemoryApps) {
-            MemoryAppsView(model: model)
+            MemoryAppsView(model: model).background(QuitFriendlyWindow())
         }
     }
 

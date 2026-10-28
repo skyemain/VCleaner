@@ -174,6 +174,8 @@ final class PermissionAndHistoryTests: XCTestCase {
             mode: "manual", dryRun: false, modules: ["temp"], discoveredCount: 2, discoveredBytes: 20,
             deletedCount: 2, deletedBytes: 20, skippedCount: 1, errors: [], duration: 8
         )
+        XCTAssertEqual(CleanRunResult(modules: [], record: record).completionTitle, "Cleaning complete")
+        XCTAssertEqual(record.skippedCount, 1)
         let report = HistoryStore.report(from: [record])
         XCTAssertTrue(report.contains("Space recovered"))
         XCTAssertTrue(report.contains("Files cleaned: 2"))

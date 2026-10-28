@@ -149,7 +149,8 @@ struct CleanRunResult: Equatable, Sendable {
     }
     var completionTitle: String {
         if record.dryRun { return blockedModuleCount > 0 ? "Preview incomplete · access needed" : "Dry run" }
-        return incomplete ? "Clean finished with skipped items" : "Cleaning complete"
+        if !record.errors.isEmpty { return "Cleaning finished · review errors" }
+        return blockedModuleCount > 0 ? "Cleaning finished · access needed" : "Cleaning complete"
     }
     var deletedBytes: Int64 { record.deletedBytes }
     var deletedCount: Int { record.deletedCount }

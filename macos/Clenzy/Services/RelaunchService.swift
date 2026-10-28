@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SwiftUI
 
 struct RelaunchPlan {
     let bundleURL: URL
@@ -42,5 +43,19 @@ enum RelaunchService {
 final class AppLifecycleDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         .terminateNow
+    }
+}
+
+// AppKit checks modal windows before consulting applicationShouldTerminate.
+// These sheets contain no unsaved documents; settings are persisted as edited.
+struct QuitFriendlyWindow: NSViewRepresentable {
+    func makeNSView(context: Context) -> QuitFriendlyWindowView { QuitFriendlyWindowView() }
+    func updateNSView(_ nsView: QuitFriendlyWindowView, context: Context) {}
+}
+
+final class QuitFriendlyWindowView: NSView {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        window?.preventsApplicationTerminationWhenModal = false
     }
 }

@@ -215,6 +215,6 @@ final class AccessRepairTests: XCTestCase {
             dryRun: false, categories: categories, exclusions: [], allowBrowserQuit: false, emptyTrashConfirmed: true))
         XCTAssertTrue(result.incomplete)
         XCTAssertEqual(result.blockedModuleCount, 1)
-        XCTAssertEqual(result.completionTitle, "Clean finished with skipped items")
+        XCTAssertEqual(result.completionTitle, "Cleaning finished · access needed")
     }
 }

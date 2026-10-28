@@ -84,12 +84,12 @@ def main() -> None:
 				CODE_SIGN_ENTITLEMENTS = Clenzy/Resources/Clenzy.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Clenzy/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.skyemain.CleanSlate;
 				PRODUCT_NAME = Clenzy;
 				SWIFT_STRICT_CONCURRENCY = minimal;

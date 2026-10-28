@@ -6,8 +6,8 @@ struct ResultsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: result.incomplete ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                    .foregroundStyle(result.incomplete ? OpsTheme.amber : OpsTheme.mint)
+                Image(systemName: (result.blockedModuleCount > 0 || !result.record.errors.isEmpty) ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+                    .foregroundStyle((result.blockedModuleCount > 0 || !result.record.errors.isEmpty) ? OpsTheme.amber : OpsTheme.mint)
                 Text(result.completionTitle)
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
@@ -21,7 +21,6 @@ struct ResultsView: View {
             }
             HStack(spacing: 12) {
                 Text("\(result.record.deletedCount) files")
-                Text("\(result.record.skippedCount) skipped")
                 Text("\(result.record.errors.count) errors")
                 Spacer(minLength: 0)
                 Text(String(format: "%.1f s", result.record.duration))
