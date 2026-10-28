@@ -2,6 +2,28 @@ import Photos
 import SwiftUI
 
 @MainActor
+protocol PhotoLibraryAccessing {
+    func authorization() async -> PHAuthorizationStatus
+    func delete(_ review: [ReviewItem]) async throws -> Set<String>
+}
+
+@MainActor
+struct PhotoLibraryAccess: PhotoLibraryAccessing {
+    func authorization() async -> PHAuthorizationStatus { await PHPhotoLibrary.requestAuthorization(for: .readWrite) }
+    func delete(_ review: [ReviewItem]) async throws -> Set<String> {
+        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: review.map(\.id), options: nil)
+        var eligible: [PHAsset] = []
+        fetched.enumerateObjects { asset, _, _ in
+            if let old = review.first(where: { $0.id == asset.localIdentifier }), old.modified == asset.modificationDate { eligible.append(asset) }
+        }
+        if !eligible.isEmpty {
+            try await PHPhotoLibrary.shared().performChanges { PHAssetChangeRequest.deleteAssets(eligible as NSArray) }
+        }
+        return Set(eligible.map(\.localIdentifier))
+    }
+}
+
+@MainActor
 final class LibraryModel: NSObject, ObservableObject, PHPhotoLibraryChangeObserver {
     @Published var items: [ReviewItem] = []
     @Published var selected = Set<String>()
@@ -11,10 +33,14 @@ final class LibraryModel: NSObject, ObservableObject, PHPhotoLibraryChangeObserv
     @Published var progress = 0.0
     @Published var storage: DeviceStorage?
     @Published var needsRescan = false
+    private let access: any PhotoLibraryAccessing
     private var worker: Task<Void, Never>?
     private var scanning: Task<PhotoScan, Error>?
 
-    override init() { super.init(); PHPhotoLibrary.shared().register(self); refreshStorage() }
+    init(access: (any PhotoLibraryAccessing)? = nil) {
+        self.access = access ?? PhotoLibraryAccess()
+        super.init(); PHPhotoLibrary.shared().register(self); refreshStorage()
+    }
     deinit { PHPhotoLibrary.shared().unregisterChangeObserver(self); worker?.cancel(); scanning?.cancel() }
     nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
         Task { @MainActor [weak self] in
@@ -28,7 +54,7 @@ final class LibraryModel: NSObject, ObservableObject, PHPhotoLibraryChangeObserv
         guard !busy else { return }
         busy = true; progress = 0; selected.removeAll()
         worker = Task {
-            let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+            let status = await access.authorization()
             limited = status == .limited
             guard !Task.isCancelled else { busy = false; return }
             guard status == .authorized || limited else {
@@ -59,18 +85,8 @@ final class LibraryModel: NSObject, ObservableObject, PHPhotoLibraryChangeObserv
         let review = items.filter { selected.contains($0.id) }
         busy = true
         Task {
-            let fetched = PHAsset.fetchAssets(withLocalIdentifiers: review.map(\.id), options: nil)
-            var eligible: [PHAsset] = []
-            fetched.enumerateObjects { asset, _, _ in
-                if let old = review.first(where: { $0.id == asset.localIdentifier }), old.modified == asset.modificationDate {
-                    eligible.append(asset)
-                }
-            }
-            let ids = Set(eligible.map(\.localIdentifier))
             do {
-                if !eligible.isEmpty {
-                    try await PHPhotoLibrary.shared().performChanges { PHAssetChangeRequest.deleteAssets(eligible as NSArray) }
-                }
+                let ids = try await access.delete(review)
                 items.removeAll { ids.contains($0.id) }; selected.removeAll()
                 message = "\(ids.count) moved to Recently Deleted · \(review.count - ids.count) changed or unavailable items skipped. Space is not necessarily freed yet."
             } catch { message = "Deletion not completed: \(error.localizedDescription)" }
