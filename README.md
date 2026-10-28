@@ -22,6 +22,8 @@ CI restores the permanent release key from encrypted repository secrets CLENZY_K
 
 ## Validation and architecture
 
+[Validated signed build](https://github.com/skyemain/VCleaner/actions/runs/40574537461): four unit tests, four Android 35 instrumentation tests, lint, APK/AAB builds and release signature verification passed. [Download the signed APK](release/Clenzy-1.1-android-candidate.apk). Home and duplicate-review screenshots were captured from the emulator and inspected.
+
 Unit tests cover filtering, metadata guards and all-copy warnings. Android 35 instrumentation covers the real system folder picker, fixture-only deletion, changed/unscanned-file protection, MediaStore duplicate detection, changed-media checks, cancellation and Activity recreation. Test screenshots use generated fixture images, not the user's photos. Additional physical-device/local/cloud provider, permission-denial and system Trash confirmation tests are required before production approval.
 
 MainActivity renders the UI and system prompts. CleanupViewModel retains operations/state. DocumentCleaner handles SAF; MediaCleaner handles MediaStore. ReviewRules/ReviewFile provide pure filters and guards. AndroidX Activity/Lifecycle/RecyclerView are runtime dependencies. Keep this as the only Markdown file. [Android document access](https://developer.android.com/training/data-storage/shared/documents-files) and [media access](https://developer.android.com/training/data-storage/shared/media) are the platform references.
