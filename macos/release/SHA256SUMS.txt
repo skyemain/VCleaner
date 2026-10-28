@@ -1,2 +1,2 @@
-80c43b3bd4b8349c8c1ebb810499ff18d7cafbca4b08d1252f2453e9af5b6f04  Clenzy-1.0.1-mac-universal.dmg
-80c43b3bd4b8349c8c1ebb810499ff18d7cafbca4b08d1252f2453e9af5b6f04  Clenzy-latest-mac-universal.dmg
+2675617257d5418fbc4160c0b0fd5567946bea0dfa3940fb3e8e7ca498e4c7f5  Clenzy-1.0.2-mac-universal.dmg
+2675617257d5418fbc4160c0b0fd5567946bea0dfa3940fb3e8e7ca498e4c7f5  Clenzy-latest-mac-universal.dmg
