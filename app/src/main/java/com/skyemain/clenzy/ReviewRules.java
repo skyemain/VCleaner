@@ -23,6 +23,14 @@ public final class ReviewRules {
         if (category == Category.DUPLICATES) result.sort(Comparator.comparing(ReviewFile::digest).thenComparingLong(ReviewFile::modified).thenComparing(ReviewFile::uri));
         return result;
     }
+    public static Set<String> extraCopies(List<ReviewFile> files) {
+        Set<String> result=new HashSet<>(),seen=new HashSet<>();
+        for(ReviewFile file:files)if(file.digest()!=null&&seen.add(file.digest())) {
+            List<ReviewFile> copies=group(files,file.digest());
+            for(int n=1;n<copies.size();n++)result.add(copies.get(n).uri());
+        }
+        return result;
+    }
     public static long selectedBytes(List<ReviewFile> files,Set<String> selected) {
         Set<String> seen=new HashSet<>();long total=0;
         for(ReviewFile f:files)if(selected.contains(f.uri()) && seen.add(f.uri()) && f.bytes()>0)total+=f.bytes();

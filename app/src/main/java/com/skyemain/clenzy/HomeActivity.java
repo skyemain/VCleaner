@@ -54,26 +54,23 @@ public final class HomeActivity extends AppCompatActivity {
         page.addView(text("Review your files before removing anything personal.",13,muted));
         page.addView(text("YOUR TOOLS",12,muted),spaced());
         LinearLayout row=new LinearLayout(this);tool(row,"▣  Large Files","Find files over 100 MB",()->open("large"));tool(row,"▧  Duplicate Files","Compare exact contents",()->open("duplicates"));page.addView(row);
-        LinearLayout row2=new LinearLayout(this);tool(row2,"↓  Downloads","Choose a folder to review",()->open("downloads"));tool(row2,"▤  Apps","Manage installed apps",this::apps);page.addView(row2);
+        LinearLayout row2=new LinearLayout(this);tool(row2,"↓  Downloads","Review downloaded files",()->open("downloads"));tool(row2,"▤  Apps","Manage installed apps",this::apps);page.addView(row2);
         long last=getSharedPreferences("cleanup",0).getLong("lastClean",0);
         if(last>0)page.addView(text("Last cleanup · "+android.text.format.DateFormat.format("MMM d, h:mm a",last)+"\n"+size(getSharedPreferences("cleanup",0).getLong("lastBytes",0))+" successfully deleted",13,muted),spaced());
-        else page.addView(text("Clenzy helps you review accessible files and remove its own disposable cache. Other apps’ private caches remain protected by Android.",13,muted),spaced());
+        else page.addView(text("One storage permission. Find large files, downloads and duplicate copies. Review your selection, then clean.",13,muted),spaced());
         setContentView(scroll);
     }
-    private void startCleaning(){
-        new AlertDialog.Builder(this).setTitle("Choose what to clean").setMessage("Start with Clenzy’s disposable cache, review photos and videos, or grant access to a folder. Personal files are never selected automatically.")
-        .setPositiveButton("Clenzy cache",(d,w)->open("cache"))
-        .setNeutralButton("Photos & videos",(d,w)->open("photos"))
-        .setNegativeButton("Choose folder",(d,w)->open("folder")).show();
-    }
+    private void startCleaning(){open("storage");}
     private void open(String tool){startActivity(new Intent(this,MainActivity.class).putExtra("tool",tool));}
     private void settings(){
-        new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Theme","Cleanup history","Privacy & access","System storage cleanup","About Clenzy"},(d,w)->{
+        new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Theme","Cleanup history","Privacy & access","System storage cleanup","About Clenzy","Photos & videos","Clenzy cache"},(d,w)->{
             if(w==0)new AlertDialog.Builder(this).setTitle("Theme").setSingleChoiceItems(new String[]{"System","Light","Dark"},getSharedPreferences("cleanup",0).getInt("theme",-1)==-1?0:getSharedPreferences("cleanup",0).getInt("theme",-1)==1?1:2,(dialog,index)->{int mode=index==0?-1:index==1?1:2;getSharedPreferences("cleanup",0).edit().putInt("theme",mode).apply();dialog.dismiss();applyTheme(mode);}).show();
             if(w==1)history();
-            if(w==2)message("Private by design","Files stay on your device. Folder access is limited to locations you choose. Media access can be partial. No advertising, tracking, root, Accessibility or all-files access. Trash may retain storage until emptied in the gallery.");
+            if(w==2)message("Private by design","Files stay on your device. Folder access is limited to locations you choose. Media access can be partial. No advertising, tracking, root or Accessibility service. Shared storage scanning uses optional all-files access. Trash may retain storage until emptied in the gallery.");
             if(w==3){try{startActivity(new Intent(android.os.storage.StorageManager.ACTION_MANAGE_STORAGE));}catch(ActivityNotFoundException e){startActivity(new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS));}}
-            if(w==4)message("Clenzy 1.2.0","Offline storage review and cleanup. Other apps’ private cache cannot be cleared by Clenzy. No speed or battery claims.");
+            if(w==5)open("photos");
+            if(w==6)open("cache");
+            if(w==4)message("Clenzy 1.3.0","Offline storage review and cleanup. Other apps’ private cache cannot be cleared by Clenzy. No speed or battery claims.");
         }).show();
     }
     private void history(){

@@ -87,7 +87,7 @@ jobs:
           if [ "$(git rev-parse origin/android)" != "${{ github.sha }}" ]; then exit 0; fi
           mkdir -p release
           rm -f release/Clenzy-*-android-candidate.apk
-          cp app/build/outputs/apk/release/app-release.apk release/Clenzy-1.2.0-android-candidate.apk
+          cp app/build/outputs/apk/release/app-release.apk release/Clenzy-1.3.0-android-candidate.apk
           (cd release && sha256sum *.apk > SHA256SUMS.txt)
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

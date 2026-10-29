@@ -13,7 +13,7 @@ public final class CleanupViewModel extends AndroidViewModel {
     public List<ReviewFile> files = List.of();
     public final Set<String> selected = new HashSet<>();
     public Uri tree;
-    public boolean busy, media, deep, ownCache, completed, waitingSettings;
+    public boolean busy, media, deep, ownCache, completed, waitingSettings, sharedStorage, downloadsOnly;
     public boolean movedToTrash;
     private List<Uri> trashUris=List.of();
     public long recoveredBytes; public int removedFiles, skippedFiles;
@@ -25,9 +25,11 @@ public final class CleanupViewModel extends AndroidViewModel {
     private final DocumentCleaner documents;
     private final MediaCleaner photos;
     private final OwnCacheCleaner cache;
+    private final SharedStorageCleaner shared;
     private CancellationSignal cancellation;
     public CleanupViewModel(Application app) {
-        super(app); cache=new OwnCacheCleaner(app.getCacheDir()); documents = new DocumentCleaner(app.getContentResolver()); photos = new MediaCleaner(app.getContentResolver());
+        super(app); shared=new SharedStorageCleaner(Environment.getExternalStorageDirectory());
+        shared.progress=count->main.post(()->{status="Scanning shared storage · "+count+" entries checked";changed();}); cache=new OwnCacheCleaner(app.getCacheDir()); documents = new DocumentCleaner(app.getContentResolver()); photos = new MediaCleaner(app.getContentResolver());
         documents.progress=count->main.post(()->{status="Examining authorized files · "+count+" entries inspected";changed();});
         photos.progress=count->main.post(()->{status="Examining authorized media · "+count+" items inspected";changed();});
         String saved = app.getSharedPreferences("cleanup", 0).getString("folder", null);
@@ -35,19 +37,19 @@ public final class CleanupViewModel extends AndroidViewModel {
     }
     public void changed() { updates.setValue(updates.getValue() + 1); }
     public void folder(Uri uri) {
-        tree = uri; media = false; ownCache=false;
+        tree = uri; sharedStorage=false; media = false; ownCache=false;
         getApplication().getSharedPreferences("cleanup", 0).edit().putString("folder", uri.toString()).apply();
         scan(false);
     }
     public void scan(boolean deepScan) {
         if (busy) return;
-        if (!ownCache && !media && tree == null) { status = "Choose a folder first."; changed(); return; }
+        if (!sharedStorage && !ownCache && !media && tree == null) { status = "Choose a folder first."; changed(); return; }
         completed=false;movedToTrash=false; deep = deepScan; busy = true; selected.clear(); files = List.of(); cancellation = new CancellationSignal();
-        status = "Scanning " + (ownCache ? "Clenzy’s disposable cache" : media ? "authorized photos and videos" : "chosen folder") + " · " + (deep ? "deep scan, up to 4 GiB read" : "up to 512 MiB read") + "."; changed();
+        status = "Scanning " + (sharedStorage ? "shared storage" : ownCache ? "Clenzy’s disposable cache" : media ? "authorized photos and videos" : "chosen folder") + " · " + (deep ? "deep scan, up to 4 GiB read" : "up to 512 MiB read") + "."; changed();
         worker.execute(() -> {
             try {
                 List<ReviewFile> result; int hashed, notHashed; boolean truncated; int skipped = 0;
-                if(ownCache) {result=cache.scan(cancellation);hashed=0;notHashed=result.size();truncated=result.size()>=5000;} else if (media) {
+                if(sharedStorage) {var scan=shared.scan(cancellation,category==ReviewRules.Category.DUPLICATES||deep,downloadsOnly);result=scan.files();hashed=scan.hashed();notHashed=scan.notHashed();truncated=scan.truncated();} else if(ownCache) {result=cache.scan(cancellation);hashed=0;notHashed=result.size();truncated=result.size()>=5000;} else if (media) {
                     var scan = photos.scan(cancellation, deep); result = scan.files(); hashed = scan.hashed(); notHashed = scan.notHashed(); truncated = scan.truncated();
                 } else {
                     var scan = documents.scan(tree, cancellation, deep); result = scan.files(); hashed = scan.hashed(); notHashed = scan.notHashed(); truncated = scan.truncated(); skipped = scan.skipped();
@@ -74,7 +76,7 @@ public final class CleanupViewModel extends AndroidViewModel {
                     PendingIntent request = MediaStore.createTrashRequest(getApplication().getContentResolver(), eligible, true);
                     main.post(() -> { trashUris=List.copyOf(eligible);pendingTrash = request; status = "Review Android's Trash confirmation. "+(chosen.size()-eligible.size())+" changed/unavailable items skipped."; busy = false; changed(); });
                 } else {
-                    var result = ownCache ? cache.delete(chosen,cancellation) : documents.delete(chosen, cancellation);
+                    var result = sharedStorage ? shared.delete(chosen,cancellation) : ownCache ? cache.delete(chosen,cancellation) : documents.delete(chosen, cancellation);
                     main.post(() -> { completed=true; recoveredBytes=result.bytes(); removedFiles=result.deleted(); skippedFiles=result.skipped();
                         recordHistory(result.bytes(),result.deleted(),result.skipped());
                         status = "Deleted "+result.deleted()+" files · "+result.bytes()+" source bytes · "+result.skipped()+" skipped. Device free space may differ."; files = List.of(); selected.clear(); busy = false; changed(); });

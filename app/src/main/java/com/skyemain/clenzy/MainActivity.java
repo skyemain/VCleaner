@@ -28,6 +28,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
     private ProgressBar usage, progress;
     private ReviewAdapter adapter;
     private boolean launchingTrash;
+    private boolean waitingStorage;
     private boolean sortByName;
     private boolean sortByDate;
     private final java.util.concurrent.ExecutorService thumbnails = java.util.concurrent.Executors.newFixedThreadPool(2);
@@ -70,11 +71,13 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
         RecyclerView list = new RecyclerView(this); list.setLayoutManager(new LinearLayoutManager(this)); adapter = new ReviewAdapter(); list.setAdapter(adapter);
         page.addView(list, new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout selectionActions=new LinearLayout(this);
-        selectionActions.addView(button("Select safe items",()->{if(model.ownCache && !model.busy) {for(ReviewFile f:model.files) model.selected.add(f.uri());render();}else new AlertDialog.Builder(this).setMessage("Personal files require individual selection. Only Clenzy’s own scanned cache is eligible for Select safe items.").setPositiveButton("Done",null).show();}));
-        selectionActions.addView(button("Deselect all",()->{if(!model.busy){model.selected.clear();render();}}));page.addView(selectionActions);
+        selectionActions.addView(button("Select all shown",()->{if(!model.busy){for(ReviewFile f:ReviewRules.filter(model.files,model.category,System.currentTimeMillis()))model.selected.add(f.uri());render();}}));
+        selectionActions.addView(button("Select extra copies",()->{if(!model.busy){model.selected.clear();model.selected.addAll(ReviewRules.extraCopies(model.files));render();}}));
+        selectionActions.addView(button("Deselect all",()->{if(!model.busy){model.selected.clear();render();}}));HorizontalScrollView bulk=new HorizontalScrollView(this);bulk.addView(selectionActions);page.addView(bulk);
         selection = label("", 12, muted); page.addView(selection);
         remove = button("CLEAN SELECTED", this::confirmDelete); page.addView(remove);
         TextView help = label("Private by design · only files you authorize", 11, muted); help.setGravity(Gravity.CENTER); help.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("Your files, your choice").setMessage("Clenzy cannot clear other apps' private caches or RAM. Photos use Android's Trash confirmation on Android 11+. Folder deletion may be permanent and may affect cloud copies. Age alone never means junk.").setPositiveButton("Done", null).setNeutralButton("Permissions", (d,w) -> startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:"+getPackageName())))).show()); page.addView(help);
+        waitingStorage=state!=null && state.getBoolean("waitingStorage",false);
         launchingTrash = state != null && state.getBoolean("trashLaunched", false);
         setContentView(page);
         model.updates.observe(this, ignored -> render());
@@ -85,7 +88,8 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
             picker.setSelection(model.category.ordinal());
             if(state==null) {
                 if(tool.equals("cache")) {model.ownCache=true;model.media=false;model.scan(false);}
-                else if(tool.equals("folder")||tool.equals("downloads")) explainFolder();
+                else if(tool.equals("folder")) explainFolder();
+                else if(!tool.equals("photos")) storageAccess();
                 else if(model.tree!=null && !tool.equals("photos")) {model.ownCache=false;model.media=false;model.scan(false);}
                 else new AlertDialog.Builder(this).setTitle("Allow Clenzy to find files you can review").setMessage("Photos access covers only authorized images and videos. You can choose a folder instead for documents and downloads. Nothing personal is selected automatically.").setPositiveButton("Continue",(d,w)->mediaAccess()).setNeutralButton("Choose folder",(d,w)->chooseFolder()).setNegativeButton("Back",(d,w)->finish()).show();
             }
@@ -93,11 +97,32 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
     }
     @Override protected void onResume() {
         super.onResume();
+        if(model!=null && waitingStorage) {
+            waitingStorage=false;
+            if(Build.VERSION.SDK_INT>=30 && Environment.isExternalStorageManager())startStorageScan();
+            else {model.status="Storage access is off. Go back and tap the tool again to enable it, or use Photos & videos from Settings.";model.changed();}
+        }
         if(model!=null && model.waitingSettings) {
             model.waitingSettings=false;
             boolean allowed=Build.VERSION.SDK_INT>=33 ? checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES)==PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.READ_MEDIA_VIDEO)==PackageManager.PERMISSION_GRANTED || (Build.VERSION.SDK_INT>=34 && checkSelfPermission(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)==PackageManager.PERMISSION_GRANTED) : checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)==PackageManager.PERMISSION_GRANTED;
             if(allowed){model.ownCache=false;model.media=true;model.scan(false);}else{model.status="Access is still limited. Go back and choose a folder to continue.";model.changed();}
         }
+    }
+    private void startStorageScan(){
+        model.sharedStorage=true;model.ownCache=false;model.media=false;
+        model.downloadsOnly="downloads".equals(getIntent().getStringExtra("tool"));model.scan(false);
+    }
+    private void storageAccess(){
+        if(Build.VERSION.SDK_INT>=30){
+            if(Environment.isExternalStorageManager()){startStorageScan();return;}
+            new AlertDialog.Builder(this).setTitle("Scan your storage automatically")
+                .setMessage("Allow Clenzy to manage shared files once. It can then find large files, Downloads and exact duplicates without asking you to pick folders. Nothing is deleted until you select it and confirm. Other apps’ private data stays protected.")
+                .setPositiveButton("Allow storage access",(d,w)->{waitingStorage=true;try{startActivity(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,Uri.parse("package:"+getPackageName())));}catch(ActivityNotFoundException e){startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));}})
+                .setNegativeButton("Not now",(d,w)->finish()).show();
+        }else if(Build.VERSION.SDK_INT<=28){
+            if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)==PackageManager.PERMISSION_GRANTED)startStorageScan();
+            else requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.WRITE_EXTERNAL_STORAGE},21);
+        }else{model.status="Android 10 uses media access for this scan. Full shared-file scanning requires Android 11 or later.";mediaAccess();}
     }
     private void explainFolder() {new AlertDialog.Builder(this).setTitle("Choose a folder to review").setMessage("Android grants access only to the folder you select. On newer Android versions, choose a supported subfolder or document provider. Clenzy cannot access Android/data or other apps’ private storage.").setPositiveButton("Continue",(d,w)->chooseFolder()).setNegativeButton("Back",(d,w)->finish()).show();}
     private void render() {
@@ -152,6 +177,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
     }
     @Override public void onRequestPermissionsResult(int request, String[] permissions, int[] grants) {
         super.onRequestPermissionsResult(request, permissions, grants);
+        if(request==21){if(grants.length>0 && grants[grants.length-1]==PackageManager.PERMISSION_GRANTED)startStorageScan();else{model.status="Storage permission denied. No files changed.";model.changed();}return;}
         if (request == 20) {
             boolean any = false; for (int g : grants) if (g == PackageManager.PERMISSION_GRANTED) any = true;
             if (any) { model.ownCache=false; model.media = true; model.scan(false); }
@@ -180,10 +206,14 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
     }
     private void preview(ReviewFile file) {
         if(model.ownCache) {new AlertDialog.Builder(this).setTitle("Clenzy cache").setMessage("This is an old file inside Clenzy’s own disposable cache. Private cache files are not shared with other apps for preview.").setPositiveButton("Done",null).show();return;}
-        try { startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(file.uri()), getContentResolver().getType(Uri.parse(file.uri()))).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)); }
+        try {
+            Uri uri=Uri.parse(file.uri());
+            if(model.sharedStorage)uri=androidx.core.content.FileProvider.getUriForFile(this,getPackageName()+".files",new java.io.File(java.net.URI.create(file.uri())));
+            String type=getContentResolver().getType(uri);
+            startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(uri,type==null?"*/*":type).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)); }
         catch (ActivityNotFoundException | SecurityException e) { new AlertDialog.Builder(this).setMessage("No preview app is available for this file.").setPositiveButton("Done", null).show(); }
     }
-    @Override protected void onSaveInstanceState(Bundle out) { out.putBoolean("trashLaunched", launchingTrash); super.onSaveInstanceState(out); }
+    @Override protected void onSaveInstanceState(Bundle out) { out.putBoolean("trashLaunched", launchingTrash);out.putBoolean("waitingStorage",waitingStorage); super.onSaveInstanceState(out); }
     @Override protected void onDestroy() { thumbnails.shutdownNow(); super.onDestroy(); }
     private String bytes(long n) { return n < 0 ? "Unknown size" : Formatter.formatFileSize(this,n); }
     private void refreshMetrics() {
@@ -212,7 +242,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
                     runOnUiThread(() -> { if (!isDestroyed() && f.uri().equals(h.thumbnail.getTag())) h.thumbnail.setImageBitmap(bitmap); });
                 } catch (Exception ignored) { }
             });
-            h.name.setText(f.name()); h.detail.setText(bytes(f.bytes())+" · "+(f.modified()>0?android.text.format.DateFormat.format("MMM d, yyyy",f.modified()):"Date unavailable")+"\n"+(model.ownCache?"Clenzy cache":model.media?"Authorized photos & videos":"Selected folder"));
+            h.name.setText(f.name()); h.detail.setText(bytes(f.bytes())+" · "+(f.modified()>0?android.text.format.DateFormat.format("MMM d, yyyy",f.modified()):"Date unavailable")+"\n"+(model.ownCache?"Clenzy cache":model.media?"Authorized photos & videos":model.sharedStorage?"Shared storage":"Selected folder"));
             h.group.setVisibility(View.VISIBLE);
             h.group.setText(model.ownCache?"SAFE CLEANUP · CLENZY CACHE":"REVIEW BEFORE DELETING");
             if (model.category == ReviewRules.Category.DUPLICATES) {

@@ -17,7 +17,7 @@ public class HomeFlowTest {
   try(var scenario=ActivityScenario.launch(HomeActivity.class)){
    scenario.onActivity(activity->{TextView start=find(activity.getWindow().getDecorView(),"START CLEANING");assertNotNull(start);start.performClick();});
    UiDevice device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
-   assertTrue(device.wait(Until.hasObject(By.text("Choose what to clean")),5000));device.pressBack();
+   assertTrue(device.wait(Until.hasObject(By.text("Scan your storage automatically")),5000));device.pressBack();
   }
  }
  @Test public void guided_cache_cleanup_reaches_verified_results() throws Exception {
@@ -26,10 +26,9 @@ public class HomeFlowTest {
   try {
    try(var output=new FileOutputStream(fixture)){output.write(new byte[256]);}
    assertTrue(fixture.setLastModified(System.currentTimeMillis()-172800000L));
-   try(var scenario=ActivityScenario.launch(HomeActivity.class)){
+   android.content.Intent intent=new android.content.Intent(context,MainActivity.class).putExtra("tool","cache");
+   try(var scenario=ActivityScenario.<MainActivity>launch(intent)){
     UiDevice device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
-    var start=device.wait(Until.findObject(By.text("START CLEANING")),10000);assertNotNull(start);start.click();
-    var cache=device.wait(Until.findObject(By.text(java.util.regex.Pattern.compile("(?i)Clenzy cache"))),5000);assertNotNull(cache);cache.click();
     var clean=device.wait(Until.findObject(By.text(java.util.regex.Pattern.compile("CLEAN SELECTED.*")).enabled(true)),10000);assertNotNull(clean);
     device.waitForIdle();clean.click();
     var confirm=device.wait(Until.findObject(By.text(java.util.regex.Pattern.compile("(?i)Continue"))),5000);assertNotNull(confirm);confirm.click();
