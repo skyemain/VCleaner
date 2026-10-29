@@ -1,0 +1,30 @@
+name: Windows 11 validation
+on:
+  push:
+    branches: [windows]
+    paths:
+      - 'tests/Windows11Maintenance.Tests.ps1'
+      - '.github/workflows/windows11-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Test production maintenance module in Windows PowerShell 5.1
+        shell: powershell
+        run: ./tests/Windows11Maintenance.Tests.ps1
+      - name: Build and run full regression suite
+        shell: pwsh
+        run: ./build/publish.ps1 -Release
+      - name: Exercise actual WPF scan, apply and restore with fixtures
+        shell: pwsh
+        run: |
+          $app = Start-Process -FilePath 'artifacts/release/Clenzy-1.5.0-win-x64.exe' -ArgumentList '--windows11-smoke' -PassThru
+          if (-not $app.WaitForExit(60000)) { $app.Kill(); throw 'UI smoke timed out' }
+          if ($app.ExitCode -ne 0) { throw 'UI smoke failed' }
