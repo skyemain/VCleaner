@@ -129,7 +129,7 @@ public sealed class SandboxOptimizationBackend : IOptimizationBackend
     public Task<OptimizationAudit> AuditAsync(CancellationToken token) => Task.FromResult(new OptimizationAudit("SANDBOX PREVIEW · generated Windows 11 fixtures", true, false,
         OptimizationCatalog.Actions.Select(x => new OptimizationFinding(x, values[x.Id].Value ?? "Absent", true, State: values[x.Id])).ToArray(), "Generated fixtures only. No host hardware, applications, security or performance was inspected. No Windows settings are modified."));
     public Task<OptimizationState> ReadAsync(string id, CancellationToken token) { OptimizationCatalog.Get(id); token.ThrowIfCancellationRequested(); return Task.FromResult(values[id]); }
-    public Task<OptimizationState> DesiredAsync(string id, CancellationToken token) => Task.FromResult(OptimizationCatalog.Get(id).Irreversible ? new OptimizationState(false, null, "Package") : new OptimizationState(true, id is "extensions" or "hidden" ? "1" : "0", "DWord"));
+    public Task<OptimizationState> DesiredAsync(string id, CancellationToken token) => Task.FromResult(OptimizationCatalog.Get(id).Irreversible ? new OptimizationState(false, null, "Package") : new OptimizationState(true, id == "hidden" ? "1" : "0", "DWord"));
     public Task WriteAsync(string id, OptimizationState state, CancellationToken token) { OptimizationCatalog.Get(id); token.ThrowIfCancellationRequested(); values[id] = state; return Task.CompletedTask; }
     public Task<bool> VerifyRecoveryPointAsync(CancellationToken token) => Task.FromResult(true);
 }

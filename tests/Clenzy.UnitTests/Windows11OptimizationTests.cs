@@ -65,6 +65,24 @@ public sealed class Windows11OptimizationTests : IDisposable
         var b = new SandboxOptimizationBackend(); var e = new OptimizationEngine(b, root);
         await Assert.ThrowsAsync<InvalidOperationException>(() => e.RestoreAsync("../other", default));
     }
+    [Fact] public async Task Failed_recovery_blocks_package_removal_before_any_write()
+    {
+        var b = new RecoveryFailureBackend(); var e = new OptimizationEngine(b, root); var a = await b.AuditAsync(default);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => e.ApplyAsync(a, new[]{"Microsoft.Copilot"}, OptimizationProfile.Advanced, true, true, default));
+        Assert.True((await b.ReadAsync("Microsoft.Copilot", default)).Exists);
+        Assert.Equal(0, b.Writes); Assert.Single(e.Transactions());
+    }
+    private sealed class RecoveryFailureBackend : IOptimizationBackend
+    {
+        private readonly SandboxOptimizationBackend inner = new();
+        public int Writes { get; private set; }
+        public bool Sandbox => true;
+        public Task<OptimizationAudit> AuditAsync(CancellationToken token) => inner.AuditAsync(token);
+        public Task<OptimizationState> ReadAsync(string id, CancellationToken token) => inner.ReadAsync(id,token);
+        public Task<OptimizationState> DesiredAsync(string id, CancellationToken token) => inner.DesiredAsync(id,token);
+        public Task WriteAsync(string id, OptimizationState state, CancellationToken token) { Writes++; return inner.WriteAsync(id,state,token); }
+        public Task<bool> VerifyRecoveryPointAsync(CancellationToken token) => Task.FromResult(false);
+    }
     [Fact] public void Essential_components_are_not_removal_candidates()
     {
         foreach (var name in new[]{"Microsoft.WindowsStore","Microsoft.DesktopAppInstaller","Microsoft.SecHealthUI","Microsoft.GamingServices","Microsoft.WindowsTerminal","Microsoft.MicrosoftEdge.Stable"})

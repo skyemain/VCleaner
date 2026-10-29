@@ -40,7 +40,7 @@ function Invoke-ClenzyWindows11 {
             if ($p.Count -gt 1) { throw 'Multiple package registrations require manual review.' }
             if ($p.Count -eq 0) { return @{ Exists=$false; FullName=$null; Blocked=$false; Reason='Not installed' } }
             $p = $p[0]
-            $dependents = @($all | Where-Object { @($_.Dependencies | Where-Object { $_.PackageFullName -eq $p.PackageFullName }).Count -gt 0 })
+            $dependents = @($all | Where-Object { @($_.Dependencies | Where-Object { ($_.PackageFullName -eq $p.PackageFullName) -or ([string]$_ -ceq $p.PackageFullName) }).Count -gt 0 })
             $running = @(Get-Process | Where-Object { try { $_.Path -and $p.InstallLocation -and $_.Path.StartsWith($p.InstallLocation + '\', [StringComparison]::OrdinalIgnoreCase) } catch { $false } })
             $blocked = $p.NonRemovable -or $p.IsFramework -or $p.IsResourcePackage -or $dependents.Count -gt 0 -or $running.Count -gt 0
             return @{ Exists=$true; FullName=$p.PackageFullName; Blocked=[bool]$blocked; Reason= $(if ($blocked) { 'Required, non-removable, depended on, or currently running; preserved.' } else { 'Installed for this user; usage history is unknown. Review before uninstalling.' }) }
