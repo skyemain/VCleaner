@@ -261,7 +261,6 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource HeroHoverBrush}" />
                             <Setter TargetName="Ring" Property="StrokeThickness" Value="3" />
-                            <Setter TargetName="Halo" Property="Opacity" Value="0.6" />
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
@@ -287,7 +286,6 @@
                             <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
                             <Setter Property="Cursor" Value="Arrow" />
                             <Setter TargetName="Ring" Property="Opacity" Value="0.35" />
-                            <Setter TargetName="Halo" Property="Opacity" Value="0.2" />
                             <Setter TargetName="Spin" Property="Visibility" Value="Visible" />
                             <Setter TargetName="Sparkle" Property="Opacity" Value="0.4" />
                             <Trigger.EnterActions>
