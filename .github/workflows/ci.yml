@@ -34,7 +34,7 @@ jobs:
       - name: Exercise sandbox UI without host changes
         shell: pwsh
         run: |
-          $app = Start-Process -FilePath 'artifacts/release/Clenzy-1.9.3-win-x64.exe' -ArgumentList '--windows11-smoke' -PassThru
+          $app = Start-Process -FilePath 'artifacts/release/Clenzy-1.0.0-win-x64.exe' -ArgumentList '--windows11-smoke' -PassThru
           if (-not $app.WaitForExit(60000)) { $app.Kill(); throw 'UI smoke test timed out' }
           if ($app.ExitCode -ne 0) { Get-Content "$env:TEMP/Clenzy-Windows11-smoke-error.txt" -ErrorAction SilentlyContinue; throw 'UI smoke test failed' }
           New-Item -ItemType Directory -Force screenshots | Out-Null
@@ -70,5 +70,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create windows-v1.9.3 release/Clenzy-1.9.3-win-x64.exe release/SHA256SUMS.txt release/THIRD-PARTY-NOTICES.txt --target '${{ github.sha }}' --title 'Clenzy 1.9.3 for Windows' --prerelease --latest=false --notes 'Expands Windows 11 Cleanup with a shared 79-action catalog: 47 optional apps, advertising/privacy preferences, Recall policy, selective startup and guarded optional services. Reuses reviewed disk cleanup, preserves security and gaming dependencies, and records verified changes and rollback. Windows x64 unsigned candidate; live Windows 11 validation remains outstanding.'
+          gh release create windows-v1.0.0 release/Clenzy-1.0.0-win-x64.exe release/SHA256SUMS.txt release/THIRD-PARTY-NOTICES.txt --target '${{ github.sha }}' --title 'Clenzy 1.0.0 for Windows' --prerelease --latest=false --notes 'Expands Windows 11 Cleanup with a shared 79-action catalog: 47 optional apps, advertising/privacy preferences, Recall policy, selective startup and guarded optional services. Reuses reviewed disk cleanup, preserves security and gaming dependencies, and records verified changes and rollback. Windows x64 unsigned candidate; live Windows 11 validation remains outstanding.'
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

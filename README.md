@@ -56,3 +56,7 @@ The Mac host has not been modified. CI exercises fixture roundtrips, interrupted
 ## Debloat flow in 1.9.0
 
 Opening Debloat starts an Advanced live scan automatically. Only available changes are shown, initially unselected. Apply creates and verifies a new restore point before all selected operations, including reversible settings. If recovery creation fails, nothing is applied. Exact settings backups remain on disk. The inline final report identifies verified changes, unselected items and failed or unattempted operations. App removal and Recall deletion retain explicit destructive consent; those data cannot be restored from the settings backup. The page no longer exposes profile selectors, tabs, scan/filter controls or maintenance/report toolbars. Back returns home when idle. Closing during a write is blocked to protect the transaction. App launches elevated via its manifest.
+
+## Windows Version 1 (1.0.0)
+
+Version numbering restarts at 1.0.0 with fixes through 1.9.3 retained. Installing replaces the Clenzy executable and retargets its registered startup task. It retires the recognized per-user CleanSlate executable, matching Run/startup task/Start menu registration and uninstall metadata, preserving old data and backups. Running a downloaded executable without accepting installation does not replace installed apps. Loose downloaded copies remain. Same-version launches compare binary hashes before redirecting to the installed copy. Legacy migration is covered by command-matching tests; end-to-end migration on a Windows 11 PC remains unverified.

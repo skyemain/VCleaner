@@ -180,6 +180,8 @@ public sealed class InstallService
             _log.Warning("The startup entry could not be pointed at the new version: " + ex.Message);
         }
 
+        if (_startupTask?.IsRegistered == true) _startupTask.Register(target);
+
         _log.Info(previous is null ? $"Installed Clenzy {version}." : $"Replaced Clenzy {previous.Version} with {version}.");
         return new InstallResult(previous is null ? InstallResultKind.Installed : InstallResultKind.Updated, target, previous?.Version);
     }

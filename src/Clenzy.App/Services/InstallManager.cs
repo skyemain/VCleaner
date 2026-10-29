@@ -46,6 +46,7 @@ public sealed class InstallManager : IInstallManager
             }
 
             var trustNote = trustCertificate ? TryTrust() : string.Empty;
+            Clenzy.Windows.LegacyInstallation.Retire();
             Launch(result.ExecutablePath);
             var verb = result.Kind == InstallResultKind.Updated ? $"Replaced version {result.PreviousVersion}." : "Installed.";
             return new InstallActionResult(true, verb + trustNote + " Restarting from the installed copy...", true);

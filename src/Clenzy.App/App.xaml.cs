@@ -267,7 +267,8 @@ public partial class App : Application
             var certificate = new WindowsCertificateTrust(new ElevationService(), Assembly.GetExecutingAssembly(), path);
             var manager = new InstallManager(service, current, certificate);
 
-            if (installed is not null && string.Equals(installed.Version, current, StringComparison.OrdinalIgnoreCase))
+            if (installed is not null && string.Equals(installed.Version, current, StringComparison.OrdinalIgnoreCase) &&
+                System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)).SequenceEqual(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(installed.ExecutablePath))))
             {
                 try
                 {
@@ -282,7 +283,7 @@ public partial class App : Application
             }
 
             var message = installed is null
-                ? $"Install Clenzy {current}?\n\nIt is copied to your user profile and added to the Start menu. No administrator rights are needed, and you can uninstall it from Windows Settings.{TrustLine(certificate)}\n\nYes installs and opens it.\nNo runs this copy once without installing."
+                ? $"Install Clenzy {current}?\n\nIt is copied to your user profile and added to the Start menu. Windows requests administrator permission at launch. Setup replaces Clenzy and retires the recognized legacy CleanSlate installation; settings and recovery backups are kept. You can uninstall from Windows Settings.{TrustLine(certificate)}\n\nYes installs and opens it.\nNo runs this copy once without installing."
                 : $"Clenzy {installed.Version} is installed. Replace it with {current}?\n\nThe old version is closed and removed. Your settings and history are kept.{TrustLine(certificate)}\n\nYes replaces it and opens the new version.\nNo runs this copy once without installing.";
             var choice = MessageBox.Show(message, "Clenzy setup", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (choice != MessageBoxResult.Yes)
