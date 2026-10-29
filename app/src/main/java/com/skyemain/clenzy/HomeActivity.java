@@ -70,11 +70,20 @@ public final class HomeActivity extends AppCompatActivity {
     private void settings(){
         new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Theme","Cleanup history","Privacy & access","System storage cleanup","About Clenzy"},(d,w)->{
             if(w==0)new AlertDialog.Builder(this).setTitle("Theme").setSingleChoiceItems(new String[]{"System","Light","Dark"},getSharedPreferences("cleanup",0).getInt("theme",-1)==-1?0:getSharedPreferences("cleanup",0).getInt("theme",-1)==1?1:2,(dialog,index)->{int mode=index==0?-1:index==1?1:2;getSharedPreferences("cleanup",0).edit().putInt("theme",mode).apply();dialog.dismiss();applyTheme(mode);}).show();
-            if(w==1){long last=getSharedPreferences("cleanup",0).getLong("lastClean",0);message("Last cleanup",last==0?"No completed cleanup yet.":android.text.format.DateFormat.format("MMM d, yyyy h:mm a",last)+"\n"+size(getSharedPreferences("cleanup",0).getLong("lastBytes",0))+" deleted from selected files.");}
+            if(w==1)history();
             if(w==2)message("Private by design","Files stay on your device. Folder access is limited to locations you choose. Media access can be partial. No advertising, tracking, root, Accessibility or all-files access. Trash may retain storage until emptied in the gallery.");
             if(w==3){try{startActivity(new Intent(android.os.storage.StorageManager.ACTION_MANAGE_STORAGE));}catch(ActivityNotFoundException e){startActivity(new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS));}}
             if(w==4)message("Clenzy 1.2.0","Offline storage review and cleanup. Other apps’ private cache cannot be cleared by Clenzy. No speed or battery claims.");
         }).show();
+    }
+    private void history(){
+        try {
+            org.json.JSONArray entries=new org.json.JSONArray(getSharedPreferences("cleanup",0).getString("history","[]"));
+            if(entries.length()==0){message("Cleanup history","No completed cleanup yet.");return;}
+            String[] rows=new String[entries.length()];
+            for(int n=0;n<entries.length();n++){var entry=entries.getJSONObject(n);rows[n]=android.text.format.DateFormat.format("MMM d, h:mm a",entry.getLong("time"))+" · "+size(entry.getLong("bytes"))+" · "+entry.getInt("files")+" files";}
+            new AlertDialog.Builder(this).setTitle("Cleanup history · on this device").setItems(rows,(d,w)->{try{var item=entries.getJSONObject(w);message("Cleanup details",rows[w]+"\n"+item.getInt("skipped")+" skipped or unavailable. Source bytes deleted may differ from device free-space changes.");}catch(org.json.JSONException e){message("Unavailable","This history entry could not be read.");}}).setPositiveButton("Done",null).show();
+        }catch(org.json.JSONException e){message("History unavailable","Saved cleanup history could not be read.");}
     }
     private void apps(){
         worker.execute(()->{

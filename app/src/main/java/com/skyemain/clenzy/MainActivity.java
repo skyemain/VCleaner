@@ -29,6 +29,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
     private ReviewAdapter adapter;
     private boolean launchingTrash;
     private boolean sortByName;
+    private boolean sortByDate;
     private final java.util.concurrent.ExecutorService thumbnails = java.util.concurrent.Executors.newFixedThreadPool(2);
     private int dp(float value) { return Math.round(value * getResources().getDisplayMetrics().density); }
 
@@ -64,7 +65,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
             public void onNothingSelected(AdapterView<?> p) {}
         });
         LinearLayout filters = new LinearLayout(this); filters.addView(picker, new LinearLayout.LayoutParams(0,-2,1));
-        Button sort = button("Sort", () -> new AlertDialog.Builder(this).setTitle("Sort files").setItems(new String[]{"Largest first", "Name"}, (d,which) -> { sortByName = which == 1; render(); }).show()); filters.addView(sort); page.addView(filters);
+        Button sort = button("Sort", () -> new AlertDialog.Builder(this).setTitle("Sort files").setItems(new String[]{"Largest first", "Name", "Newest first"}, (d,which) -> { sortByName = which == 1; sortByDate=which==2; render(); }).show()); filters.addView(sort); page.addView(filters);
         RecyclerView list = new RecyclerView(this); list.setLayoutManager(new LinearLayoutManager(this)); adapter = new ReviewAdapter(); list.setAdapter(adapter);
         page.addView(list, new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout selectionActions=new LinearLayout(this);
@@ -105,6 +106,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
         for (Button b : List.of(choose, photos, scan, deep)) b.setEnabled(!model.busy && model.pendingTrash == null);
         List<ReviewFile> visible = ReviewRules.filter(model.files, model.category, System.currentTimeMillis());
         if (sortByName && model.category != ReviewRules.Category.DUPLICATES) visible.sort(Comparator.comparing(ReviewFile::name, String.CASE_INSENSITIVE_ORDER));
+        if(sortByDate && model.category!=ReviewRules.Category.DUPLICATES)visible.sort(Comparator.comparingLong(ReviewFile::modified).reversed());
         adapter.submit(visible);
         updateSelection(); refreshMetrics();
         if (model.pendingTrash != null && !launchingTrash) {
@@ -114,7 +116,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
         }
     }
     private void updateSelection() {
-        long bytes = 0; for (ReviewFile f : model.chosen()) if (f.bytes() >= 0) bytes += f.bytes();
+        long bytes = ReviewRules.selectedBytes(model.files,model.selected);
         selection.setText(model.selected.isEmpty() ? "Nothing selected · tap Preview to inspect a file" : model.selected.size()+" selected · "+bytes(bytes)+" source size");
         remove.setText("CLEAN SELECTED — "+bytes(bytes)); remove.setEnabled(!model.busy && model.pendingTrash == null && !model.selected.isEmpty());
     }
@@ -208,8 +210,9 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
                     runOnUiThread(() -> { if (!isDestroyed() && f.uri().equals(h.thumbnail.getTag())) h.thumbnail.setImageBitmap(bitmap); });
                 } catch (Exception ignored) { }
             });
-            h.name.setText(f.name()); h.detail.setText(bytes(f.bytes()));
-            h.group.setVisibility(model.category == ReviewRules.Category.DUPLICATES ? View.VISIBLE : View.GONE);
+            h.name.setText(f.name()); h.detail.setText(bytes(f.bytes())+" · "+(f.modified()>0?android.text.format.DateFormat.format("MMM d, yyyy",f.modified()):"Date unavailable")+"\n"+(model.ownCache?"Clenzy cache":model.media?"Authorized photos & videos":"Selected folder"));
+            h.group.setVisibility(View.VISIBLE);
+            h.group.setText(model.ownCache?"SAFE CLEANUP · CLENZY CACHE":"REVIEW BEFORE DELETING");
             if (model.category == ReviewRules.Category.DUPLICATES) {
                 List<ReviewFile> group=ReviewRules.group(model.files,f.digest());
                 h.group.setText("MATCHING COPIES · "+group.size()+(group.get(0).uri().equals(f.uri()) ? " · Suggested keep" : ""));

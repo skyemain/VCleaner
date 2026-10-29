@@ -68,6 +68,8 @@ jobs:
             mkdir -p screenshots
             adb exec-out screencap -p > screenshots/Clenzy-Android-home.png
             adb pull /sdcard/Android/data/com.skyemain.clenzy/files/Clenzy-Android-review.png screenshots/Clenzy-Android-review.png
+            adb pull /sdcard/Android/data/com.skyemain.clenzy/files/Clenzy-Android-light.png screenshots/
+            adb pull /sdcard/Android/data/com.skyemain.clenzy/files/Clenzy-Android-dark.png screenshots/
       - uses: actions/upload-artifact@v4
         with:
           name: Clenzy-Android-screenshots
