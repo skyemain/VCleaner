@@ -1,1 +1,1 @@
-9f45a5b7ca0542ea954fe3ee426e840f9603f109ff5ea01db2184a023f247cfd  Clenzy-1.5.0-win-x64.exe
+2e90a1b91ed789949dab2a9d02dd22dfbc158bc7ccdccc94ff9be0c74e9e5314  Clenzy-1.6.0-win-x64.exe
