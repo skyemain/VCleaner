@@ -311,7 +311,8 @@ public static class SessionRecorder
             RegistryIssuesRepaired = registryRepaired
         };
 
-        var cleanedByCategory = clean?.Modules.SelectMany(m => m.Categories).ToDictionary(c => (c.ModuleId, c.Category))
+        var cleanedByCategory = clean?.Modules.SelectMany(m => m.Categories).GroupBy(c => (c.ModuleId, c.Category)).Select(g => new CategoryResult(g.Key.ModuleId, g.First().Group, g.Key.Category,
+                g.Sum(c => c.Cleaned), g.Sum(c => c.Skipped), g.Sum(c => c.Errors), g.Sum(c => c.EstimatedBytes), g.Sum(c => c.RecoveredBytes))).ToDictionary(c => (c.ModuleId, c.Category))
                                 ?? new Dictionary<(string, string), CategoryResult>();
 
         foreach (var module in scan.Modules)
