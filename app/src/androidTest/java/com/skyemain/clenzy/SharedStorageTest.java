@@ -11,6 +11,28 @@ import java.util.*;
 import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class SharedStorageTest {
+ private void shell(String command) throws Exception {
+  try(var fd=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(command);var stream=new android.os.ParcelFileDescriptor.AutoCloseInputStream(fd)){while(stream.read()!=-1){}}
+ }
+ @Test public void duplicates_tool_scans_without_picker_and_bulk_deletes_one_copy() throws Exception {
+  Context context=ApplicationProvider.getApplicationContext();
+  File folder=new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS),"Clenzy-test-"+UUID.randomUUID());
+  File first=new File(folder,"first.bin"),second=new File(folder,"second.bin");
+  try{
+   shell("appops set --uid "+context.getPackageName()+" MANAGE_EXTERNAL_STORAGE allow");
+   assertTrue(android.os.Environment.isExternalStorageManager());assertTrue(folder.mkdirs());
+   byte[] bytes=new byte[357];new java.util.Random().nextBytes(bytes);Files.write(first.toPath(),bytes);Files.write(second.toPath(),bytes);
+   android.content.Intent intent=new android.content.Intent(context,MainActivity.class).putExtra("tool","duplicates");
+   try(var scenario=androidx.test.core.app.ActivityScenario.<MainActivity>launch(intent)){
+    var device=androidx.test.uiautomator.UiDevice.getInstance(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation());
+    assertTrue(device.wait(androidx.test.uiautomator.Until.hasObject(androidx.test.uiautomator.By.text("first.bin")),15000));
+    var select=device.findObject(androidx.test.uiautomator.By.text("Select extra copies"));assertNotNull(select);select.click();
+    var clean=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("CLEAN SELECTED.*")).enabled(true)),5000);assertNotNull(clean);clean.click();
+    var confirm=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("(?i)Continue"))),5000);assertNotNull(confirm);confirm.click();
+    assertTrue(device.wait(androidx.test.uiautomator.Until.hasObject(androidx.test.uiautomator.By.text("CLEANING COMPLETE")),10000));assertTrue(first.exists()^second.exists());
+   }
+  }finally{first.delete();second.delete();folder.delete();shell("appops set --uid "+context.getPackageName()+" MANAGE_EXTERNAL_STORAGE default");}
+ }
  @Test public void scan_groups_bulk_selects_and_deletes_only_extra_copy() throws Exception {
   File root=new File(ApplicationProvider.<Context>getApplicationContext().getCacheDir(),"shared-"+UUID.randomUUID());assertTrue(root.mkdirs());
   File a=new File(root,"a.txt"),b=new File(root,"b.txt"),other=new File(root,"other.txt");

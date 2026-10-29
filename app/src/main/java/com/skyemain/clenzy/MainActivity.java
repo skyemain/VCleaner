@@ -168,7 +168,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
         startActivityForResult(intent, 10);
     }
     private void mediaAccess() {
-        model.ownCache=false;
+        model.sharedStorage=false;model.ownCache=false;
         ArrayList<String> permissions = new ArrayList<>();
         if (Build.VERSION.SDK_INT >= 33) { permissions.add(Manifest.permission.READ_MEDIA_IMAGES); permissions.add(Manifest.permission.READ_MEDIA_VIDEO); if (Build.VERSION.SDK_INT >= 34) permissions.add(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED); }
         else permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);

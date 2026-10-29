@@ -45,11 +45,11 @@ public final class CleanupViewModel extends AndroidViewModel {
         if (busy) return;
         if (!sharedStorage && !ownCache && !media && tree == null) { status = "Choose a folder first."; changed(); return; }
         completed=false;movedToTrash=false; deep = deepScan; busy = true; selected.clear(); files = List.of(); cancellation = new CancellationSignal();
-        status = "Scanning " + (sharedStorage ? "shared storage" : ownCache ? "Clenzy’s disposable cache" : media ? "authorized photos and videos" : "chosen folder") + " · " + (deep ? "deep scan, up to 4 GiB read" : "up to 512 MiB read") + "."; changed();
+        status = "Scanning " + (sharedStorage ? "shared storage" : ownCache ? "Clenzy’s disposable cache" : media ? "authorized photos and videos" : "chosen folder") + " · " + (sharedStorage ? "local files; duplicate reads limited to 16 GiB" : deep ? "deep scan, up to 4 GiB read" : "up to 512 MiB read") + "."; changed();
         worker.execute(() -> {
             try {
                 List<ReviewFile> result; int hashed, notHashed; boolean truncated; int skipped = 0;
-                if(sharedStorage) {var scan=shared.scan(cancellation,category==ReviewRules.Category.DUPLICATES||deep,downloadsOnly);result=scan.files();hashed=scan.hashed();notHashed=scan.notHashed();truncated=scan.truncated();} else if(ownCache) {result=cache.scan(cancellation);hashed=0;notHashed=result.size();truncated=result.size()>=5000;} else if (media) {
+                if(sharedStorage) {var scan=shared.scan(cancellation,category==ReviewRules.Category.DUPLICATES||category==ReviewRules.Category.ALL||deep,downloadsOnly);result=scan.files();hashed=scan.hashed();notHashed=scan.notHashed();truncated=scan.truncated();} else if(ownCache) {result=cache.scan(cancellation);hashed=0;notHashed=result.size();truncated=result.size()>=5000;} else if (media) {
                     var scan = photos.scan(cancellation, deep); result = scan.files(); hashed = scan.hashed(); notHashed = scan.notHashed(); truncated = scan.truncated();
                 } else {
                     var scan = documents.scan(tree, cancellation, deep); result = scan.files(); hashed = scan.hashed(); notHashed = scan.notHashed(); truncated = scan.truncated(); skipped = scan.skipped();
