@@ -20,6 +20,24 @@ public class HomeFlowTest {
    assertTrue(device.wait(Until.hasObject(By.text("Choose what to clean")),5000));device.pressBack();
   }
  }
+ @Test public void guided_cache_cleanup_reaches_verified_results() throws Exception {
+  var context=androidx.test.core.app.ApplicationProvider.<android.content.Context>getApplicationContext();
+  File fixture=new File(context.getCacheDir(),"guided-"+java.util.UUID.randomUUID()+".cache");
+  try {
+   try(var output=new FileOutputStream(fixture)){output.write(new byte[256]);}
+   assertTrue(fixture.setLastModified(System.currentTimeMillis()-172800000L));
+   try(var scenario=ActivityScenario.launch(HomeActivity.class)){
+    UiDevice device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+    var start=device.wait(Until.findObject(By.text("START CLEANING")),10000);assertNotNull(start);start.click();
+    var cache=device.wait(Until.findObject(By.text(java.util.regex.Pattern.compile("(?i)Clenzy cache"))),5000);assertNotNull(cache);cache.click();
+    var clean=device.wait(Until.findObject(By.text(java.util.regex.Pattern.compile("CLEAN SELECTED.*"))),10000);assertNotNull(clean);
+    device.waitForIdle();clean.click();
+    var confirm=device.wait(Until.findObject(By.text(java.util.regex.Pattern.compile("(?i)Continue"))),5000);assertNotNull(confirm);confirm.click();
+    assertTrue(device.wait(Until.hasObject(By.text("CLEANING COMPLETE")),10000));assertFalse(fixture.exists());
+    var done=device.findObject(By.text("DONE"));assertNotNull(done);done.click();
+   }
+  }finally{fixture.delete();}
+ }
  @Test public void capture_light_and_dark_home_without_file_permissions() {
   var context=androidx.test.core.app.ApplicationProvider.<android.content.Context>getApplicationContext();
   try {
