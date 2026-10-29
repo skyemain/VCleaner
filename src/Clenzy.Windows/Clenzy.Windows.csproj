@@ -9,4 +9,7 @@
     <ProjectReference Include="..\Clenzy.Cleaners\Clenzy.Cleaners.csproj" />
     <ProjectReference Include="..\Clenzy.Presentation\Clenzy.Presentation.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Windows11/Maintenance.ps1" LogicalName="Clenzy.Windows11.Maintenance.ps1" />
+  </ItemGroup>
 </Project>

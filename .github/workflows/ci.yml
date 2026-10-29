@@ -21,6 +21,25 @@ jobs:
       - name: Build, test and package
         shell: pwsh
         run: ./build/publish.ps1 -Release -ToRelease
+      - name: Validate PowerShell 5.1 module syntax
+        shell: powershell
+        run: |
+          $errors = $null; $tokens = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'src/Clenzy.Windows/Windows11/Maintenance.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+      - name: Exercise sandbox UI without host changes
+        shell: pwsh
+        run: |
+          $app = Start-Process -FilePath 'artifacts/release/Clenzy-1.5.0-win-x64.exe' -ArgumentList '--windows11-smoke' -PassThru
+          if (-not $app.WaitForExit(60000)) { $app.Kill(); throw 'UI smoke test timed out' }
+          if ($app.ExitCode -ne 0) { Get-Content "$env:TEMP/Clenzy-Windows11-smoke-error.txt" -ErrorAction SilentlyContinue; throw 'UI smoke test failed' }
+          New-Item -ItemType Directory -Force screenshots | Out-Null
+          Copy-Item "$env:TEMP/Clenzy-Windows11-sandbox.png" screenshots/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Clenzy-Windows11-sandbox-screenshot
+          path: screenshots/*.png
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: Clenzy-windows-candidate
@@ -47,5 +66,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create windows-v1.4.1 release/Clenzy-1.4.1-win-x64.exe release/SHA256SUMS.txt --target '${{ github.sha }}' --title 'Clenzy 1.4.1 for Windows' --prerelease --latest=false --notes 'Routine skipped-file counts no longer clutter completion rows and notifications. Detailed diagnostics and real errors remain available. Self-contained Windows x64 candidate; unsigned and not yet approved for production.'
+          gh release create windows-v1.5.0 release/Clenzy-1.5.0-win-x64.exe release/SHA256SUMS.txt --target '${{ github.sha }}' --title 'Clenzy 1.5.0 for Windows' --prerelease --latest=false --notes 'Adds one Windows 11 Cleanup button with sandbox fixture preview, optional isolated Windows Sandbox launch, detected app review, reversible supported settings, audit reports and verified rollback. App uninstall requires separate confirmation and a verified new restore point. Advanced service, task, OEM and provisioned package changes are not implemented. Windows x64 unsigned development candidate; real Windows 11 validation required.'
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

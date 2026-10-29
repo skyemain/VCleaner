@@ -33,6 +33,22 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args.Contains("--windows11-cleanup", StringComparer.OrdinalIgnoreCase) || e.Args.Contains("--windows11-smoke", StringComparer.OrdinalIgnoreCase))
+        {
+            ThemeManager.Start(false);
+            MainWindow = new Clenzy.App.Views.Windows11CleanupWindow();
+            if (e.Args.Contains("--windows11-smoke", StringComparer.OrdinalIgnoreCase))
+            {
+                var testWindow = (Clenzy.App.Views.Windows11CleanupWindow)MainWindow;
+                testWindow.ContentRendered += async (_, _) => {
+                    try { await testWindow.RunSandboxSmokeAsync(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Clenzy-Windows11-sandbox.png")); Shutdown(0); }
+                    catch (Exception ex) { System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Clenzy-Windows11-smoke-error.txt"), ex.ToString()); Shutdown(2); }
+                };
+            }
+            MainWindow.Show();
+            return;
+        }
+
 
         var restarted = e.Args.Contains("--restarted", StringComparer.OrdinalIgnoreCase);
         var startup = e.Args.Contains("--startup", StringComparer.OrdinalIgnoreCase);

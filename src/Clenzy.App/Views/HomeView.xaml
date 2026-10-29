@@ -10,6 +10,7 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,40,0">
+            <Button Content="Windows 11 Cleanup" Click="Windows11CleanupClick" HorizontalAlignment="Center" Margin="0,0,0,18" AutomationProperties.HelpText="Opens an isolated preview, system review and reversible Windows 11 cleanup."/>
             <Button Style="{StaticResource HeroButton}" Content="{Binding PrimaryButtonText}" Command="{Binding PrimaryCommand}"
                     HorizontalAlignment="Center" Margin="0,8,0,0"
                     AutomationProperties.Name="{Binding PrimaryButtonText}"
