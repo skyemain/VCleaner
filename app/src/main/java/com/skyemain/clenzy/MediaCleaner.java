@@ -10,6 +10,7 @@ import java.security.MessageDigest;
 import java.util.*;
 
 public final class MediaCleaner {
+    public java.util.function.IntConsumer progress=count->{};
     private final ContentResolver resolver;
     private final Map<String, ReviewFile> observed = new HashMap<>();
     public MediaCleaner(ContentResolver resolver) { this.resolver = resolver; }
@@ -26,7 +27,7 @@ public final class MediaCleaner {
                     cancel.throwIfCanceled();
                     if (files.size() >= 10000) { truncated = true; break; }
                     ReviewFile f = new ReviewFile(ContentUris.withAppendedId(collection, c.getLong(0)).toString(), c.getString(1), c.isNull(2) ? -1 : c.getLong(2), c.getLong(3) * 1000, null);
-                    files.add(f); observed.put(f.uri(), f);
+                    files.add(f); if(files.size()%50==0)progress.accept(files.size()); observed.put(f.uri(), f);
                 }
             } catch (SecurityException e) { /* Images and videos can have different access grants. */ }
         }

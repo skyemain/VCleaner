@@ -5,7 +5,7 @@ import android.os.CancellationSignal;
 public final class OwnCacheCleaner {
     private final File root;
     private final Map<String,ReviewFile> scanned=new HashMap<>();
-    public OwnCacheCleaner(File root) {this.root=root;}
+    public OwnCacheCleaner(File root) {try {this.root=root.getCanonicalFile();}catch(IOException e){throw new IllegalArgumentException("Cache directory unavailable",e);}}
     public List<ReviewFile> scan(CancellationSignal cancel) throws IOException {
         scanned.clear(); List<ReviewFile> result=new ArrayList<>(); ArrayDeque<File> pending=new ArrayDeque<>(); pending.push(root);
         String base=root.getCanonicalPath()+File.separator; int examined=0;

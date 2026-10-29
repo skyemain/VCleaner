@@ -25,9 +25,14 @@ public final class HomeActivity extends AppCompatActivity {
     private int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
     @Override public void onCreate(Bundle state){
         int theme=getSharedPreferences("cleanup",0).getInt("theme",-1);
-        AppCompatDelegate.setDefaultNightMode(theme); super.onCreate(state); draw();
+        applyTheme(theme); super.onCreate(state); draw();
     }
     @Override protected void onResume(){super.onResume(); if(page!=null) draw();}
+    private static void applyTheme(int mode){
+        if(mode==1)AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        else if(mode==2)AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        else AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+    }
     private void draw(){
         boolean dark=(getResources().getConfiguration().uiMode&48)==32;
         ink=Color.parseColor(dark?"#F3F6FF":"#172137");muted=Color.parseColor(dark?"#A7B3C9":"#647087");surface=Color.parseColor(dark?"#192437":"#FFFFFF");bg=Color.parseColor(dark?"#0E1726":"#F3F6FC");
@@ -63,7 +68,7 @@ public final class HomeActivity extends AppCompatActivity {
     private void open(String tool){startActivity(new Intent(this,MainActivity.class).putExtra("tool",tool));}
     private void settings(){
         new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Theme","Cleanup history","Privacy & access","System storage cleanup","About Clenzy"},(d,w)->{
-            if(w==0)new AlertDialog.Builder(this).setTitle("Theme").setSingleChoiceItems(new String[]{"System","Light","Dark"},getSharedPreferences("cleanup",0).getInt("theme",-1)==-1?0:getSharedPreferences("cleanup",0).getInt("theme",-1)==1?1:2,(dialog,index)->{int mode=index==0?-1:index==1?1:2;getSharedPreferences("cleanup",0).edit().putInt("theme",mode).apply();dialog.dismiss();AppCompatDelegate.setDefaultNightMode(mode);}).show();
+            if(w==0)new AlertDialog.Builder(this).setTitle("Theme").setSingleChoiceItems(new String[]{"System","Light","Dark"},getSharedPreferences("cleanup",0).getInt("theme",-1)==-1?0:getSharedPreferences("cleanup",0).getInt("theme",-1)==1?1:2,(dialog,index)->{int mode=index==0?-1:index==1?1:2;getSharedPreferences("cleanup",0).edit().putInt("theme",mode).apply();dialog.dismiss();applyTheme(mode);}).show();
             if(w==1){long last=getSharedPreferences("cleanup",0).getLong("lastClean",0);message("Last cleanup",last==0?"No completed cleanup yet.":android.text.format.DateFormat.format("MMM d, yyyy h:mm a",last)+"\n"+size(getSharedPreferences("cleanup",0).getLong("lastBytes",0))+" deleted from selected files.");}
             if(w==2)message("Private by design","Files stay on your device. Folder access is limited to locations you choose. Media access can be partial. No advertising, tracking, root, Accessibility or all-files access. Trash may retain storage until emptied in the gallery.");
             if(w==3){try{startActivity(new Intent(android.os.storage.StorageManager.ACTION_MANAGE_STORAGE));}catch(ActivityNotFoundException e){startActivity(new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS));}}

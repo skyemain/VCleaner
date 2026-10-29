@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.*;
 import java.util.*;
 
 public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
+    private int ink=Color.WHITE,background=Color.rgb(14,23,38),cardColor=Color.rgb(25,36,55);
     private final int mint = Color.rgb(103, 154, 255), muted = Color.rgb(151, 179, 173);
     private CleanupViewModel model;
     private Uri tree;
@@ -33,15 +34,17 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        boolean dark=(getResources().getConfiguration().uiMode&48)==32;
+        ink=Color.parseColor(dark?"#F3F6FF":"#172137");background=Color.parseColor(dark?"#0E1726":"#F3F6FC");cardColor=Color.parseColor(dark?"#192437":"#FFFFFF");
         model = new ViewModelProvider(this).get(CleanupViewModel.class); tree = model.tree;
         LinearLayout page = column(); page.setPadding(dp(22), dp(20), dp(22), dp(16));
-        page.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{Color.rgb(15,42,36),Color.rgb(9,15,20)}));
+        page.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{background,background}));
         page.setOnApplyWindowInsetsListener((v, insets) -> { v.setPadding(dp(22), insets.getSystemWindowInsetTop()+dp(12), dp(22), insets.getSystemWindowInsetBottom()+dp(12)); return insets; });
         TextView brand = label("✦  C L E N Z Y", 14, mint); brand.setTypeface(null, Typeface.BOLD); page.addView(brand);
-        TextView title = label("Cleanup ready", 30, Color.WHITE); title.setTypeface(null, Typeface.BOLD); page.addView(title);
+        TextView title = label("Cleanup ready", 30, ink); title.setTypeface(null, Typeface.BOLD); page.addView(title);
         page.addView(label("Select what you no longer need. Your files stay in your control.", 14, muted));
         LinearLayout storage = column(); styleCard(storage);
-        storage.addView(label("DEVICE STORAGE", 11, mint)); metrics = label("", 22, Color.WHITE); storage.addView(metrics);
+        storage.addView(label("DEVICE STORAGE", 11, mint)); metrics = label("", 22, ink); storage.addView(metrics);
         usage = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal); usage.setProgressTintList(android.content.res.ColorStateList.valueOf(mint)); storage.addView(usage);
         page.addView(storage, spaced());
         LinearLayout sources = new LinearLayout(this);
@@ -64,6 +67,9 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
         Button sort = button("Sort", () -> new AlertDialog.Builder(this).setTitle("Sort files").setItems(new String[]{"Largest first", "Name"}, (d,which) -> { sortByName = which == 1; render(); }).show()); filters.addView(sort); page.addView(filters);
         RecyclerView list = new RecyclerView(this); list.setLayoutManager(new LinearLayoutManager(this)); adapter = new ReviewAdapter(); list.setAdapter(adapter);
         page.addView(list, new LinearLayout.LayoutParams(-1,0,1));
+        LinearLayout selectionActions=new LinearLayout(this);
+        selectionActions.addView(button("Select safe items",()->{if(model.ownCache && !model.busy) {for(ReviewFile f:model.files) model.selected.add(f.uri());render();}else new AlertDialog.Builder(this).setMessage("Personal files require individual selection. Only Clenzy’s own scanned cache is eligible for Select safe items.").setPositiveButton("Done",null).show();}));
+        selectionActions.addView(button("Deselect all",()->{if(!model.busy){model.selected.clear();render();}}));page.addView(selectionActions);
         selection = label("", 12, muted); page.addView(selection);
         remove = button("CLEAN SELECTED", this::confirmDelete); page.addView(remove);
         TextView help = label("Private by design · only files you authorize", 11, muted); help.setGravity(Gravity.CENTER); help.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("Your files, your choice").setMessage("Clenzy cannot clear other apps' private caches or RAM. Photos use Android's Trash confirmation on Android 11+. Folder deletion may be permanent and may affect cloud copies. Age alone never means junk.").setPositiveButton("Done", null).setNeutralButton("Permissions", (d,w) -> startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:"+getPackageName())))).show()); page.addView(help);
@@ -81,6 +87,14 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
                 else if(model.tree!=null && !tool.equals("photos")) {model.ownCache=false;model.media=false;model.scan(false);}
                 else new AlertDialog.Builder(this).setTitle("Allow Clenzy to find files you can review").setMessage("Photos access covers only authorized images and videos. You can choose a folder instead for documents and downloads. Nothing personal is selected automatically.").setPositiveButton("Continue",(d,w)->mediaAccess()).setNeutralButton("Choose folder",(d,w)->chooseFolder()).setNegativeButton("Back",(d,w)->finish()).show();
             }
+        }
+    }
+    @Override protected void onResume() {
+        super.onResume();
+        if(model!=null && model.waitingSettings) {
+            model.waitingSettings=false;
+            boolean allowed=Build.VERSION.SDK_INT>=33 ? checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES)==PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.READ_MEDIA_VIDEO)==PackageManager.PERMISSION_GRANTED || (Build.VERSION.SDK_INT>=34 && checkSelfPermission(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)==PackageManager.PERMISSION_GRANTED) : checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)==PackageManager.PERMISSION_GRANTED;
+            if(allowed){model.ownCache=false;model.media=true;model.scan(false);}else{model.status="Access is still limited. Go back and choose a folder to continue.";model.changed();}
         }
     }
     private void explainFolder() {new AlertDialog.Builder(this).setTitle("Choose a folder to review").setMessage("Android grants access only to the folder you select. On newer Android versions, choose a supported subfolder or document provider. Clenzy cannot access Android/data or other apps’ private storage.").setPositiveButton("Continue",(d,w)->chooseFolder()).setNegativeButton("Back",(d,w)->finish()).show();}
@@ -111,12 +125,12 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
             .setNegativeButton("Cancel", null).setPositiveButton("Continue", (d,w) -> model.delete()).show();
     }
     private void showResults() {
-        LinearLayout result=column();result.setPadding(dp(28),dp(32),dp(28),dp(24));result.setBackgroundColor(Color.rgb(14,23,38));
-        result.addView(label("✓",48,mint));result.addView(label("CLEANING COMPLETE",26,Color.WHITE));
-        result.addView(label(bytes(model.recoveredBytes)+" successfully deleted",30,Color.WHITE));
-        result.addView(label(model.removedFiles+" files removed · "+model.skippedFiles+" skipped or unavailable",16,muted));
+        LinearLayout result=column();result.setPadding(dp(28),dp(32),dp(28),dp(24));result.setBackgroundColor(background);
+        result.addView(label("✓",48,mint));result.addView(label("CLEANING COMPLETE",26,ink));
+        result.addView(label(model.movedToTrash ? model.removedFiles+" items moved to Trash" : bytes(model.recoveredBytes)+" successfully deleted",30,ink));
+        result.addView(label(model.removedFiles+(model.movedToTrash?" items trashed · ":" files removed · ")+model.skippedFiles+" skipped or unavailable",16,muted));
         StatFs disk=new StatFs(Environment.getDataDirectory().getAbsolutePath());result.addView(label(bytes(disk.getAvailableBytes())+" available now",18,muted));
-        result.addView(label("Deletion totals reflect verified provider operations. Actual free space can differ because of provider trash, cloud storage and filesystem accounting.",13,muted));
+        result.addView(label((model.movedToTrash ? "Trashed media may still use storage until the gallery empties Trash. " : "")+"Deletion totals reflect verified provider operations. Actual free space can differ because of provider trash, cloud storage and filesystem accounting.",13,muted));
         result.addView(button("DONE",this::finish));setContentView(result);
     }
     private void chooseFolder() {
@@ -125,6 +139,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
         startActivityForResult(intent, 10);
     }
     private void mediaAccess() {
+        model.ownCache=false;
         ArrayList<String> permissions = new ArrayList<>();
         if (Build.VERSION.SDK_INT >= 33) { permissions.add(Manifest.permission.READ_MEDIA_IMAGES); permissions.add(Manifest.permission.READ_MEDIA_VIDEO); if (Build.VERSION.SDK_INT >= 34) permissions.add(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED); }
         else permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
@@ -136,7 +151,10 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
         if (request == 20) {
             boolean any = false; for (int g : grants) if (g == PackageManager.PERMISSION_GRANTED) any = true;
             if (any) { model.ownCache=false; model.media = true; model.scan(false); }
-            else { model.status = "Photos access denied. Choose a folder instead or change access in app settings."; model.changed(); }
+            else {
+                model.status = "Photos access denied. Limited folder review is still available."; model.changed();
+                new AlertDialog.Builder(this).setTitle("Continue with limited access").setMessage("You can choose a folder without broad media permission, or grant access in Android Settings.").setPositiveButton("Choose folder",(d,w)->chooseFolder()).setNeutralButton("Settings",(d,w)->{model.waitingSettings=true;startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName())));}).setNegativeButton("Back",(d,w)->finish()).show();
+            }
         }
     }
     @Override public void onActivityResult(int request, int result, Intent data) {
@@ -169,15 +187,15 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
     }
     private LinearLayout column() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.VERTICAL); return v; }
     private TextView label(String text, int size, int color) { TextView v = new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(color); v.setPadding(0,dp(5),0,dp(5)); return v; }
-    private Button button(String title, Runnable action) { Button v = new Button(this); v.setText(title); v.setAllCaps(false); v.setTextColor(mint); v.setOnClickListener(w -> action.run()); return v; }
-    private void styleCard(View v) { GradientDrawable bg = new GradientDrawable(); bg.setColor(Color.argb(150,30,54,48)); bg.setCornerRadius(dp(22)); bg.setStroke(dp(1),Color.rgb(42,79,69)); v.setBackground(bg); v.setPadding(dp(16),dp(12),dp(16),dp(12)); }
+    private Button button(String title, Runnable action) { Button v = new com.google.android.material.button.MaterialButton(this); v.setText(title); v.setAllCaps(false); v.setTextColor(mint); v.setOnClickListener(w -> action.run()); return v; }
+    private void styleCard(View v) { GradientDrawable bg = new GradientDrawable(); bg.setColor(cardColor); bg.setCornerRadius(dp(22)); bg.setStroke(dp(1),Color.argb(40,100,130,190)); v.setBackground(bg); v.setPadding(dp(16),dp(12),dp(16),dp(12)); }
     private LinearLayout.LayoutParams spaced() { LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,dp(14),0,dp(14)); return p; }
     private final class ReviewAdapter extends RecyclerView.Adapter<ReviewAdapter.Holder> {
         List<ReviewFile> entries = List.of();
         void submit(List<ReviewFile> items) { entries = items; notifyDataSetChanged(); }
         class Holder extends RecyclerView.ViewHolder {
             TextView name, detail, group; CheckBox selected; Button preview; ImageView thumbnail;
-            Holder(LinearLayout card) { super(card); thumbnail = new ImageView(MainActivity.this); thumbnail.setScaleType(ImageView.ScaleType.CENTER_CROP); card.addView(thumbnail, new LinearLayout.LayoutParams(dp(64),dp(64))); group = label("",11,mint); name=label("",15,Color.WHITE); detail=label("",12,muted); selected = new CheckBox(MainActivity.this); selected.setText("Select"); selected.setTextColor(mint); preview=button("Preview", () -> {}); card.addView(group); card.addView(name); card.addView(detail); LinearLayout actions = new LinearLayout(MainActivity.this); actions.addView(selected); actions.addView(preview); card.addView(actions); }
+            Holder(LinearLayout card) { super(card); thumbnail = new ImageView(MainActivity.this); thumbnail.setScaleType(ImageView.ScaleType.CENTER_CROP); card.addView(thumbnail, new LinearLayout.LayoutParams(dp(64),dp(64))); group = label("",11,mint); name=label("",15,ink); detail=label("",12,muted); selected = new CheckBox(MainActivity.this); selected.setText("Select"); selected.setTextColor(mint); preview=button("Preview", () -> {}); card.addView(group); card.addView(name); card.addView(detail); LinearLayout actions = new LinearLayout(MainActivity.this); actions.addView(selected); actions.addView(preview); card.addView(actions); }
         }
         @Override public Holder onCreateViewHolder(ViewGroup parent,int type) { LinearLayout card=column(); styleCard(card); RecyclerView.LayoutParams p=new RecyclerView.LayoutParams(-1,-2); p.setMargins(0,dp(5),0,dp(5)); card.setLayoutParams(p); return new Holder(card); }
         @Override public void onBindViewHolder(Holder h,int position) {

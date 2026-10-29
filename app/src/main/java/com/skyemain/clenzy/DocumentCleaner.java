@@ -10,6 +10,7 @@ import java.security.MessageDigest;
 import java.util.*;
 
 public final class DocumentCleaner {
+    public java.util.function.IntConsumer progress=count->{};
     private final ContentResolver resolver;
     private static final String[] COLUMNS = {
         DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME,
@@ -66,6 +67,7 @@ public final class DocumentCleaner {
             if (cursor == null) { skipped++; return; }
             while (cursor.moveToNext()) {
                 cancel.throwIfCanceled();
+                if(entries%50==0)progress.accept(entries);
                 if (++entries > 5000) { truncated = true; break; }
                 Metadata m = metadata(cursor);
                 if (DocumentsContract.Document.MIME_TYPE_DIR.equals(m.type)) {
@@ -94,7 +96,7 @@ public final class DocumentCleaner {
                 if (file.digest() != null && !file.digest().equals(hash(uri, cancel))) { skipped++; continue; }
                 Metadata last = query(uri);
                 if (!file.matches(last.bytes, last.modified)) { skipped++; continue; }
-                if (DocumentsContract.deleteDocument(resolver, uri)) {
+                if (DocumentsContract.deleteDocument(resolver, uri) && gone(uri)) {
                     deleted++; bytes += file.bytes(); observed.remove(file.uri());
                 } else skipped++;
             } catch (Exception e) { skipped++; }
@@ -102,6 +104,11 @@ public final class DocumentCleaner {
         return new Outcome(deleted, skipped, bytes);
     }
 
+    private boolean gone(Uri uri) {
+        try(Cursor c=resolver.query(uri,new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID},null,null,null)) {
+            return c!=null && !c.moveToFirst();
+        }catch(Exception e){return e instanceof java.io.FileNotFoundException;}
+    }
     private Metadata query(Uri uri) throws IOException {
         try (Cursor c = resolver.query(uri, COLUMNS, null, null, null)) {
             if (c == null || !c.moveToFirst()) throw new IOException("Document unavailable");
