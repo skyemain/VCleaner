@@ -5,11 +5,11 @@
  <Grid Margin="28">
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <StackPanel>
-   <TextBlock Text="WINDOWS 11 CLEANUP" FontSize="25" FontWeight="SemiBold"/>
+   <TextBlock Text="DEBLOAT" FontSize="25" FontWeight="SemiBold"/>
    <TextBlock Text="Scan. Choose what changes. Keep a way back." Style="{StaticResource SecondaryText}" Margin="0,6,0,14"/>
    <WrapPanel>
-    <CheckBox x:Name="Sandbox" Content="Sandbox preview · generated fixtures, no Windows changes" IsChecked="True" Margin="0,0,18,10" Checked="EnvironmentChanged" Unchecked="EnvironmentChanged"/>
-    <ComboBox x:Name="Profile" Width="130" SelectedIndex="0" SelectionChanged="ProfileChanged"><ComboBoxItem Content="Safe"/><ComboBoxItem Content="Balanced"/><ComboBoxItem Content="Advanced"/></ComboBox>
+    <CheckBox x:Name="Sandbox" Content="Sandbox preview · generated fixtures, no Windows changes" IsChecked="False" Visibility="Collapsed" Margin="0,0,18,10" Checked="EnvironmentChanged" Unchecked="EnvironmentChanged"/>
+    <ComboBox x:Name="Profile" Width="130" SelectedIndex="0" SelectionChanged="ProfileChanged"><ComboBoxItem Content="Simple"/><ComboBoxItem Content="Advanced"/></ComboBox>
    </WrapPanel>
   </StackPanel>
   <StackPanel Grid.Row="1">
@@ -18,12 +18,12 @@
   </StackPanel>
   <WrapPanel Grid.Row="2" Margin="0,12">
    <Button x:Name="Scan" Content="Scan" Click="ScanClick" Margin="0,0,8,0"/>
-   <Button x:Name="Apply" Content="Review selected changes" Click="ApplyClick" IsEnabled="False" Margin="0,0,8,0"/>
+   <Button x:Name="Apply" Content="Review and apply" Click="ApplyClick" IsEnabled="False" Margin="0,0,8,0"/>
    <Button x:Name="Cancel" Content="Cancel" Click="CancelClick" IsEnabled="False" Margin="0,0,8,0"/>
    <Button Content="Open reports &amp; backups" Click="ReportsClick" Margin="0,0,8,0"/>
    <Button Content="Review disk cleanup" Click="DiskCleanupClick" Margin="0,0,8,0"/>
    <Button Content="Restart as administrator" Click="AdministratorClick" Margin="0,0,8,0"/>
-   <Button Content="Run in Windows Sandbox" Click="LaunchSandboxClick"/>
+
   </WrapPanel>
   <TabControl Grid.Row="3">
    <TabItem Header="Review changes">
@@ -58,7 +58,7 @@
     </StackPanel>
    </TabItem>
   </TabControl>
-  <TextBlock Grid.Row="4" Text="Safe: reversible preferences. Balanced: optional startup and shell changes. Advanced: reviewed app removal, policies and optional services. Registry verification confirms stored values; Windows may require sign-out/restart. No speed improvement is claimed without measurement." Style="{StaticResource SecondaryText}" Margin="0,12"/>
+  <TextBlock Grid.Row="4" Text="Simple: reversible preferences and optional startup. Advanced: app removal, policies and optional services. Registry verification confirms stored values; Windows may require sign-out/restart. No speed improvement is claimed without measurement." Style="{StaticResource SecondaryText}" Margin="0,12"/>
   <Button Grid.Row="5" Content="Done" HorizontalAlignment="Right" Click="DoneClick"/>
  </Grid>
 </Window>

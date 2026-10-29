@@ -29,6 +29,20 @@ public partial class MainWindow : Window
         Closing += OnClosing;
     }
 
+    private void DebloatClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.IsBusy) return;
+        var page = new Views.Windows11CleanupWindow();
+        var content = page.Content; page.Content = null;
+        DebloatHost.Content = content; DebloatHost.Visibility = Visibility.Visible;
+        page.EmbeddedOwner = this;
+        page.ExitRequested = () => {
+            DebloatHost.Content = null; DebloatHost.Visibility = Visibility.Collapsed;
+            if (page.DiskCleanupRequested) _ = _viewModel.ReviewWindows11DiskCleanupAsync();
+            if (page.AdministratorRequested && _viewModel.RestartAsAdministratorCommand.CanExecute(null)) _viewModel.RestartAsAdministratorCommand.Execute(null);
+        };
+    }
+
     public void MarkSessionEnding() => _sessionEnding = true;
 
     public void BringToFront()

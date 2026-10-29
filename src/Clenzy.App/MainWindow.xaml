@@ -32,9 +32,12 @@
                 <TextBlock Text="{Binding ShortVersion}" Style="{StaticResource SecondaryText}" FontFamily="{StaticResource MonoFont}"
                            FontSize="11" Margin="10,2,0,0" VerticalAlignment="Center" />
             </StackPanel>
-            <Button Style="{StaticResource IconButton}" Content="&#xE713;" HorizontalAlignment="Right"
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Debloat" Style="{StaticResource LinkButton}" FontSize="12" Margin="0,0,16,0" Click="DebloatClick"/>
+            <Button Style="{StaticResource IconButton}" Content="&#xE713;"
                     Command="{Binding OpenSettingsCommand}" ToolTip="Settings"
                     AutomationProperties.Name="Settings" />
+            </StackPanel>
         </Grid>
 
         <Grid Margin="32,18,40,6" Visibility="{Binding IsHome, Converter={StaticResource InverseBoolToVisibility}}">
@@ -48,6 +51,7 @@
                        VerticalAlignment="Center" Margin="8,0,0,0" AutomationProperties.HeadingLevel="Level1" />
         </Grid>
 
+        <ContentControl x:Name="DebloatHost" Grid.RowSpan="2" Panel.ZIndex="10" Visibility="Collapsed" Background="{DynamicResource WindowBackgroundBrush}"/>
         <Grid Grid.Row="1">
             <views:HomeView Visibility="{Binding IsHome, Converter={StaticResource BoolToVisibility}}" />
             <ContentControl Content="{Binding CurrentPage}" IsTabStop="False"

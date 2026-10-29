@@ -15,15 +15,19 @@ public partial class Windows11CleanupWindow : Window
     private OptimizationAudit? audit;
     private CancellationTokenSource? operation;
     private bool busy;
+    public Window? EmbeddedOwner { get; set; }
+    public Action? ExitRequested { get; set; }
+    private void Leave() { if (ExitRequested is not null) ExitRequested(); else Close(); }
     public bool DiskCleanupRequested { get; private set; }
     public bool AdministratorRequested { get; private set; }
     private readonly string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Clenzy", "Windows11");
     private List<Choice> choices = new();
     private string ReportsRoot => Path.Combine(root, backend.Sandbox ? "sandbox" : "live");
-    private OptimizationProfile SelectedProfile => (OptimizationProfile)Math.Max(0, Profile.SelectedIndex);
+    private OptimizationProfile SelectedProfile => Profile.SelectedIndex == 0 ? OptimizationProfile.Balanced : OptimizationProfile.Advanced;
     public Windows11CleanupWindow()
     {
         InitializeComponent(); ResetEnvironment();
+
         foreach (var (title, uri) in new[] {
             ("Privacy & permissions", "ms-settings:privacy"), ("Ads & recommendations", "ms-settings:privacy-general"),
             ("Installed apps / OEM software", "ms-settings:appsfeatures"), ("Startup optimization", "ms-settings:startupapps"),
@@ -39,6 +43,7 @@ public partial class Windows11CleanupWindow : Window
     }
     public async Task RunSandboxSmokeAsync(string screenshot)
     {
+        Sandbox.IsChecked = true; ResetEnvironment();
         if (!backend.Sandbox) throw new InvalidOperationException("Smoke test requires fixture backend.");
         audit = await backend.AuditAsync(default); ShowFindings(); AuditText.Text = audit.Details;
         var tx = await engine.ApplyAsync(audit, new[] { "advertising" }, OptimizationProfile.Safe, true, false, default);
@@ -82,12 +87,12 @@ public partial class Windows11CleanupWindow : Window
     {
         if (busy) return;
         if (backend.Sandbox) { Status.Text = "Disk cleanup operates on real files. Leave sandbox preview to open the existing scan-and-review screen; nothing is deleted without review."; return; }
-        DiskCleanupRequested = true; Close();
+        DiskCleanupRequested = true; Leave();
     }
     private void AdministratorClick(object sender, RoutedEventArgs e)
     {
         if (busy) return;
-        AdministratorRequested = true; Close();
+        AdministratorRequested = true; Leave();
     }
     private async Task RunAsync(Func<CancellationToken, Task> action)
     {
@@ -113,14 +118,18 @@ public partial class Windows11CleanupWindow : Window
     private async void ApplyClick(object sender, RoutedEventArgs e)
     {
         if (audit is null || busy) return;
+        if (!backend.Sandbox && audit.IsAdministrator == false) {
+            if (MessageBox.Show(EmbeddedOwner ?? this, "Windows needs administrator permission to apply debloat changes. Restart Clenzy as administrator, then rescan and review your selection.", "Administrator access", MessageBoxButton.OKCancel) == MessageBoxResult.OK) { AdministratorRequested = true; Leave(); }
+            return;
+        }
         var selected = choices.Where(x => x.Selected && x.Enabled).Select(x => x.Finding.Action).ToArray();
         if (selected.Length == 0) { Status.Text = "Select the changes you want first."; return; }
         var preview = string.Join("\n\n", selected.Select(x => x.Title + "\n" + x.Impact));
-        if (MessageBox.Show(this, (backend.Sandbox ? "SANDBOX PREVIEW: only fixtures change.\n\n" : "Apply these changes to this Windows user?\n\n") + preview, "Review exact changes", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+        if (MessageBox.Show(EmbeddedOwner ?? this, (backend.Sandbox ? "SANDBOX PREVIEW: only fixtures change.\n\n" : "Apply these changes to this Windows user?\n\n") + preview, "Review exact changes", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
         var destructive = selected.Any(x => x.Irreversible || MaintenanceCatalog.Get(x.Id).Destructive);
         var currentAudit = audit ?? throw new InvalidOperationException("Rescan first.");
         var profile = SelectedProfile;
-        if (destructive && MessageBox.Show(this, "These changes may delete app data or saved Recall snapshots. Restoring settings cannot restore deleted data. A verified new restore point is required for live destructive changes. Continue?", "Confirm destructive changes separately", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        if (destructive && MessageBox.Show(EmbeddedOwner ?? this, "These changes may delete app data or saved Recall snapshots. Restoring settings cannot restore deleted data. A verified new restore point is required for live destructive changes. Continue?", "Confirm destructive changes separately", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         await RunAsync(async token => {
             var tx = await Task.Run(() => engine.ApplyAsync(currentAudit, selected.Select(x => x.Id), profile, true, destructive, token), token);
             Activity.AppendText($"{tx.Started:u} · {(tx.Sandbox ? "SANDBOX" : "LIVE")} · {tx.Id}\n" + string.Join("\n", tx.Changes.Select(x => x.Id + ": " + x.Status)) + "\n");
@@ -130,7 +139,7 @@ public partial class Windows11CleanupWindow : Window
     private async void RestoreClick(object sender, RoutedEventArgs e)
     {
         if (Backups.SelectedItem is not string id || busy) return;
-        if (MessageBox.Show(this, "Restore reversible settings in this backup? Newer conflicting values will be preserved and reported. Removed apps must be reinstalled from Microsoft Store.", "Review restore", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
+        if (MessageBox.Show(EmbeddedOwner ?? this, "Restore reversible settings in this backup? Newer conflicting values will be preserved and reported. Removed apps must be reinstalled from Microsoft Store.", "Review restore", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
         await RunAsync(async token => {
             var tx = await Task.Run(() => engine.RestoreAsync(id, token), token);
             Status.Text = "Reversible settings restored and verified. Rescan before applying anything else.";
@@ -138,7 +147,7 @@ public partial class Windows11CleanupWindow : Window
         });
     }
     private void CancelClick(object sender, RoutedEventArgs e) => operation?.Cancel();
-    private void DoneClick(object sender, RoutedEventArgs e) { if (!busy) Close(); }
+    private void DoneClick(object sender, RoutedEventArgs e) { if (!busy) Leave(); }
     private void ReportsClick(object sender, RoutedEventArgs e) { Directory.CreateDirectory(ReportsRoot); Process.Start(new ProcessStartInfo(ReportsRoot) { UseShellExecute = true }); }
     private void LaunchSandboxClick(object sender, RoutedEventArgs e)
     {

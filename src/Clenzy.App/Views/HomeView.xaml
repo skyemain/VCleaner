@@ -10,7 +10,6 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,40,0">
-            <Button Content="Windows 11 Cleanup" Click="Windows11CleanupClick" HorizontalAlignment="Center" Margin="0,0,0,18" AutomationProperties.HelpText="Opens an isolated preview, system review and reversible Windows 11 cleanup."/>
             <Button Style="{StaticResource HeroButton}" Content="{Binding PrimaryButtonText}" Command="{Binding PrimaryCommand}"
                     HorizontalAlignment="Center" Margin="0,8,0,0"
                     AutomationProperties.Name="{Binding PrimaryButtonText}"
@@ -24,8 +23,6 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="{Binding LastCleanedText}" Style="{StaticResource SecondaryText}" FontFamily="{StaticResource MonoFont}"
-                       FontSize="11" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,22,0,0" />
 
             <StackPanel Margin="0,18,0,0" Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibility}}">
                 <ProgressBar IsIndeterminate="{Binding IsIndeterminate}" Value="{Binding ProgressFraction, Mode=OneWay}"
