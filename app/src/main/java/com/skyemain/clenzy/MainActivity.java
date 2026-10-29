@@ -119,6 +119,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
     private void updateSelection() {
         long bytes = ReviewRules.selectedBytes(model.files,model.selected);
         selection.setText(model.selected.isEmpty() ? "Nothing selected · tap Preview to inspect a file" : model.selected.size()+" selected · "+bytes(bytes)+" source size");
+        remove.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(50,104,232)));remove.setTextColor(Color.WHITE);
         remove.setText("CLEAN SELECTED — "+bytes(bytes)); remove.setEnabled(!model.busy && model.pendingTrash == null && !model.selected.isEmpty());
     }
     private void confirmDelete() {
@@ -191,7 +192,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
     }
     private LinearLayout column() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.VERTICAL); return v; }
     private TextView label(String text, int size, int color) { TextView v = new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(color); v.setPadding(0,dp(5),0,dp(5)); return v; }
-    private Button button(String title, Runnable action) { Button v = new com.google.android.material.button.MaterialButton(this); v.setText(title); v.setAllCaps(false); v.setTextColor(mint); v.setOnClickListener(w -> action.run()); return v; }
+    private Button button(String title, Runnable action) { Button v = new com.google.android.material.button.MaterialButton(this); v.setText(title); v.setAllCaps(false); v.setTextColor(ink); v.setBackgroundTintList(android.content.res.ColorStateList.valueOf(cardColor)); v.setOnClickListener(w -> action.run()); return v; }
     private void styleCard(View v) { GradientDrawable bg = new GradientDrawable(); bg.setColor(cardColor); bg.setCornerRadius(dp(22)); bg.setStroke(dp(1),Color.argb(40,100,130,190)); v.setBackground(bg); v.setPadding(dp(16),dp(12),dp(16),dp(12)); }
     private LinearLayout.LayoutParams spaced() { LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,dp(14),0,dp(14)); return p; }
     private final class ReviewAdapter extends RecyclerView.Adapter<ReviewAdapter.Holder> {
