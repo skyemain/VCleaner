@@ -11,6 +11,16 @@ public sealed class MainViewModelTests
     private static string TempFile(PresentationHarness h, string name) => h.Core.Temp.Combine("Users/tester/AppData/Local/Temp/" + name);
 
     [Fact]
+    public async Task Manual_cleanup_honors_disabled_review_for_explicitly_enabled_permanent_items()
+    {
+        using var h = new PresentationHarness(s => { s.EmptyRecycleBin = true; s.ReviewBeforeCleaning = false; });
+        h.Core.Bin.Bytes = 100; h.Core.Bin.Items = 1;
+        await h.Main.PrimaryCommand.ExecuteAsync();
+        Assert.Equal(1,h.Core.Bin.EmptyCalls);
+        Assert.Null(h.Main.CurrentPage);
+        Assert.Equal(AppState.Completed,h.Main.State);
+    }
+    [Fact]
     public async Task Windows11_disk_cleanup_requires_review_and_preserves_recent_temp_until_confirmation()
     {
         using var h = new PresentationHarness(s => { s.CleanUserTemp = true; s.ReviewBeforeCleaning = false; s.CleanRecentTempFiles = true; });
@@ -120,9 +130,9 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task A_permanent_operation_forces_the_review_screen_even_in_one_click_mode()
+    public async Task Enabled_review_shows_permanent_operations_before_execution()
     {
-        using var h = new PresentationHarness(s => s.EmptyRecycleBin = true);
+        using var h = new PresentationHarness(s => { s.EmptyRecycleBin = true; s.ReviewBeforeCleaning = true; });
         h.Core.Bin.Bytes = 5_000_000;
         h.Core.Bin.Items = 3;
 
@@ -130,7 +140,7 @@ public sealed class MainViewModelTests
         var review = await PresentationHarness.WaitFor(() => h.Main.CurrentPage as ReviewViewModel);
 
         Assert.Equal(AppState.AwaitingReview, h.Main.State);
-        Assert.True(review.ForcedByPolicy);
+        Assert.False(review.ForcedByPolicy);
         Assert.True(review.HasPermanentSelection);
         Assert.Equal(0, h.Core.Bin.EmptyCalls);
 
@@ -145,7 +155,7 @@ public sealed class MainViewModelTests
     [Fact]
     public async Task Canceling_the_review_changes_nothing()
     {
-        using var h = new PresentationHarness(s => s.EmptyRecycleBin = true);
+        using var h = new PresentationHarness(s => { s.EmptyRecycleBin = true; s.ReviewBeforeCleaning = true; });
         h.Core.Bin.Bytes = 5_000_000;
         h.Core.Bin.Items = 3;
 
@@ -733,7 +743,7 @@ public sealed class SettingsViewModelTests
     [Fact]
     public async Task Turning_a_risky_option_off_never_prompts()
     {
-        using var h = new PresentationHarness(s => s.EmptyRecycleBin = true);
+        using var h = new PresentationHarness(s => { s.EmptyRecycleBin = true; s.ReviewBeforeCleaning = true; });
         var settings = Open(h);
 
         await settings.Toggle("recycle").SetAsync(false);

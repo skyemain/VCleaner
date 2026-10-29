@@ -522,12 +522,12 @@ public sealed class MainViewModel : ObservableObject
 
             ShowScanRows();
 
-            var mode = PlanMode.Automatic;
+            var mode = automatic ? PlanMode.Automatic : PlanMode.Reviewed;
             var forced = PlanBuilder.RequiresReview(scan);
-            if (!automatic && (settings.ReviewBeforeCleaning || forced))
+            if (!automatic && settings.ReviewBeforeCleaning)
             {
                 mode = PlanMode.Reviewed;
-                if (!await ReviewAsync(scan, forced && !settings.ReviewBeforeCleaning).ConfigureAwait(true))
+                if (!await ReviewAsync(scan, false).ConfigureAwait(true))
                 {
                     FinishCanceled("Cleaning canceled. Nothing was changed.");
                     return;
