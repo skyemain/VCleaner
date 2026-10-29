@@ -26,6 +26,7 @@ public class HomeFlowTest {
    for(int mode:new int[]{1,2}){
     context.getSharedPreferences("cleanup",0).edit().putInt("theme",mode).commit();
     try(var scenario=ActivityScenario.launch(HomeActivity.class)){
+     InstrumentationRegistry.getInstrumentation().waitForIdleSync();
      scenario.onActivity(activity->{
       View view=activity.getWindow().getDecorView();assertNotNull(find(view,"START CLEANING"));
       Bitmap bitmap=Bitmap.createBitmap(view.getWidth(),view.getHeight(),Bitmap.Config.ARGB_8888);view.draw(new Canvas(bitmap));

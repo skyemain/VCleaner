@@ -20,7 +20,7 @@ import java.util.*;
 
 public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
     private int ink=Color.WHITE,background=Color.rgb(14,23,38),cardColor=Color.rgb(25,36,55);
-    private final int mint = Color.rgb(103, 154, 255), muted = Color.rgb(151, 179, 173);
+    private int mint = Color.rgb(103, 154, 255), muted = Color.rgb(151, 179, 173);
     private CleanupViewModel model;
     private Uri tree;
     private TextView status, metrics, selection;
@@ -36,6 +36,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         boolean dark=(getResources().getConfiguration().uiMode&48)==32;
+        mint=Color.parseColor(dark?"#679AFF":"#3268E8");muted=Color.parseColor(dark?"#A7B3C9":"#647087");
         ink=Color.parseColor(dark?"#F3F6FF":"#172137");background=Color.parseColor(dark?"#0E1726":"#F3F6FC");cardColor=Color.parseColor(dark?"#192437":"#FFFFFF");
         model = new ViewModelProvider(this).get(CleanupViewModel.class); tree = model.tree;
         LinearLayout page = column(); page.setPadding(dp(22), dp(20), dp(22), dp(16));
