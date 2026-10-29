@@ -57,10 +57,9 @@
             </Border>
         </StackPanel>
 
-        <ScrollViewer Grid.Column="1" VerticalAlignment="Center" MaxWidth="720" HorizontalAlignment="Stretch"
+        <ScrollViewer BorderThickness="0" Background="Transparent" FocusVisualStyle="{x:Null}" Grid.Column="1" VerticalAlignment="Center" MaxWidth="720" HorizontalAlignment="Stretch"
                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
             <StackPanel Margin="0,0,8,0">
-                <TextBlock Text="[ TARGETS ]" Style="{StaticResource SectionTitle}" Margin="2,0,0,12" />
 
                 <ItemsControl ItemsSource="{Binding Rows}" Focusable="False" IsTabStop="False">
                     <ItemsControl.ItemTemplate>
@@ -111,19 +110,7 @@
                         HorizontalAlignment="Left" Margin="2,6,0,0"
                         Visibility="{Binding HasRegistryIssues, Converter={StaticResource BoolToVisibility}}" />
 
-                <Border Margin="0,10,0,0" Padding="16,10" CornerRadius="12" Background="{DynamicResource InfoBackgroundBrush}"
-                        Visibility="{Binding ShowAdminHint, Converter={StaticResource BoolToVisibility}}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding AdminHint}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" />
-                        <Button Grid.Column="1" Style="{StaticResource LinkButton}" Content="Run as administrator" Command="{Binding RestartAsAdministratorCommand}"
-                                VerticalAlignment="Center" Margin="16,0,0,0"
-                                AutomationProperties.HelpText="Windows will ask for permission before Clenzy restarts." />
-                    </Grid>
-                </Border>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>

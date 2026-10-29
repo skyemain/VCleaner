@@ -21,7 +21,7 @@ public partial class MainWindow : Window
         SourceInitialized += (_, _) =>
         {
             ApplyTitleBarTheme(ThemeManager.IsDark);
-            EnableGlassBackdrop();
+            // Opaque composition avoids rectangular backdrop artifacts on Windows GPUs.
         };
         ThemeManager.ThemeChanged += (_, dark) => ApplyTitleBarTheme(dark);
         PreviewKeyDown += OnPreviewKeyDown;
@@ -34,10 +34,11 @@ public partial class MainWindow : Window
         if (_viewModel.IsBusy) return;
         var page = new Views.Windows11CleanupWindow();
         var content = page.Content; page.Content = null;
-        DebloatHost.Content = content; DebloatHost.Visibility = Visibility.Visible;
+        if (content is FrameworkElement element) element.Resources = page.Resources;
+        DebloatHost.Content = content; DebloatSurface.Visibility = Visibility.Visible;
         page.EmbeddedOwner = this;
         page.ExitRequested = () => {
-            DebloatHost.Content = null; DebloatHost.Visibility = Visibility.Collapsed;
+            DebloatHost.Content = null; DebloatSurface.Visibility = Visibility.Collapsed;
             if (page.DiskCleanupRequested) _ = _viewModel.ReviewWindows11DiskCleanupAsync();
             if (page.AdministratorRequested && _viewModel.RestartAsAdministratorCommand.CanExecute(null)) _viewModel.RestartAsAdministratorCommand.Execute(null);
         };

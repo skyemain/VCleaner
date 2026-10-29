@@ -53,9 +53,16 @@ public partial class Windows11CleanupWindow : Window
         Activity.Text = "Generated fixture transaction verified and restored.";
         ShowFindings(); UpdateLayout();
         var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-        bitmap.Render(this); var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        var content = (FrameworkElement)Content; Content = null; content.Resources = Resources;
+        var surface = new System.Windows.Controls.Border { Background = (System.Windows.Media.Brush)FindResource("WindowBackgroundBrush"), Child = content };
+        if (surface.Background is not System.Windows.Media.SolidColorBrush { Color.A: 255 }) throw new InvalidOperationException("Embedded page must be opaque.");
+        var host = new Window { Width = ActualWidth, Height = ActualHeight, Content = surface };
+        host.Show(); host.UpdateLayout();
+        if (content.TryFindResource(typeof(System.Windows.Controls.TabItem)) is null) throw new InvalidOperationException("Embedded theme was lost.");
+        bitmap.Render(host); var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
         encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
-        using var file = File.Create(screenshot); encoder.Save(file);
+        using (var file = File.Create(screenshot)) encoder.Save(file);
+        host.Content = null; surface.Child = null; host.Close(); Content = content;
     }
     private void EnvironmentChanged(object sender, RoutedEventArgs e) { if (Findings is not null && !busy) ResetEnvironment(); }
     private void ResetEnvironment()

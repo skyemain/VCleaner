@@ -4,8 +4,8 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- Runs with the user's normal rights. Elevation is only ever requested explicitly from the UI. -->
-        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+        <!-- Windows requests administrator permission at launch. -->
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>
