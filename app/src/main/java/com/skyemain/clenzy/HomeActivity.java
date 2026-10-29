@@ -20,6 +20,7 @@ import java.util.*;
 public final class HomeActivity extends AppCompatActivity {
     private int ink,muted,surface,bg; private final int blue=Color.rgb(50,104,232);
     private LinearLayout page;
+    private boolean waitingUsage;
     private final java.util.concurrent.ExecutorService worker=java.util.concurrent.Executors.newSingleThreadExecutor();
     @Override protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
     private int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
@@ -27,7 +28,7 @@ public final class HomeActivity extends AppCompatActivity {
         int theme=getSharedPreferences("cleanup",0).getInt("theme",-1);
         applyTheme(theme); super.onCreate(state); draw();
     }
-    @Override protected void onResume(){super.onResume(); if(page!=null) draw();}
+    @Override protected void onResume(){super.onResume(); if(page!=null) draw();if(waitingUsage){waitingUsage=false;loadApps();}}
     private static void applyTheme(int mode){
         if(mode==1)AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         else if(mode==2)AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
@@ -54,7 +55,7 @@ public final class HomeActivity extends AppCompatActivity {
         page.addView(text("Review your files before removing anything personal.",13,muted));
         page.addView(text("YOUR TOOLS",12,muted),spaced());
         LinearLayout row=new LinearLayout(this);tool(row,"▣  Large Files","Find files over 100 MB",()->open("large"));tool(row,"▧  Duplicate Files","Compare exact contents",()->open("duplicates"));page.addView(row);
-        LinearLayout row2=new LinearLayout(this);tool(row2,"↓  Downloads","Review downloaded files",()->open("downloads"));tool(row2,"▤  Apps","Manage installed apps",this::apps);page.addView(row2);
+        LinearLayout row2=new LinearLayout(this);tool(row2,"↓  Downloads","Review downloaded files",()->open("downloads"));tool(row2,"▤  Apps","Find space-heavy apps",this::apps);page.addView(row2);
         long last=getSharedPreferences("cleanup",0).getLong("lastClean",0);
         if(last>0)page.addView(text("Last cleanup · "+android.text.format.DateFormat.format("MMM d, h:mm a",last)+"\n"+size(getSharedPreferences("cleanup",0).getLong("lastBytes",0))+" successfully deleted",13,muted),spaced());
         else page.addView(text("One storage permission. Find large files, downloads and duplicate copies. Review your selection, then clean.",13,muted),spaced());
@@ -82,13 +83,41 @@ public final class HomeActivity extends AppCompatActivity {
             new AlertDialog.Builder(this).setTitle("Cleanup history · on this device").setItems(rows,(d,w)->{try{var item=entries.getJSONObject(w);message("Cleanup details",rows[w]+"\n"+item.getInt("skipped")+" skipped or unavailable. Source bytes deleted may differ from device free-space changes.");}catch(org.json.JSONException e){message("Unavailable","This history entry could not be read.");}}).setPositiveButton("Done",null).show();
         }catch(org.json.JSONException e){message("History unavailable","Saved cleanup history could not be read.");}
     }
+    private boolean usageAllowed(){
+        android.app.AppOpsManager ops=getSystemService(android.app.AppOpsManager.class);
+        return ops.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,android.os.Process.myUid(),getPackageName())==android.app.AppOpsManager.MODE_ALLOWED;
+    }
     private void apps(){
+        if(usageAllowed()){loadApps();return;}
+        new AlertDialog.Builder(this).setTitle("Find apps taking up space")
+            .setMessage("Optional Usage access lets Clenzy show app sizes and recent use, so you can decide what to uninstall. This information stays on your phone.")
+            .setPositiveButton("Enable usage access",(d,w)->{waitingUsage=true;startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));})
+            .setNeutralButton("Continue without sizes",(d,w)->loadApps()).setNegativeButton("Cancel",null).show();
+    }
+    private record AppEntry(String name,String pkg,long bytes,long cache,long lastUsed) {}
+    private void loadApps(){
+        android.app.AlertDialog loading=new AlertDialog.Builder(this).setTitle("Analyzing apps…").setMessage("Reading storage reported by Android").setNegativeButton("Cancel",null).create();loading.show();
         worker.execute(()->{
+            boolean allowed=usageAllowed();List<AppEntry> entries=new ArrayList<>();Set<String> seen=new HashSet<>();
+            Map<String,android.app.usage.UsageStats> usage=Map.of();
+            if(allowed)try{var stats=getSystemService(android.app.usage.UsageStatsManager.class).queryAndAggregateUsageStats(System.currentTimeMillis()-90L*86400000,System.currentTimeMillis());if(stats!=null)usage=stats;}catch(SecurityException ignored){}
             Intent launcher=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
-            Map<String,String> visible=new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-            for(ResolveInfo r:getPackageManager().queryIntentActivities(launcher,0))visible.put(r.loadLabel(getPackageManager()).toString()+" · "+r.activityInfo.packageName,r.activityInfo.packageName);
-            runOnUiThread(()->{if(isFinishing())return;String[] labels=visible.keySet().toArray(new String[0]);
-                new AlertDialog.Builder(this).setTitle("Apps · visible launcher apps").setItems(labels,(d,w)->{String pkg=visible.get(labels[w]);new AlertDialog.Builder(this).setTitle(labels[w]).setMessage("Android controls app storage and uninstall. Private app storage sizes are not available to Clenzy.").setPositiveButton("App settings",(a,b)->startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+pkg)))).setNeutralButton("Uninstall",(a,b)->{try{startActivity(new Intent(Intent.ACTION_DELETE,Uri.parse("package:"+pkg)));}catch(ActivityNotFoundException e){message("Unavailable","Open Android Settings to uninstall this app.");}}).setNegativeButton("Cancel",null).show();}).setPositiveButton("All apps in Settings",(d,w)->startActivity(new Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS))).show();});
+            for(ResolveInfo info:getPackageManager().queryIntentActivities(launcher,0)){
+                String pkg=info.activityInfo.packageName;if(!seen.add(pkg))continue;
+                long bytes=-1,cache=-1,last=0;
+                if(allowed)try{var app=getPackageManager().getApplicationInfo(pkg,0);var stats=getSystemService(android.app.usage.StorageStatsManager.class).queryStatsForPackage(app.storageUuid==null?android.os.storage.StorageManager.UUID_DEFAULT:app.storageUuid,pkg,android.os.Process.myUserHandle());bytes=stats.getAppBytes()+stats.getDataBytes();cache=stats.getCacheBytes();}catch(Exception ignored){}
+                if(usage.containsKey(pkg))last=usage.get(pkg).getLastTimeUsed();
+                entries.add(new AppEntry(info.loadLabel(getPackageManager()).toString(),pkg,bytes,cache,last));
+            }
+            entries.sort(Comparator.comparingLong(AppEntry::bytes).reversed().thenComparing(AppEntry::name));
+            runOnUiThread(()->{if(isFinishing()||isDestroyed()||!loading.isShowing())return;loading.dismiss();
+                String[] labels=new String[entries.size()];for(int n=0;n<entries.size();n++){AppEntry app=entries.get(n);labels[n]=app.name()+" · "+(app.bytes()<0?"Size unavailable":size(app.bytes()))+"\n"+(app.lastUsed()>0?"Last used "+android.text.format.DateFormat.format("MMM d",app.lastUsed()):"No usage record available");}
+                new AlertDialog.Builder(this).setTitle("Apps · largest first").setItems(labels,(d,w)->{
+                    AppEntry app=entries.get(w);new AlertDialog.Builder(this).setTitle(app.name()).setMessage((app.cache()<0?"":size(app.cache())+" cache included in app data.\n")+"Open Android app settings to clear its cache, or uninstall it. Uninstalling can remove its local data.")
+                    .setPositiveButton("App settings",(a,b)->startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+app.pkg()))))
+                    .setNeutralButton("Uninstall",(a,b)->{try{startActivity(new Intent(Intent.ACTION_DELETE,Uri.parse("package:"+app.pkg())));}catch(ActivityNotFoundException e){message("Unavailable","Use Android app settings to uninstall.");}}).setNegativeButton("Cancel",null).show();
+                }).setPositiveButton("Done",null).show();
+            });
         });
     }
     private void message(String title,String body){new AlertDialog.Builder(this).setTitle(title).setMessage(body).setPositiveButton("Done",null).show();}
