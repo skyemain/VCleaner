@@ -52,15 +52,26 @@ public final class SharedStorageCleaner {
     }
     private String digest(File file,CancellationSignal cancel) throws Exception {
         MessageDigest hash=MessageDigest.getInstance("SHA-256");byte[] buffer=new byte[131072];
-        try(var input=new FileInputStream(file)){int count;while((count=input.read(buffer))!=-1){cancel.throwIfCanceled();hash.update(buffer,0,count);}}
+        long expected=file.length(),read=0;
+        try(var input=new FileInputStream(file)){int count;while((count=input.read(buffer))!=-1){cancel.throwIfCanceled();read+=count;if(read>expected)throw new IOException("File changed during hashing");hash.update(buffer,0,count);}}
+        if(read!=expected)throw new IOException("File changed during hashing");
         StringBuilder value=new StringBuilder();for(byte b:hash.digest())value.append(String.format("%02x",b&255));return value.toString();
     }
     public DocumentCleaner.Outcome delete(List<ReviewFile> selected,CancellationSignal cancel){
         int deleted=0,skipped=0;long bytes=0;
+        Set<String> selectedUris=new HashSet<>();for(ReviewFile item:selected)selectedUris.add(item.uri());
         for(ReviewFile f:selected){if(cancel.isCanceled())break;
             try{File local=new File(java.net.URI.create(f.uri()));
                 if(!f.equals(scanned.get(f.uri()))||!allowed(local)||!Files.isRegularFile(local.toPath(),LinkOption.NOFOLLOW_LINKS)||!f.matches(local.length(),local.lastModified())){skipped++;continue;}
-                if(f.digest()!=null&&!f.digest().equals(digest(local,cancel))){skipped++;continue;}
+                if(f.digest()!=null){
+                    if(!f.digest().equals(digest(local,cancel))){skipped++;continue;}
+                    boolean keeperExpected=false,keeperVerified=false;
+                    for(ReviewFile keep:scanned.values())if(f.digest().equals(keep.digest())&&!selectedUris.contains(keep.uri())){
+                        keeperExpected=true;File kept=new File(java.net.URI.create(keep.uri()));
+                        if(allowed(kept)&&kept.isFile()&&keep.matches(kept.length(),kept.lastModified())&&keep.digest().equals(digest(kept,cancel))){keeperVerified=true;break;}
+                    }
+                    if(keeperExpected&&!keeperVerified){skipped++;continue;}
+                }
                 if(!allowed(local)||!f.matches(local.length(),local.lastModified())){skipped++;continue;}
                 if(local.delete()&&!local.exists()){deleted++;bytes+=f.bytes();}else skipped++;
             }catch(Exception e){skipped++;}

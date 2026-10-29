@@ -45,6 +45,16 @@ public class SharedStorageTest {
    var outcome=cleaner.delete(chosen,new CancellationSignal());assertEquals(1,outcome.deleted());assertEquals(3,outcome.bytes());assertTrue(other.exists());assertTrue(a.exists()||b.exists());
   }finally{a.delete();b.delete();other.delete();root.delete();}
  }
+ @Test public void duplicate_cleanup_keeps_last_copy_when_original_disappears() throws Exception {
+  File root=new File(ApplicationProvider.<Context>getApplicationContext().getCacheDir(),"shared-"+UUID.randomUUID());assertTrue(root.mkdirs());
+  File a=new File(root,"a"),b=new File(root,"b");
+  try{Files.write(a.toPath(),new byte[]{1,2});Files.write(b.toPath(),new byte[]{1,2});
+   SharedStorageCleaner cleaner=new SharedStorageCleaner(root);var scan=cleaner.scan(new CancellationSignal(),true,false);
+   Set<String> extras=ReviewRules.extraCopies(scan.files());List<ReviewFile> chosen=new ArrayList<>();
+   for(var f:scan.files())if(extras.contains(f.uri()))chosen.add(f);else assertTrue(new File(java.net.URI.create(f.uri())).delete());
+   assertEquals(0,cleaner.delete(chosen,new CancellationSignal()).deleted());assertTrue(a.exists()||b.exists());
+  }finally{a.delete();b.delete();root.delete();}
+ }
  @Test public void downloads_scan_excludes_other_files_and_rejects_changed_files() throws Exception {
   File root=new File(ApplicationProvider.<Context>getApplicationContext().getCacheDir(),"shared-"+UUID.randomUUID());File downloads=new File(root,"Download");assertTrue(downloads.mkdirs());
   File file=new File(downloads,"document.txt"),outside=new File(root,"outside.txt");
