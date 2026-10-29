@@ -238,7 +238,7 @@ public sealed class SafeDeletionService : ISafeDeletionService
         {
             cancellationToken.ThrowIfCancellationRequested();
             var directory = pending.Pop();
-            var entries = ListDirectory(directory, options);
+            var entries = ListDirectory(directory, options, cancellationToken);
 
             foreach (var entry in entries)
             {
@@ -273,7 +273,7 @@ public sealed class SafeDeletionService : ISafeDeletionService
 
     private readonly record struct RawEntry(string Name, bool IsDirectory, FileAttributes Attributes, long Length, DateTime LastWriteUtc);
 
-    private static List<RawEntry> ListDirectory(string directory, EnumerationOptions options)
+    private static List<RawEntry> ListDirectory(string directory, EnumerationOptions options, CancellationToken token)
     {
         var list = new List<RawEntry>();
         try
@@ -288,7 +288,7 @@ public sealed class SafeDeletionService : ISafeDeletionService
                     e.LastWriteTimeUtc.UtcDateTime),
                 options);
 
-            list.AddRange(enumerable);
+            foreach (var entry in enumerable) { token.ThrowIfCancellationRequested(); list.Add(entry); }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {

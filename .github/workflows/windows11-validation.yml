@@ -25,6 +25,6 @@ jobs:
       - name: Exercise actual WPF scan, apply and restore with fixtures
         shell: pwsh
         run: |
-          $app = Start-Process -FilePath 'artifacts/release/Clenzy-1.9.0-win-x64.exe' -ArgumentList '--windows11-smoke' -PassThru
+          $app = Start-Process -FilePath 'artifacts/release/Clenzy-1.9.1-win-x64.exe' -ArgumentList '--windows11-smoke' -PassThru
           if (-not $app.WaitForExit(60000)) { $app.Kill(); throw 'UI smoke timed out' }
           if ($app.ExitCode -ne 0) { throw 'UI smoke failed' }

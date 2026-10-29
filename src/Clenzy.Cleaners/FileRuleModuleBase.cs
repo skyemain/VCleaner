@@ -287,6 +287,7 @@ public abstract class FileRuleModuleBase : ICleanerModule
             else
             {
                 var root = roots[finding.RuleId!];
+                context.Reporter.Operation($"Cleaning {Name}: {cleaned + skipped + errors + 1:N0} of {findings.Count:N0} files…");
                 outcome = Deletion.DeleteFile(root, finding.Location, finding.LastWriteUtcTicks, finding.EstimatedBytes, context.NowUtc);
                 if (outcome.Kind == OutcomeKind.Cleaned)
                 {
@@ -334,11 +335,14 @@ public abstract class FileRuleModuleBase : ICleanerModule
         }
 
         var removedDirectories = 0;
+        context.Reporter.Operation($"Finishing {Name}: removing empty folders…");
         foreach (var (ruleId, directories) in parents)
         {
+            if (ct.IsCancellationRequested) { canceled = true; break; }
             if (roots.TryGetValue(ruleId, out var root))
             {
-                removedDirectories += Deletion.PruneEmptyDirectories(root, directories, CancellationToken.None);
+                try { removedDirectories += Deletion.PruneEmptyDirectories(root, directories, ct); }
+                catch (OperationCanceledException) { canceled = true; break; }
             }
         }
 

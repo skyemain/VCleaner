@@ -78,6 +78,16 @@ public sealed class SafeDeletionServiceTests
         s.Enumerate(root, DateTime.UtcNow, CancellationToken.None).ToList();
 
     [Fact]
+    public void Cancelled_folder_cleanup_preserves_folders_and_stops()
+    {
+        using var h = new Harness();
+        var folder = Path.Combine(h.Paths.UserTemp,"unfinished"); Directory.CreateDirectory(folder);
+        var root = h.Deletion.Prepare(Rule(h.Paths.UserTemp),ExclusionPolicy.None,out _)!;
+        using var stop = new CancellationTokenSource(); stop.Cancel();
+        Assert.Throws<OperationCanceledException>(() => h.Deletion.PruneEmptyDirectories(root,new[]{folder},stop.Token));
+        Assert.True(Directory.Exists(folder));
+    }
+    [Fact]
     public void Prepare_rejects_protected_ancestor_missing_and_invalid_roots()
     {
         using var h = new Harness();
