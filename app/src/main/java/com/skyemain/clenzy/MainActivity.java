@@ -175,6 +175,7 @@ public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
         model.folder(tree);
     }
     private void preview(ReviewFile file) {
+        if(model.ownCache) {new AlertDialog.Builder(this).setTitle("Clenzy cache").setMessage("This is an old file inside Clenzy’s own disposable cache. Private cache files are not shared with other apps for preview.").setPositiveButton("Done",null).show();return;}
         try { startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(file.uri()), getContentResolver().getType(Uri.parse(file.uri()))).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)); }
         catch (ActivityNotFoundException | SecurityException e) { new AlertDialog.Builder(this).setMessage("No preview app is available for this file.").setPositiveButton("Done", null).show(); }
     }

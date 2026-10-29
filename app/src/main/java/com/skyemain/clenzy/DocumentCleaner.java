@@ -106,7 +106,9 @@ public final class DocumentCleaner {
 
     private boolean gone(Uri uri) {
         try(Cursor c=resolver.query(uri,new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID},null,null,null)) {
-            return c!=null && !c.moveToFirst();
+            if(c!=null)return !c.moveToFirst();
+            try(var descriptor=resolver.openFileDescriptor(uri,"r")){return false;}
+            catch(java.io.FileNotFoundException removed){return true;}
         }catch(Exception e){return e instanceof java.io.FileNotFoundException;}
     }
     private Metadata query(Uri uri) throws IOException {

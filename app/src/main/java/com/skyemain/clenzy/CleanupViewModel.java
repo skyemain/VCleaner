@@ -43,7 +43,7 @@ public final class CleanupViewModel extends AndroidViewModel {
         if (busy) return;
         if (!ownCache && !media && tree == null) { status = "Choose a folder first."; changed(); return; }
         completed=false;movedToTrash=false; deep = deepScan; busy = true; selected.clear(); files = List.of(); cancellation = new CancellationSignal();
-        status = "Scanning " + (media ? "authorized photos and videos" : "chosen folder") + " · " + (deep ? "deep scan, up to 4 GiB read" : "up to 512 MiB read") + "."; changed();
+        status = "Scanning " + (ownCache ? "Clenzy’s disposable cache" : media ? "authorized photos and videos" : "chosen folder") + " · " + (deep ? "deep scan, up to 4 GiB read" : "up to 512 MiB read") + "."; changed();
         worker.execute(() -> {
             try {
                 List<ReviewFile> result; int hashed, notHashed; boolean truncated; int skipped = 0;
