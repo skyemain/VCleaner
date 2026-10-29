@@ -1,6 +1,6 @@
 # Clenzy for Android
 
-Version 1.1. Native Android 8+ development candidate, not approved for production. Only Android source, tests, builds and CI belong on this branch. Main remains the catalog of approved production platforms.
+Version 1.2.0. Native Android 8+ development candidate, not approved for production. Only Android source, tests, builds and CI belong on this branch. Main remains the catalog of approved production platforms.
 
 ## Cleanup and review
 
@@ -41,3 +41,5 @@ Cleanup history retains up to 20 local folder/cache cleanup entries, with the la
 Platform limits: no other-app private cache cleanup; no trustworthy automatic residual-app-file classification; no automatic empty-directory removal because Android providers may recursively delete contents changed by another app. Downloads require a supported folder/document grant. Package storage sizes are not exposed and are not invented. Folder providers may keep trash or represent cloud files; source bytes deleted are distinct from actual device free-space changes. Scan/deletion cancellation remains cooperative during slow provider calls.
 
 Automated coverage adds cache eligibility/changed-file refusal, unique selection totals, small-download review, launcher recreation, primary-action routing and light/dark screenshots. Build, lint, emulator and signing verification results must be checked for the final commit before declaring the candidate validated. Physical-device, cloud-provider, permanent-denial and interruption stress testing remain required before production approval.
+
+Validation for 1.2.0: https://github.com/skyemain/VCleaner/actions/runs/40917106034 passed unit tests, lint, debug/release APK and AAB builds, release signature verification and all nine Android 35 emulator instrumentation tests. The guided test exercises Home → cache source → real scan → selection → confirmation → verified results and asserts removal of its disposable fixture. Earlier light/dark screenshots were visually inspected; later changes affect review-button contrast and testing only. APK SHA256: ba57d6697ba1fb41a4204dad0b28713f707a509c43f862187ae3c85d1f20fbaa. Download release/Clenzy-1.2.0-android-candidate.apk. Signing certificate remains unchanged. This is a tested development candidate, not approval for production or a claim that physical-device/provider/permission edge cases are all covered.
