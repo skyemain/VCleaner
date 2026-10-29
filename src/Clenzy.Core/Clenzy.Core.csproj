@@ -4,4 +4,5 @@
     <RootNamespace>Clenzy.Core</RootNamespace>
     <AssemblyName>Clenzy.Core</AssemblyName>
   </PropertyGroup>
+  <ItemGroup><EmbeddedResource Include="Windows11/Catalog.json" LogicalName="Clenzy.Windows11.Catalog.json" /></ItemGroup>
 </Project>

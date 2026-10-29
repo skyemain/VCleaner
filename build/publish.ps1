@@ -87,6 +87,7 @@ try {
         Write-Host 'Not code-signed (use -Sign). Windows SmartScreen warns about unsigned downloads.' -ForegroundColor Yellow
     }
 
+    Copy-Item (Join-Path $root 'THIRD-PARTY-NOTICES.txt') $releaseDir -Force
     $files = @($exe)
     if ($Zip) {
         $zipPath = Join-Path $releaseDir "Clenzy-$version-$runtime.zip"

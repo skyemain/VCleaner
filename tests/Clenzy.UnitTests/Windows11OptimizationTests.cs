@@ -72,6 +72,43 @@ public sealed class Windows11OptimizationTests : IDisposable
         Assert.True((await b.ReadAsync("Microsoft.Copilot", default)).Exists);
         Assert.Equal(0, b.Writes); Assert.Single(e.Transactions());
     }
+    [Fact] public void Catalog_has_unique_ids_valid_profiles_and_preserves_essential_components()
+    {
+        Assert.Equal(MaintenanceCatalog.Entries.Count, MaintenanceCatalog.Entries.Select(x => x.Id).Distinct().Count());
+        foreach (var entry in MaintenanceCatalog.Entries) {
+            Assert.NotEmpty(entry.Impact); Assert.NotEmpty(entry.Title);
+            Assert.True(Enum.IsDefined(entry.Action.Profile));
+            if (entry.Kind == "Package" || entry.Kind == "Service" || entry.Policy) Assert.Equal(OptimizationProfile.Advanced, entry.Action.Profile);
+            Assert.DoesNotContain("Security", entry.Path, StringComparison.OrdinalIgnoreCase);
+        }
+        Assert.DoesNotContain(MaintenanceCatalog.Entries, x => x.Id.Contains("GamingServices") || x.Id.Contains("Xbox") || x.Id.Contains("WindowsStore") || x.Id.Contains("WebExperience"));
+    }
+    [Fact] public async Task Every_reversible_action_roundtrips_its_exact_prior_state()
+    {
+        var b = new SandboxOptimizationBackend(); var e = new OptimizationEngine(b, root);
+        foreach (var entry in MaintenanceCatalog.Entries.Where(x => x.Kind != "Package" && !x.Destructive)) {
+            var before = await b.ReadAsync(entry.Id, default);
+            var tx = await e.ApplyAsync(await b.AuditAsync(default), new[]{entry.Id}, OptimizationProfile.Advanced, true, false, default);
+            Assert.Equal(entry.DesiredState, await b.ReadAsync(entry.Id, default));
+            await e.RestoreAsync(tx.Id, default);
+            Assert.Equal(before, await b.ReadAsync(entry.Id, default));
+        }
+    }
+    [Fact] public async Task Recall_policy_requires_destructive_consent_even_though_setting_is_reversible()
+    {
+        var b = new SandboxOptimizationBackend(); var e = new OptimizationEngine(b, root);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => e.ApplyAsync(awaitAudit(),new[]{"recall"},OptimizationProfile.Advanced,true,false,default));
+        OptimizationAudit awaitAudit() => b.AuditAsync(default).GetAwaiter().GetResult();
+        Assert.Empty(e.Transactions());
+    }
+    [Fact] public async Task Startup_command_can_be_restored_after_application_restart()
+    {
+        var b = new SandboxOptimizationBackend(); var e = new OptimizationEngine(b, root);
+        var tx = await e.ApplyAsync(await b.AuditAsync(default),new[]{"startup:Steam"},OptimizationProfile.Balanced,true,false,default);
+        Assert.False((await b.ReadAsync("startup:Steam",default)).Exists);
+        var restarted = new OptimizationEngine(b,root); await restarted.RestoreAsync(tx.Id,default);
+        Assert.Equal("fixture.exe",(await b.ReadAsync("startup:Steam",default)).Value);
+    }
     private sealed class RecoveryFailureBackend : IOptimizationBackend
     {
         private readonly SandboxOptimizationBackend inner = new();

@@ -13,6 +13,8 @@ public sealed class OptimizationTransaction
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public DateTimeOffset Started { get; set; } = DateTimeOffset.UtcNow;
     public string Audit { get; set; } = "";
+    public string Owner { get; set; } = Environment.UserDomainName + "\\" + Environment.UserName;
+    public string Machine { get; set; } = Environment.MachineName;
     public bool Sandbox { get; set; }
     public List<OptimizationChange> Changes { get; set; } = new();
 }
@@ -28,22 +30,7 @@ public interface IOptimizationBackend
 
 public static class OptimizationCatalog
 {
-    public static readonly IReadOnlyList<OptimizationAction> Actions = new[] {
-        new OptimizationAction("advertising", "Windows Privacy", "Turn off advertising ID", "Stops apps using the Windows advertising ID. Other tracking methods are unaffected.", OptimizationProfile.Safe),
-        new OptimizationAction("extensions", "Windows Explorer", "Show file extensions", "Shows known file extensions. Reversible; refresh Explorer if needed.", OptimizationProfile.Safe),
-        new OptimizationAction("hidden", "Windows Explorer", "Show hidden files", "Shows hidden files, preserving protected operating-system file hiding.", OptimizationProfile.Balanced),
-        new OptimizationAction("explorerads", "Ads and AI Features", "Turn off Explorer provider suggestions", "Suppresses sync-provider promotional notifications. Does not stop syncing.", OptimizationProfile.Safe),
-        new OptimizationAction("taskview", "Windows Explorer", "Hide Task View button", "Hides the button; virtual desktops remain available with keyboard shortcuts.", OptimizationProfile.Balanced),
-        new OptimizationAction("alignment", "Windows Explorer", "Align taskbar to the left", "Changes taskbar alignment; no shell replacement or restart is forced.", OptimizationProfile.Balanced),
-        new OptimizationAction("theme", "Windows Explorer", "Use dark app mode", "Changes the current user's application theme.", OptimizationProfile.Safe),
-        new OptimizationAction("Microsoft.BingNews", "Bloatware Removal", "Remove Microsoft News", "Current-user uninstall. Original app data cannot be restored automatically; reinstall from Microsoft Store.", OptimizationProfile.Advanced, true),
-        new OptimizationAction("Microsoft.BingWeather", "Bloatware Removal", "Remove Microsoft Weather", "Current-user uninstall; reinstall from Microsoft Store. Does not remove Widgets dependencies.", OptimizationProfile.Advanced, true),
-        new OptimizationAction("Microsoft.MicrosoftSolitaireCollection", "Bloatware Removal", "Remove Solitaire Collection", "Current-user uninstall; game data may be lost. Reinstall from Microsoft Store.", OptimizationProfile.Advanced, true),
-        new OptimizationAction("Clipchamp.Clipchamp", "Bloatware Removal", "Remove Clipchamp", "Current-user uninstall; export projects first. Reinstall from Microsoft Store.", OptimizationProfile.Advanced, true),
-        new OptimizationAction("Microsoft.Getstarted", "Bloatware Removal", "Remove Microsoft Tips", "Only removable installed packages are offered. No provisioned packages are removed.", OptimizationProfile.Advanced, true),
-        new OptimizationAction("Microsoft.WindowsFeedbackHub", "Bloatware Removal", "Remove Feedback Hub", "Current-user uninstall. Windows diagnostics and security logging are preserved.", OptimizationProfile.Advanced, true),
-        new OptimizationAction("Microsoft.Copilot", "Ads and AI Features", "Remove Copilot app", "Removes only the standalone current-user app; shared AI frameworks, Recall and drivers are preserved.", OptimizationProfile.Advanced, true)
-    };
+    public static readonly IReadOnlyList<OptimizationAction> Actions = MaintenanceCatalog.Entries.Select(x => x.Action).ToArray();
     public static OptimizationAction Get(string id) => Actions.SingleOrDefault(x => x.Id == id) ?? throw new InvalidOperationException("Unknown optimization action.");
 }
 
@@ -62,7 +49,7 @@ public sealed class OptimizationEngine
         foreach (var id in ids) {
             var action = OptimizationCatalog.Get(id);
             if (action.Profile > profile || !audit.Findings.Any(x => x.Action.Id == id && x.Available)) throw new InvalidOperationException("Selection is unavailable or outside the selected profile.");
-            if (action.Irreversible && !destructiveConfirmed) throw new InvalidOperationException("App removal requires a separate confirmation.");
+            if ((action.Irreversible || MaintenanceCatalog.Get(id).Destructive) && !destructiveConfirmed) throw new InvalidOperationException("Destructive changes require a separate confirmation.");
         }
         await gate.WaitAsync(token);
         var tx = new OptimizationTransaction { Audit = audit.Details, Sandbox = backend.Sandbox };
@@ -76,7 +63,7 @@ public sealed class OptimizationEngine
                 tx.Changes.Add(new(id, before, await backend.DesiredAsync(id, token), "Prepared"));
             }
             Save(tx);
-            if (ids.Any(id => OptimizationCatalog.Get(id).Irreversible) && !await backend.VerifyRecoveryPointAsync(token))
+            if (ids.Any(id => OptimizationCatalog.Get(id).Irreversible || MaintenanceCatalog.Get(id).Destructive) && !await backend.VerifyRecoveryPointAsync(token))
                 throw new InvalidOperationException("No new restore point could be verified. App removal is blocked; use reversible settings or establish recovery first.");
             for (var i = 0; i < tx.Changes.Count; i++) {
                 token.ThrowIfCancellationRequested();
@@ -101,7 +88,7 @@ public sealed class OptimizationEngine
         await gate.WaitAsync(token);
         try {
             var tx = JsonSerializer.Deserialize<OptimizationTransaction>(File.ReadAllText(Path.Combine(root, id + ".json"))) ?? throw new InvalidDataException();
-            if (tx.Id != id || tx.Sandbox != backend.Sandbox) throw new InvalidOperationException("Backup belongs to a different environment.");
+            if (tx.Id != id || tx.Sandbox != backend.Sandbox || tx.Owner != Environment.UserDomainName + "\\" + Environment.UserName || tx.Machine != Environment.MachineName) throw new InvalidOperationException("Backup belongs to a different environment.");
             for (var i = tx.Changes.Count - 1; i >= 0; i--) {
                 token.ThrowIfCancellationRequested(); var c = tx.Changes[i]; var action = OptimizationCatalog.Get(c.Id);
                 if (action.Irreversible || c.Status == "Prepared" || c.Status == "Restored") continue;
@@ -125,11 +112,16 @@ public sealed class OptimizationEngine
 public sealed class SandboxOptimizationBackend : IOptimizationBackend
 {
     public bool Sandbox => true;
-    private readonly Dictionary<string, OptimizationState> values = OptimizationCatalog.Actions.ToDictionary(x => x.Id, x => x.Irreversible ? new OptimizationState(true, "fixture-package", "Package") : new OptimizationState(true, "1", "DWord"));
+    private readonly Dictionary<string, OptimizationState> values = MaintenanceCatalog.Entries.ToDictionary(x => x.Id, x => x.Kind switch {
+        "Package" => new OptimizationState(true, "fixture-package", "Package"),
+        "Startup" => new OptimizationState(true, "fixture.exe", "String"),
+        "Service" => new OptimizationState(true, "Automatic", "Service"),
+        _ => new OptimizationState(true, x.Desired == 0 ? "1" : "0", "DWord")
+    });
     public Task<OptimizationAudit> AuditAsync(CancellationToken token) => Task.FromResult(new OptimizationAudit("SANDBOX PREVIEW · generated Windows 11 fixtures", true, false,
         OptimizationCatalog.Actions.Select(x => new OptimizationFinding(x, values[x.Id].Value ?? "Absent", true, State: values[x.Id])).ToArray(), "Generated fixtures only. No host hardware, applications, security or performance was inspected. No Windows settings are modified."));
     public Task<OptimizationState> ReadAsync(string id, CancellationToken token) { OptimizationCatalog.Get(id); token.ThrowIfCancellationRequested(); return Task.FromResult(values[id]); }
-    public Task<OptimizationState> DesiredAsync(string id, CancellationToken token) => Task.FromResult(OptimizationCatalog.Get(id).Irreversible ? new OptimizationState(false, null, "Package") : new OptimizationState(true, id == "hidden" ? "1" : "0", "DWord"));
+    public Task<OptimizationState> DesiredAsync(string id, CancellationToken token) => Task.FromResult(MaintenanceCatalog.Get(id).DesiredState);
     public Task WriteAsync(string id, OptimizationState state, CancellationToken token) { OptimizationCatalog.Get(id); token.ThrowIfCancellationRequested(); values[id] = state; return Task.CompletedTask; }
     public Task<bool> VerifyRecoveryPointAsync(CancellationToken token) => Task.FromResult(true);
 }

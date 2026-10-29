@@ -449,7 +449,9 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    private async Task RunAsync(bool automatic)
+    public Task ReviewWindows11DiskCleanupAsync() => RunAsync(automatic: false, maintenanceReview: true);
+
+    private async Task RunAsync(bool automatic, bool maintenanceReview = false)
     {
         if (!CanStart)
         {
@@ -476,6 +478,20 @@ public sealed class MainViewModel : ObservableObject
         }
 
         var settings = _ctx.Settings.Current.Clone();
+        if (maintenanceReview)
+        {
+            settings.ReviewBeforeCleaning = true;
+            settings.CleanPrefetch = false;
+            settings.CleanShaderCache = false;
+            settings.CleanRecentTempFiles = false;
+            settings.CloseBrowsersBeforeCleaning = false;
+            settings.ClearRunHistory = false;
+            settings.ClearRecentItems = false;
+            settings.ClearExplorerAddressHistory = false;
+            settings.ClearActivityHistory = false;
+            settings.ClearBrowserSiteStorage = false;
+            settings.ScanRegistry = false;
+        }
         if (automatic)
         {
             settings.ReviewBeforeCleaning = false;

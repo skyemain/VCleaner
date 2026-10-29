@@ -2,8 +2,16 @@
 function Invoke-ClenzyWindows11 {
     param([Parameter(Mandatory=$true)]$Request)
     $ErrorActionPreference = 'Stop'
-    $allowed = @('Microsoft.BingNews','Microsoft.BingWeather','Microsoft.MicrosoftSolitaireCollection','Clipchamp.Clipchamp','Microsoft.Getstarted','Microsoft.WindowsFeedbackHub','Microsoft.Copilot')
+    $allowed = @($script:ClenzyCatalog | Where-Object Kind -eq 'Package' | ForEach-Object Id)
     switch ($Request.Operation) {
+        'Capabilities' { return @{ PowerShell=$PSVersionTable.PSVersion.ToString(); CatalogCount=@($script:ClenzyCatalog).Count } }
+        'Packages' {
+            $script:PackageSnapshot = @(Get-AppxPackage)
+            $results = @{}
+            try { foreach ($id in $allowed) { $results[$id] = Invoke-ClenzyWindows11 ([pscustomobject]@{Operation='Package';Id=$id}) } }
+            finally { $script:PackageSnapshot = $null }
+            return $results
+        }
         'Audit' {
             $errors = New-Object System.Collections.Generic.List[string]
             function Read-Section([string]$Name, [scriptblock]$Body) {
@@ -12,6 +20,7 @@ function Invoke-ClenzyWindows11 {
             $os = Get-CimInstance Win32_OperatingSystem
             $packages = @(Get-AppxPackage | Select-Object Name,PackageFullName,InstallLocation,NonRemovable,IsFramework,IsResourcePackage,Dependencies)
             $audit = [ordered]@{
+                DomainJoined = [bool](Get-CimInstance Win32_ComputerSystem).PartOfDomain
                 OS = $os | Select-Object Caption,Version,BuildNumber,OSArchitecture
                 CPU = @(Read-Section 'CPU' { Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores })
                 RAMBytes = [long]$os.TotalVisibleMemorySize * 1024
@@ -35,7 +44,7 @@ function Invoke-ClenzyWindows11 {
         }
         'Package' {
             if ($allowed -cnotcontains [string]$Request.Id) { throw 'Package is not allowlisted.' }
-            $all = @(Get-AppxPackage)
+            $all = if ($null -ne $script:PackageSnapshot) { @($script:PackageSnapshot) } else { @(Get-AppxPackage) }
             $p = @($all | Where-Object { $_.Name -ceq $Request.Id })
             if ($p.Count -gt 1) { throw 'Multiple package registrations require manual review.' }
             if ($p.Count -eq 0) { return @{ Exists=$false; FullName=$null; Blocked=$false; Reason='Not installed' } }
@@ -51,6 +60,24 @@ function Invoke-ClenzyWindows11 {
             if ($state.Blocked -or $state.FullName -cne $Request.FullName) { throw 'Package changed, is running, or is protected; rescan.' }
             Remove-AppxPackage -Package $state.FullName -ErrorAction Stop
             return @{ Removed=$true }
+        }
+        'Service' {
+            $entry = @($script:ClenzyCatalog | Where-Object { $_.Kind -ceq 'Service' -and $_.Id -ceq $Request.Id })
+            if ($entry.Count -ne 1) { throw 'Service is not allowlisted.' }
+            $service = Get-Service -Name $entry[0].Name -ErrorAction SilentlyContinue
+            if ($null -eq $service) { return @{Exists=$false; Mode=$null; Available=$false; Reason='Service is not installed.'} }
+            $delayed = Get-ItemPropertyValue -LiteralPath ('HKLM:\SYSTEM\CurrentControlSet\Services\' + $entry[0].Name) -Name DelayedAutoStart -ErrorAction SilentlyContinue
+            $blocked = $service.Status -ne 'Stopped' -or @($service.DependentServices).Count -gt 0 -or $delayed -eq 1
+            $mode = $service.StartType.ToString()
+            return @{Exists=$true; Mode=$mode; Available=(-not $blocked -and $mode -eq 'Automatic'); Reason=$(if ($blocked) {'Running, depended on or delayed-start service; preserved.'} else {'Only automatic services can be changed to manual.'})}
+        }
+        'SetService' {
+            if (@('Manual','Automatic') -cnotcontains [string]$Request.Mode) { throw 'Unsupported service start mode.' }
+            $state = Invoke-ClenzyWindows11 ([pscustomobject]@{Operation='Service';Id=$Request.Id})
+            if (-not $state.Exists -or ($Request.Mode -eq 'Manual' -and -not $state.Available)) { throw 'Service changed or cannot be modified; rescan.' }
+            $entry = $script:ClenzyCatalog | Where-Object { $_.Kind -ceq 'Service' -and $_.Id -ceq $Request.Id }
+            Set-Service -Name $entry.Name -StartupType $Request.Mode -ErrorAction Stop
+            return @{Changed=$true}
         }
         'Recovery' {
             $description = 'Clenzy Windows 11 ' + [Guid]::NewGuid().ToString('N')

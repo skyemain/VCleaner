@@ -15,6 +15,8 @@ public partial class Windows11CleanupWindow : Window
     private OptimizationAudit? audit;
     private CancellationTokenSource? operation;
     private bool busy;
+    public bool DiskCleanupRequested { get; private set; }
+    public bool AdministratorRequested { get; private set; }
     private readonly string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Clenzy", "Windows11");
     private List<Choice> choices = new();
     private string ReportsRoot => Path.Combine(root, backend.Sandbox ? "sandbox" : "live");
@@ -62,7 +64,30 @@ public partial class Windows11CleanupWindow : Window
     private void ShowFindings()
     {
         choices = audit?.Findings.Where(x => x.Action.Profile <= SelectedProfile).Select(x => new Choice(x)).ToList() ?? new();
-        Findings.ItemsSource = choices; Apply.IsEnabled = !busy && audit is { IsWindows11: true };
+        FilterFindings(); Apply.IsEnabled = !busy && audit is { IsWindows11: true };
+    }
+    private void FilterChanged(object sender, RoutedEventArgs e) { if (Findings is not null) FilterFindings(); }
+    private void FilterFindings()
+    {
+        var query = Search?.Text?.Trim() ?? "";
+        Findings.ItemsSource = choices.Where(x => (AvailableOnly?.IsChecked != true || x.Enabled) && (query.Length == 0 || (x.Title + " " + x.Description).Contains(query, StringComparison.OrdinalIgnoreCase))).ToList();
+    }
+    private void SelectSafeClick(object sender, RoutedEventArgs e)
+    {
+        if (busy) return;
+        foreach (var choice in choices) choice.Selected = choice.Enabled && choice.Finding.Action.Profile == OptimizationProfile.Safe;
+        FilterFindings(); Findings.Items.Refresh();
+    }
+    private void DiskCleanupClick(object sender, RoutedEventArgs e)
+    {
+        if (busy) return;
+        if (backend.Sandbox) { Status.Text = "Disk cleanup operates on real files. Leave sandbox preview to open the existing scan-and-review screen; nothing is deleted without review."; return; }
+        DiskCleanupRequested = true; Close();
+    }
+    private void AdministratorClick(object sender, RoutedEventArgs e)
+    {
+        if (busy) return;
+        AdministratorRequested = true; Close();
     }
     private async Task RunAsync(Func<CancellationToken, Task> action)
     {
@@ -92,14 +117,14 @@ public partial class Windows11CleanupWindow : Window
         if (selected.Length == 0) { Status.Text = "Select the changes you want first."; return; }
         var preview = string.Join("\n\n", selected.Select(x => x.Title + "\n" + x.Impact));
         if (MessageBox.Show(this, (backend.Sandbox ? "SANDBOX PREVIEW: only fixtures change.\n\n" : "Apply these changes to this Windows user?\n\n") + preview, "Review exact changes", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
-        var destructive = selected.Any(x => x.Irreversible);
+        var destructive = selected.Any(x => x.Irreversible || MaintenanceCatalog.Get(x.Id).Destructive);
         var currentAudit = audit ?? throw new InvalidOperationException("Rescan first.");
         var profile = SelectedProfile;
-        if (destructive && MessageBox.Show(this, "App removal can delete app data. Reinstalling does not restore that data. Current-user packages only. Live removal is blocked unless a new restore point is verified. Continue?", "Confirm app removal separately", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        if (destructive && MessageBox.Show(this, "These changes may delete app data or saved Recall snapshots. Restoring settings cannot restore deleted data. A verified new restore point is required for live destructive changes. Continue?", "Confirm destructive changes separately", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         await RunAsync(async token => {
             var tx = await Task.Run(() => engine.ApplyAsync(currentAudit, selected.Select(x => x.Id), profile, true, destructive, token), token);
             Activity.AppendText($"{tx.Started:u} · {(tx.Sandbox ? "SANDBOX" : "LIVE")} · {tx.Id}\n" + string.Join("\n", tx.Changes.Select(x => x.Id + ": " + x.Status)) + "\n");
-            Status.Text = $"{tx.Changes.Count} changes verified. No restart was forced. Rescan to refresh findings."; audit = null; choices.Clear(); Findings.ItemsSource = null;
+            Status.Text = $"{tx.Changes.Count} stored changes verified. Windows may need sign-out/restart to reflect policy and shell changes. No restart was forced. Rescan to refresh findings."; audit = null; choices.Clear(); Findings.ItemsSource = null;
         });
     }
     private async void RestoreClick(object sender, RoutedEventArgs e)

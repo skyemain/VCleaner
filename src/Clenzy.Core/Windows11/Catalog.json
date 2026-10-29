@@ -1,0 +1,732 @@
+[
+  {
+    "Id": "advertising",
+    "Category": "Windows Privacy",
+    "Title": "Turn off advertising ID",
+    "Impact": "Stops apps using the Windows advertising ID. Other tracking methods are unaffected.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo",
+    "Name": "Enabled",
+    "Desired": 0
+  },
+  {
+    "Id": "extensions",
+    "Category": "Windows Explorer",
+    "Title": "Show file extensions",
+    "Impact": "Shows known file extensions. Reversible; refresh Explorer if needed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+    "Name": "HideFileExt",
+    "Desired": 0
+  },
+  {
+    "Id": "hidden",
+    "Category": "Windows Explorer",
+    "Title": "Show hidden files",
+    "Impact": "Shows hidden files, preserving protected operating-system file hiding.",
+    "Profile": "Balanced",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+    "Name": "Hidden",
+    "Desired": 1
+  },
+  {
+    "Id": "explorerads",
+    "Category": "Ads and AI Features",
+    "Title": "Turn off Explorer provider suggestions",
+    "Impact": "Suppresses sync-provider promotional notifications. Does not stop syncing.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+    "Name": "ShowSyncProviderNotifications",
+    "Desired": 0
+  },
+  {
+    "Id": "taskview",
+    "Category": "Windows Explorer",
+    "Title": "Hide Task View button",
+    "Impact": "Hides the button; virtual desktops remain available with keyboard shortcuts.",
+    "Profile": "Balanced",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+    "Name": "ShowTaskViewButton",
+    "Desired": 0
+  },
+  {
+    "Id": "alignment",
+    "Category": "Windows Explorer",
+    "Title": "Align taskbar to the left",
+    "Impact": "Changes taskbar alignment; no shell replacement or restart is forced.",
+    "Profile": "Balanced",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+    "Name": "TaskbarAl",
+    "Desired": 0
+  },
+  {
+    "Id": "theme",
+    "Category": "Windows Explorer",
+    "Title": "Use dark app mode",
+    "Impact": "Changes the current user's application theme.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+    "Name": "AppsUseLightTheme",
+    "Desired": 0
+  },
+  {
+    "Id": "Microsoft.BingNews",
+    "Category": "Bloatware Removal",
+    "Title": "Remove Microsoft News",
+    "Impact": "Current-user uninstall. Original app data cannot be restored automatically; reinstall from Microsoft Store.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.BingWeather",
+    "Category": "Bloatware Removal",
+    "Title": "Remove Microsoft Weather",
+    "Impact": "Current-user uninstall; reinstall from Microsoft Store. Does not remove Widgets dependencies.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.MicrosoftSolitaireCollection",
+    "Category": "Bloatware Removal",
+    "Title": "Remove Solitaire Collection",
+    "Impact": "Current-user uninstall; game data may be lost. Reinstall from Microsoft Store.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Clipchamp.Clipchamp",
+    "Category": "Bloatware Removal",
+    "Title": "Remove Clipchamp",
+    "Impact": "Current-user uninstall; export projects first. Reinstall from Microsoft Store.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.Getstarted",
+    "Category": "Bloatware Removal",
+    "Title": "Remove Microsoft Tips",
+    "Impact": "Only removable installed packages are offered. No provisioned packages are removed.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.WindowsFeedbackHub",
+    "Category": "Bloatware Removal",
+    "Title": "Remove Feedback Hub",
+    "Impact": "Current-user uninstall. Windows diagnostics and security logging are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.Copilot",
+    "Category": "Ads and AI Features",
+    "Title": "Remove Copilot app",
+    "Impact": "Removes only the standalone current-user app; shared AI frameworks, Recall and drivers are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "welcome",
+    "Category": "Ads & privacy",
+    "Title": "Disable post-update welcome suggestions",
+    "Impact": "Reduces promotional content for this user. Sign out and back in if the shell has not refreshed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+    "Name": "SubscribedContent-310093Enabled",
+    "Desired": 0
+  },
+  {
+    "Id": "tips",
+    "Category": "Ads & privacy",
+    "Title": "Disable Windows tips",
+    "Impact": "Reduces promotional content for this user. Sign out and back in if the shell has not refreshed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+    "Name": "SubscribedContent-338389Enabled",
+    "Desired": 0
+  },
+  {
+    "Id": "settingsads",
+    "Category": "Ads & privacy",
+    "Title": "Disable Settings suggestions",
+    "Impact": "Reduces promotional content for this user. Sign out and back in if the shell has not refreshed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+    "Name": "SubscribedContent-338393Enabled",
+    "Desired": 0
+  },
+  {
+    "Id": "settingsads2",
+    "Category": "Ads & privacy",
+    "Title": "Disable Settings promotional content",
+    "Impact": "Reduces promotional content for this user. Sign out and back in if the shell has not refreshed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+    "Name": "SubscribedContent-353694Enabled",
+    "Desired": 0
+  },
+  {
+    "Id": "settingsads3",
+    "Category": "Ads & privacy",
+    "Title": "Disable additional Settings suggestions",
+    "Impact": "Reduces promotional content for this user. Sign out and back in if the shell has not refreshed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+    "Name": "SubscribedContent-353696Enabled",
+    "Desired": 0
+  },
+  {
+    "Id": "locktips",
+    "Category": "Ads & privacy",
+    "Title": "Disable lock-screen tips",
+    "Impact": "Reduces promotional content for this user. Sign out and back in if the shell has not refreshed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+    "Name": "SubscribedContent-338387Enabled",
+    "Desired": 0
+  },
+  {
+    "Id": "lockoverlay",
+    "Category": "Ads & privacy",
+    "Title": "Disable lock-screen promotional overlay",
+    "Impact": "Reduces promotional content for this user. Sign out and back in if the shell has not refreshed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+    "Name": "RotatingLockScreenOverlayEnabled",
+    "Desired": 0
+  },
+  {
+    "Id": "suggestedapps",
+    "Category": "Ads & privacy",
+    "Title": "Disable suggested-app automatic installation",
+    "Impact": "Reduces promotional content for this user. Sign out and back in if the shell has not refreshed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+    "Name": "SilentInstalledAppsEnabled",
+    "Desired": 0
+  },
+  {
+    "Id": "startsuggestions",
+    "Category": "Ads & privacy",
+    "Title": "Disable suggested apps in Start",
+    "Impact": "Reduces promotional content for this user. Sign out and back in if the shell has not refreshed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+    "Name": "SystemPaneSuggestionsEnabled",
+    "Desired": 0
+  },
+  {
+    "Id": "setupnag",
+    "Category": "Ads & privacy",
+    "Title": "Disable finish-setting-up reminders",
+    "Impact": "Reduces promotional content for this user. Sign out and back in if the shell has not refreshed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\UserProfileEngagement",
+    "Name": "ScoobeSystemSettingEnabled",
+    "Desired": 0
+  },
+  {
+    "Id": "tailored",
+    "Category": "Ads & privacy",
+    "Title": "Disable tailored diagnostic experiences",
+    "Impact": "Stops this user setting from requesting diagnostic-data-based personalized recommendations. Does not eliminate telemetry.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Privacy",
+    "Name": "TailoredExperiencesWithDiagnosticDataEnabled",
+    "Desired": 0
+  },
+  {
+    "Id": "startrecommendations",
+    "Category": "Ads & privacy",
+    "Title": "Disable Start tips and app recommendations",
+    "Impact": "Reduces promotional content for this user. Sign out and back in if the shell has not refreshed.",
+    "Profile": "Safe",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+    "Name": "Start_IrisRecommendations",
+    "Desired": 0
+  },
+  {
+    "Id": "searchbutton",
+    "Category": "Ads & privacy",
+    "Title": "Hide taskbar search",
+    "Impact": "Hides the search button; Start-menu search remains available.",
+    "Profile": "Balanced",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+    "Name": "SearchboxTaskbarMode",
+    "Desired": 0
+  },
+  {
+    "Id": "widgetbutton",
+    "Category": "Ads & privacy",
+    "Title": "Hide Widgets on the taskbar",
+    "Impact": "Hides the Widgets button. Does not uninstall Web Experience or its dependencies.",
+    "Profile": "Balanced",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+    "Name": "TaskbarDa",
+    "Desired": 0
+  },
+  {
+    "Id": "tracklaunches",
+    "Category": "Ads & privacy",
+    "Title": "Disable app-launch tracking",
+    "Impact": "Reduces launch-history-based Start/search personalization. Search remains available.",
+    "Profile": "Balanced",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+    "Name": "Start_TrackProgs",
+    "Desired": 0
+  },
+  {
+    "Id": "inking",
+    "Category": "Ads & privacy",
+    "Title": "Disable optional typing diagnostics",
+    "Impact": "Turns off the existing optional typing/inking diagnostics preference. Keyboard and pen input remain available.",
+    "Profile": "Balanced",
+    "Kind": "Registry",
+    "Path": "Software\\Microsoft\\Input\\TIPC",
+    "Name": "Enabled",
+    "Desired": 0
+  },
+  {
+    "Id": "diagnostics",
+    "Category": "Ads & privacy",
+    "Title": "Use required diagnostic data only",
+    "Impact": "Required diagnostic data remains enabled. Administrator required; existing policy overrides are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Registry",
+    "Path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+    "Name": "AllowTelemetry",
+    "Desired": 1,
+    "Machine": true,
+    "AllowCreate": true,
+    "Policy": true
+  },
+  {
+    "Id": "recall",
+    "Category": "Ads & privacy",
+    "Title": "Turn off Recall snapshot saving",
+    "Impact": "Stops Recall snapshot saving on supported devices. Existing snapshots may be deleted by Windows and cannot be recovered by restoring the policy. Sign out or restart may be needed.",
+    "Profile": "Advanced",
+    "Kind": "Registry",
+    "Path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI",
+    "Name": "DisableAIDataAnalysis",
+    "Desired": 1,
+    "Machine": true,
+    "AllowCreate": true,
+    "Policy": true,
+    "MinBuild": 26100,
+    "MinRevision": 3915,
+    "Destructive": true
+  },
+  {
+    "Id": "Microsoft.Todos",
+    "Category": "Optional apps",
+    "Title": "Remove Microsoft To Do",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.OutlookForWindows",
+    "Category": "Optional apps",
+    "Title": "Remove Outlook for Windows",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "MicrosoftTeams",
+    "Category": "Optional apps",
+    "Title": "Remove Teams personal (legacy)",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "MSTeams",
+    "Category": "Optional apps",
+    "Title": "Remove Microsoft Teams",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.YourPhone",
+    "Category": "Optional apps",
+    "Title": "Remove Phone Link",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.WindowsMaps",
+    "Category": "Optional apps",
+    "Title": "Remove Windows Maps",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.MicrosoftOfficeHub",
+    "Category": "Optional apps",
+    "Title": "Remove Microsoft 365 hub",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.People",
+    "Category": "Optional apps",
+    "Title": "Remove People",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.SkypeApp",
+    "Category": "Optional apps",
+    "Title": "Remove Skype",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.ZuneVideo",
+    "Category": "Optional apps",
+    "Title": "Remove Movies & TV",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.Microsoft3DViewer",
+    "Category": "Optional apps",
+    "Title": "Remove 3D Viewer",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.Print3D",
+    "Category": "Optional apps",
+    "Title": "Remove Print 3D",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.3DBuilder",
+    "Category": "Optional apps",
+    "Title": "Remove 3D Builder",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.BingFinance",
+    "Category": "Optional apps",
+    "Title": "Remove Bing Finance",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.BingSports",
+    "Category": "Optional apps",
+    "Title": "Remove Bing Sports",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.BingTravel",
+    "Category": "Optional apps",
+    "Title": "Remove Bing Travel",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.BingFoodAndDrink",
+    "Category": "Optional apps",
+    "Title": "Remove Bing Food & Drink",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.BingHealthAndFitness",
+    "Category": "Optional apps",
+    "Title": "Remove Bing Health & Fitness",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.Office.Sway",
+    "Category": "Optional apps",
+    "Title": "Remove Sway",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.OneConnect",
+    "Category": "Optional apps",
+    "Title": "Remove Mobile Plans",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.Windows.DevHome",
+    "Category": "Optional apps",
+    "Title": "Remove Dev Home",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.PowerAutomateDesktop",
+    "Category": "Optional apps",
+    "Title": "Remove Power Automate Desktop",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.MicrosoftJournal",
+    "Category": "Optional apps",
+    "Title": "Remove Journal",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.MicrosoftStickyNotes",
+    "Category": "Optional apps",
+    "Title": "Remove Sticky Notes",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.WindowsAlarms",
+    "Category": "Optional apps",
+    "Title": "Remove Clock",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Microsoft.WindowsSoundRecorder",
+    "Category": "Optional apps",
+    "Title": "Remove Sound Recorder",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "SpotifyAB.SpotifyMusic",
+    "Category": "Optional apps",
+    "Title": "Remove Spotify",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "BytedancePte.Ltd.TikTok",
+    "Category": "Optional apps",
+    "Title": "Remove TikTok",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "FACEBOOK.FACEBOOK",
+    "Category": "Optional apps",
+    "Title": "Remove Facebook",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Facebook.Instagram",
+    "Category": "Optional apps",
+    "Title": "Remove Instagram",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "4DF9E0F8.Netflix",
+    "Category": "Optional apps",
+    "Title": "Remove Netflix",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "AmazonVideo.PrimeVideo",
+    "Category": "Optional apps",
+    "Title": "Remove Prime Video",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "Disney.37853FC22B2CE",
+    "Category": "Optional apps",
+    "Title": "Remove Disney+",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "king.com.CandyCrushSaga",
+    "Category": "Optional apps",
+    "Title": "Remove Candy Crush Saga",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "king.com.CandyCrushSodaSaga",
+    "Category": "Optional apps",
+    "Title": "Remove Candy Crush Soda Saga",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "king.com.BubbleWitch3Saga",
+    "Category": "Optional apps",
+    "Title": "Remove Bubble Witch 3",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "AD2F1837.HPJumpStarts",
+    "Category": "Optional apps",
+    "Title": "Remove HP JumpStarts",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "AD2F1837.HPRegistration",
+    "Category": "Optional apps",
+    "Title": "Remove HP Registration",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "AD2F1837.HPWelcome",
+    "Category": "Optional apps",
+    "Title": "Remove HP Welcome",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "AcerIncorporated.AcerRegistration",
+    "Category": "Optional apps",
+    "Title": "Remove Acer Registration",
+    "Impact": "Only if you do not use this app. Current-user uninstall may erase app data; export notes, projects and other data first. Reinstall from Microsoft Store; original data is not backed up. Dependencies and running apps are preserved.",
+    "Profile": "Advanced",
+    "Kind": "Package"
+  },
+  {
+    "Id": "startup:Spotify",
+    "Category": "Startup",
+    "Title": "Stop Spotify launching at sign-in",
+    "Impact": "Removes only this existing current-user Run entry and backs up its exact command. Does not close or uninstall the app. App updates can recreate startup entries.",
+    "Profile": "Balanced",
+    "Kind": "Startup",
+    "Name": "Spotify",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+  },
+  {
+    "Id": "startup:Discord",
+    "Category": "Startup",
+    "Title": "Stop Discord launching at sign-in",
+    "Impact": "Removes only this existing current-user Run entry and backs up its exact command. Does not close or uninstall the app. App updates can recreate startup entries.",
+    "Profile": "Balanced",
+    "Kind": "Startup",
+    "Name": "Discord",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+  },
+  {
+    "Id": "startup:Steam",
+    "Category": "Startup",
+    "Title": "Stop Steam launching at sign-in",
+    "Impact": "Removes only this existing current-user Run entry and backs up its exact command. Does not close or uninstall the app. App updates can recreate startup entries.",
+    "Profile": "Balanced",
+    "Kind": "Startup",
+    "Name": "Steam",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+  },
+  {
+    "Id": "startup:EpicGamesLauncher",
+    "Category": "Startup",
+    "Title": "Stop Epic Games Launcher launching at sign-in",
+    "Impact": "Removes only this existing current-user Run entry and backs up its exact command. Does not close or uninstall the app. App updates can recreate startup entries.",
+    "Profile": "Balanced",
+    "Kind": "Startup",
+    "Name": "EpicGamesLauncher",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+  },
+  {
+    "Id": "startup:com.squirrel.Teams.Teams",
+    "Category": "Startup",
+    "Title": "Stop Teams classic launching at sign-in",
+    "Impact": "Removes only this existing current-user Run entry and backs up its exact command. Does not close or uninstall the app. App updates can recreate startup entries.",
+    "Profile": "Balanced",
+    "Kind": "Startup",
+    "Name": "com.squirrel.Teams.Teams",
+    "Path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+  },
+  {
+    "Id": "service:MapsBroker",
+    "Category": "Optional services",
+    "Title": "Use manual start for Downloaded Maps Manager",
+    "Impact": "Offline map updates may be delayed until requested. Only offered when installed, stopped, without dependents, and currently automatic. Does not stop a running service. Administrator required. Original start mode is backed up.",
+    "Profile": "Advanced",
+    "Kind": "Service",
+    "Name": "MapsBroker",
+    "Machine": true
+  },
+  {
+    "Id": "service:WMPNetworkSvc",
+    "Category": "Optional services",
+    "Title": "Use manual start for Windows Media Player Network Sharing",
+    "Impact": "Media sharing may need to start this service manually. Only offered when installed, stopped, without dependents, and currently automatic. Does not stop a running service. Administrator required. Original start mode is backed up.",
+    "Profile": "Advanced",
+    "Kind": "Service",
+    "Name": "WMPNetworkSvc",
+    "Machine": true
+  }
+]

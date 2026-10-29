@@ -21,10 +21,14 @@
    <Button x:Name="Apply" Content="Review selected changes" Click="ApplyClick" IsEnabled="False" Margin="0,0,8,0"/>
    <Button x:Name="Cancel" Content="Cancel" Click="CancelClick" IsEnabled="False" Margin="0,0,8,0"/>
    <Button Content="Open reports &amp; backups" Click="ReportsClick" Margin="0,0,8,0"/>
+   <Button Content="Review disk cleanup" Click="DiskCleanupClick" Margin="0,0,8,0"/>
+   <Button Content="Restart as administrator" Click="AdministratorClick" Margin="0,0,8,0"/>
    <Button Content="Run in Windows Sandbox" Click="LaunchSandboxClick"/>
   </WrapPanel>
   <TabControl Grid.Row="3">
    <TabItem Header="Review changes">
+    <DockPanel>
+     <WrapPanel DockPanel.Dock="Top" Margin="8"><TextBox x:Name="Search" Width="230" TextChanged="FilterChanged" ToolTip="Filter by app, category or setting"/><CheckBox x:Name="AvailableOnly" Content="Available only" Margin="12,4" Checked="FilterChanged" Unchecked="FilterChanged"/><Button Content="Select available Safe changes" Click="SelectSafeClick" Margin="12,0"/></WrapPanel>
     <ListBox x:Name="Findings" BorderThickness="0" HorizontalContentAlignment="Stretch">
      <ListBox.ItemTemplate><DataTemplate>
       <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SecondaryTextBrush}" Padding="12">
@@ -35,12 +39,13 @@
       </Border>
      </DataTemplate></ListBox.ItemTemplate>
     </ListBox>
+    </DockPanel>
    </TabItem>
    <TabItem Header="System review">
     <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="14">
      <TextBlock Text="These controls open Windows' own supported review screens. Clenzy does not claim a performance or gaming improvement without measurements." Margin="0,0,0,12"/>
      <WrapPanel x:Name="SettingsLinks"/>
-     <TextBlock Text="Service and task inventories are included in the audit. Automatic service/task disabling, OEM/antivirus removal, provisioned-package removal and AI framework deletion are deliberately unavailable in this build. Review active workloads before changing them." Style="{StaticResource SecondaryText}" Margin="0,14"/>
+     <TextBlock Text="Startup changes cover detected current-user Run entries for supported optional apps. Service changes cover only stopped, dependency-free optional services in the catalog. Scheduled tasks, provisioned packages, drivers, antivirus and shared AI frameworks are preserved. Disk cleanup uses Clenzy’s existing review engine." Style="{StaticResource SecondaryText}" Margin="0,14"/>
      <Expander Header="Hardware, security, packages, startup, services and tasks audit"><TextBox x:Name="AuditText" IsReadOnly="True" TextWrapping="Wrap" Height="300" VerticalScrollBarVisibility="Auto"/></Expander>
     </StackPanel></ScrollViewer>
    </TabItem>
@@ -53,7 +58,7 @@
     </StackPanel>
    </TabItem>
   </TabControl>
-  <TextBlock Grid.Row="4" Text="No items are preselected. Safe shows reversible settings; Advanced also offers detected consumer apps. No forced restart. Backup reports may contain local system information." Style="{StaticResource SecondaryText}" Margin="0,12"/>
+  <TextBlock Grid.Row="4" Text="Safe: reversible preferences. Balanced: optional startup and shell changes. Advanced: reviewed app removal, policies and optional services. Registry verification confirms stored values; Windows may require sign-out/restart. No speed improvement is claimed without measurement." Style="{StaticResource SecondaryText}" Margin="0,12"/>
   <Button Grid.Row="5" Content="Done" HorizontalAlignment="Right" Click="DoneClick"/>
  </Grid>
 </Window>

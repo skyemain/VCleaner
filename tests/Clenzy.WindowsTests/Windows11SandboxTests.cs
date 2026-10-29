@@ -6,6 +6,20 @@ namespace Clenzy.WindowsTests;
 
 public sealed class Windows11SandboxTests
 {
+    [Fact] public async Task Actual_PowerShell_transport_loads_embedded_catalog_without_truncation()
+    {
+        var method = typeof(WindowsOptimizationBackend).GetMethod("InvokeAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var task = (Task<System.Text.Json.JsonElement>)method.Invoke(null,new object[]{new { Operation="Capabilities" },CancellationToken.None})!;
+        var result = await task;
+        Assert.StartsWith("5.1", result.GetProperty("PowerShell").GetString());
+        Assert.Equal(Clenzy.Core.Windows11.MaintenanceCatalog.Entries.Count,result.GetProperty("CatalogCount").GetInt32());
+    }
+    [Fact] public async Task Actual_PowerShell_transport_rejects_unknown_operations()
+    {
+        var method = typeof(WindowsOptimizationBackend).GetMethod("InvokeAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var task = (Task<System.Text.Json.JsonElement>)method.Invoke(null,new object[]{new { Operation="Unknown" },CancellationToken.None})!;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => task);
+    }
     [Fact] public void Sandbox_maps_only_staged_executable_folder_readonly_and_disables_external_channels()
     {
         var xml = XDocument.Parse(WindowsSandboxLauncher.Configuration(Path.Combine(Path.GetTempPath(), "Clenzy & Test"), "Clenzy.exe"));
