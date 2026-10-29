@@ -132,6 +132,14 @@ public sealed class Windows11OptimizationTests : IDisposable
         public Task<bool> VerifyRecoveryPointAsync(CancellationToken token) => Task.FromResult(true);
         public Task WriteAsync(string id,OptimizationState state,CancellationToken token) => id == "extensions" ? throw new IOException("Simulated denied write") : inner.WriteAsync(id,state,token);
     }
+    [Fact] public async Task Required_restore_point_failure_blocks_even_reversible_changes()
+    {
+        var b = new RecoveryFailureBackend(); var e = new OptimizationEngine(b,root);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => e.ApplyAsync(awaitAudit(),new[]{"advertising"},OptimizationProfile.Advanced,true,false,default,requireRecoveryPoint:true));
+        Assert.Equal(0,b.Writes);
+        Assert.Equal("1",(await b.ReadAsync("advertising",default)).Value);
+        OptimizationAudit awaitAudit() => b.AuditAsync(default).GetAwaiter().GetResult();
+    }
     private sealed class RecoveryFailureBackend : IOptimizationBackend
     {
         private readonly SandboxOptimizationBackend inner = new();

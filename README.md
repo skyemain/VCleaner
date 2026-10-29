@@ -52,3 +52,7 @@ Technical references: [Win11Debloat at d2cb97a](https://github.com/Raphire/Win11
 ### Validation status
 
 The Mac host has not been modified. CI exercises fixture roundtrips, interrupted/denied operations, startup restore, package/service protections, real PowerShell 5.1 transport and the WPF preview. Live Windows 11 app uninstallation, restore-point creation, effective shell/policy changes and actual Sandbox boot remain unverified because no Windows 11 environment is available. This stays a prerelease candidate; main production is unchanged.
+
+## Debloat flow in 1.9.0
+
+Opening Debloat starts an Advanced live scan automatically. Only available changes are shown, initially unselected. Apply creates and verifies a new restore point before all selected operations, including reversible settings. If recovery creation fails, nothing is applied. Exact settings backups remain on disk. The inline final report identifies verified changes, unselected items and failed or unattempted operations. App removal and Recall deletion retain explicit destructive consent; those data cannot be restored from the settings backup. The page no longer exposes profile selectors, tabs, scan/filter controls or maintenance/report toolbars. Back returns home when idle. Closing during a write is blocked to protect the transaction. App launches elevated via its manifest.

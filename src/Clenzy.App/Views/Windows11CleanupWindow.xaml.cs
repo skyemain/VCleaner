@@ -1,174 +1,116 @@
-using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using System.Windows;
-using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Clenzy.Core.Windows11;
 using Clenzy.Windows.Windows11;
-
 namespace Clenzy.App.Views;
-
 public partial class Windows11CleanupWindow : Window
 {
-    private IOptimizationBackend backend = new SandboxOptimizationBackend();
+    private IOptimizationBackend backend = new WindowsOptimizationBackend();
     private OptimizationEngine engine = null!;
     private OptimizationAudit? audit;
-    private CancellationTokenSource? operation;
-    private bool busy;
+    private List<Choice> choices = new();
+    private bool busy, started;
     public Window? EmbeddedOwner { get; set; }
     public Action? ExitRequested { get; set; }
-    private void Leave() { if (ExitRequested is not null) ExitRequested(); else Close(); }
-    public bool DiskCleanupRequested { get; private set; }
-    public bool AdministratorRequested { get; private set; }
-    private readonly string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Clenzy", "Windows11");
-    private List<Choice> choices = new();
-    private string ReportsRoot => Path.Combine(root, backend.Sandbox ? "sandbox" : "live");
-    private OptimizationProfile SelectedProfile => Profile.SelectedIndex == 0 ? OptimizationProfile.Balanced : OptimizationProfile.Advanced;
+    public bool DiskCleanupRequested => false;
+    public bool AdministratorRequested => false;
+    private string ReportsRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Clenzy", "Windows11", backend.Sandbox ? "sandbox" : "live");
     public Windows11CleanupWindow()
     {
-        InitializeComponent(); ResetEnvironment();
-
-        foreach (var (title, uri) in new[] {
-            ("Privacy & permissions", "ms-settings:privacy"), ("Ads & recommendations", "ms-settings:privacy-general"),
-            ("Installed apps / OEM software", "ms-settings:appsfeatures"), ("Startup optimization", "ms-settings:startupapps"),
-            ("Background permissions", "ms-settings:appsfeatures"), ("Disk cleanup", "ms-settings:storagesense"),
-            ("Performance / power", "ms-settings:powersleep"), ("Gaming / Game Mode", "ms-settings:gaming-gamemode"),
-            ("Explorer / personalization", "ms-settings:personalization"), ("Security & health", "windowsdefender:"),
-            ("Windows Update", "ms-settings:windowsupdate"), ("Recovery", "ms-settings:recovery") }) {
-            var button = new Button { Content = title, Margin = new Thickness(0, 0, 8, 8) };
-            button.Click += (_, _) => { try { Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true }); } catch (Exception ex) { Status.Text = ex.Message; } };
-            SettingsLinks.Children.Add(button);
-        }
-        Closing += (_, e) => { if (busy) { operation?.Cancel(); e.Cancel = true; Status.Text = "Stopping at the next safe boundary. Close when the operation finishes."; } };
+        InitializeComponent(); engine = new(backend, ReportsRoot);
+        Closing += (_, e) => { if (busy) e.Cancel = true; };
     }
-    public async Task RunSandboxSmokeAsync(string screenshot)
+    private async void PageLoaded(object sender, RoutedEventArgs e)
     {
-        Sandbox.IsChecked = true; ResetEnvironment();
-        if (!backend.Sandbox) throw new InvalidOperationException("Smoke test requires fixture backend.");
-        audit = await backend.AuditAsync(default); ShowFindings(); AuditText.Text = audit.Details;
-        var tx = await engine.ApplyAsync(audit, new[] { "advertising" }, OptimizationProfile.Safe, true, false, default);
-        if (tx.Changes.Single().Status != "Verified") throw new InvalidOperationException("Fixture apply failed.");
-        await engine.RestoreAsync(tx.Id, default);
-        Status.Text = "SANDBOX PREVIEW · scan, fixture change and rollback verified. Host settings untouched.";
-        Activity.Text = "Generated fixture transaction verified and restored.";
-        ShowFindings(); UpdateLayout();
-        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-        var content = (FrameworkElement)Content; Content = null; content.Resources = Resources;
-        var surface = new System.Windows.Controls.Border { Background = (System.Windows.Media.Brush)FindResource("WindowBackgroundBrush"), Child = content };
-        if (surface.Background is not System.Windows.Media.SolidColorBrush { Color.A: 255 }) throw new InvalidOperationException("Embedded page must be opaque.");
-        var host = new Window { Width = ActualWidth, Height = ActualHeight, Content = surface };
-        host.Show(); host.UpdateLayout();
-        if (content.TryFindResource(typeof(System.Windows.Controls.TabItem)) is null) throw new InvalidOperationException("Embedded theme was lost.");
-        bitmap.Render(host); var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
-        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
-        using (var file = File.Create(screenshot)) encoder.Save(file);
-        host.Content = null; surface.Child = null; host.Close(); Content = content;
+        if (started || Environment.GetCommandLineArgs().Contains("--windows11-smoke")) return;
+        started = true; await ScanAsync();
     }
-    private void EnvironmentChanged(object sender, RoutedEventArgs e) { if (Findings is not null && !busy) ResetEnvironment(); }
-    private void ResetEnvironment()
+    private void SetBusy(bool value)
     {
-        backend = Sandbox.IsChecked == true ? new SandboxOptimizationBackend() : new WindowsOptimizationBackend();
-        engine = new OptimizationEngine(backend, ReportsRoot); audit = null; choices.Clear(); Findings.ItemsSource = null; Apply.IsEnabled = false; AuditText.Text = "";
-        Status.Text = backend.Sandbox ? "SANDBOX PREVIEW · generated fixtures only. No host changes." : "LIVE WINDOWS 11 · Scan reads this PC. Applying requires review; app removal needs separate consent and a verified new restore point.";
-        Backups.ItemsSource = engine.Transactions();
+        busy = value; Findings.IsEnabled = Back.IsEnabled = !value;
+        Apply.IsEnabled = !value && audit is { IsWindows11: true } && choices.Count > 0;
+        Progress.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
     }
-    private void ProfileChanged(object sender, SelectionChangedEventArgs e) { if (Findings is not null && !busy) ShowFindings(); }
-    private void ShowFindings()
+    private async Task ScanAsync()
     {
-        choices = audit?.Findings.Where(x => x.Action.Profile <= SelectedProfile).Select(x => new Choice(x)).ToList() ?? new();
-        FilterFindings(); Apply.IsEnabled = !busy && audit is { IsWindows11: true };
+        SetBusy(true);
+        try {
+            Status.Text = "Scanning installed apps, privacy settings, startup and optional services…";
+            audit = await Task.Run(() => backend.AuditAsync(default));
+            choices = audit.Findings.Where(x => x.Available).Select(x => new Choice(x)).ToList(); Findings.ItemsSource = choices;
+            Directory.CreateDirectory(ReportsRoot);
+            await File.WriteAllTextAsync(Path.Combine(ReportsRoot, "audit-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff") + ".json"), JsonSerializer.Serialize(audit));
+            Status.Text = audit.IsWindows11 ? $"{choices.Count} available changes. Select the ones you want to apply." : audit.Summary;
+        } catch (Exception ex) { Status.Text = "Scan could not complete: " + ex.Message; }
+        finally { SetBusy(false); }
     }
-    private void FilterChanged(object sender, RoutedEventArgs e) { if (Findings is not null) FilterFindings(); }
-    private void FilterFindings()
-    {
-        var query = Search?.Text?.Trim() ?? "";
-        Findings.ItemsSource = choices.Where(x => (AvailableOnly?.IsChecked != true || x.Enabled) && (query.Length == 0 || (x.Title + " " + x.Description).Contains(query, StringComparison.OrdinalIgnoreCase))).ToList();
-    }
-    private void SelectSafeClick(object sender, RoutedEventArgs e)
-    {
-        if (busy) return;
-        foreach (var choice in choices) choice.Selected = choice.Enabled && choice.Finding.Action.Profile == OptimizationProfile.Safe;
-        FilterFindings(); Findings.Items.Refresh();
-    }
-    private void DiskCleanupClick(object sender, RoutedEventArgs e)
-    {
-        if (busy) return;
-        if (backend.Sandbox) { Status.Text = "Disk cleanup operates on real files. Leave sandbox preview to open the existing scan-and-review screen; nothing is deleted without review."; return; }
-        DiskCleanupRequested = true; Leave();
-    }
-    private void AdministratorClick(object sender, RoutedEventArgs e)
-    {
-        if (busy) return;
-        AdministratorRequested = true; Leave();
-    }
-    private async Task RunAsync(Func<CancellationToken, Task> action)
-    {
-        if (busy) return;
-        busy = true; operation = new(); Scan.IsEnabled = Apply.IsEnabled = Restore.IsEnabled = Sandbox.IsEnabled = Profile.IsEnabled = false;
-        Findings.IsEnabled = false; Cancel.IsEnabled = true; Progress.Visibility = Visibility.Visible;
-        try { await action(operation.Token); }
-        catch (OperationCanceledException) { Status.Text = "Stopped. Completed changes and recovery records remain in Activity; rescan before trying again."; }
-        catch (Exception ex) { Status.Text = ex.Message; Activity.AppendText($"{DateTimeOffset.Now:u} {ex.Message}\n"); }
-        finally {
-            busy = false; operation.Dispose(); operation = null; Scan.IsEnabled = Restore.IsEnabled = Sandbox.IsEnabled = Profile.IsEnabled = true;
-            Findings.IsEnabled = true; Cancel.IsEnabled = false; Progress.Visibility = Visibility.Collapsed; Backups.ItemsSource = engine.Transactions();
-            Apply.IsEnabled = audit is { IsWindows11: true };
-        }
-    }
-    private async void ScanClick(object sender, RoutedEventArgs e) => await RunAsync(async token => {
-        Status.Text = "Scanning packages, hardware, security and supported settings…";
-        audit = await Task.Run(() => backend.AuditAsync(token), token); ShowFindings(); AuditText.Text = audit.Details;
-        Directory.CreateDirectory(ReportsRoot);
-        await File.WriteAllTextAsync(Path.Combine(ReportsRoot, "audit-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff") + ".json"), System.Text.Json.JsonSerializer.Serialize(audit), token);
-        Status.Text = audit.Summary + " · Review availability and impact. No changes applied.";
-    });
     private async void ApplyClick(object sender, RoutedEventArgs e)
     {
-        if (audit is null || busy) return;
-        if (!backend.Sandbox && audit.IsAdministrator == false) {
-            if (MessageBox.Show(EmbeddedOwner ?? this, "Windows needs administrator permission to apply debloat changes. Restart Clenzy as administrator, then rescan and review your selection.", "Administrator access", MessageBoxButton.OKCancel) == MessageBoxResult.OK) { AdministratorRequested = true; Leave(); }
-            return;
-        }
-        var selected = choices.Where(x => x.Selected && x.Enabled).Select(x => x.Finding.Action).ToArray();
-        if (selected.Length == 0) { Status.Text = "Select the changes you want first."; return; }
-        var preview = string.Join("\n\n", selected.Select(x => x.Title + "\n" + x.Impact));
-        if (MessageBox.Show(EmbeddedOwner ?? this, (backend.Sandbox ? "SANDBOX PREVIEW: only fixtures change.\n\n" : "Apply these changes to this Windows user?\n\n") + preview, "Review exact changes", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+        if (busy || audit is null) return;
+        var selected = choices.Where(x => x.Selected).Select(x => x.Finding.Action).ToArray();
+        if (selected.Length == 0) { Status.Text = "Select at least one change."; return; }
         var destructive = selected.Any(x => x.Irreversible || MaintenanceCatalog.Get(x.Id).Destructive);
-        var currentAudit = audit ?? throw new InvalidOperationException("Rescan first.");
-        var profile = SelectedProfile;
-        if (destructive && MessageBox.Show(EmbeddedOwner ?? this, "These changes may delete app data or saved Recall snapshots. Restoring settings cannot restore deleted data. A verified new restore point is required for live destructive changes. Continue?", "Confirm destructive changes separately", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        await RunAsync(async token => {
-            var tx = await Task.Run(() => engine.ApplyAsync(currentAudit, selected.Select(x => x.Id), profile, true, destructive, token), token);
-            Activity.AppendText($"{tx.Started:u} · {(tx.Sandbox ? "SANDBOX" : "LIVE")} · {tx.Id}\n" + string.Join("\n", tx.Changes.Select(x => x.Id + ": " + x.Status)) + "\n");
-            Status.Text = $"{tx.Changes.Count} stored changes verified. Windows may need sign-out/restart to reflect policy and shell changes. No restart was forced. Rescan to refresh findings."; audit = null; choices.Clear(); Findings.ItemsSource = null;
-        });
+        if (destructive && MessageBox.Show(EmbeddedOwner ?? this, "Selected changes can uninstall apps and delete their data or saved Recall snapshots. Export anything you need first. Continue with these selected changes?", "Confirm selected removals", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        var old = engine.Transactions().ToHashSet();
+        SetBusy(true); Status.Text = "Creating and verifying a restore point and backing up settings…";
+        OptimizationTransaction? transaction = null; string? failure = null;
+        try {
+            transaction = await Task.Run(() => engine.ApplyAsync(audit, selected.Select(x => x.Id), OptimizationProfile.Advanced, true, destructive, default, requireRecoveryPoint: true));
+        } catch (Exception ex) {
+            failure = ex.Message;
+            var id = engine.Transactions().FirstOrDefault(x => !old.Contains(x));
+            if (id is not null) {
+                try { transaction = JsonSerializer.Deserialize<OptimizationTransaction>(await File.ReadAllTextAsync(Path.Combine(ReportsRoot,id+".json"))); }
+                catch (Exception readError) { failure += " Backup report could not be read: " + readError.Message; }
+            }
+        }
+        ShowReport(transaction, selected.Select(x => x.Id).ToArray(), failure);
+        audit = null; SetBusy(false); Apply.Visibility = Visibility.Collapsed;
     }
-    private async void RestoreClick(object sender, RoutedEventArgs e)
+    private void ShowReport(OptimizationTransaction? tx, string[] selected, string? failure)
     {
-        if (Backups.SelectedItem is not string id || busy) return;
-        if (MessageBox.Show(EmbeddedOwner ?? this, "Restore reversible settings in this backup? Newer conflicting values will be preserved and reported. Removed apps must be reinstalled from Microsoft Store.", "Review restore", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
-        await RunAsync(async token => {
-            var tx = await Task.Run(() => engine.RestoreAsync(id, token), token);
-            Status.Text = "Reversible settings restored and verified. Rescan before applying anything else.";
-            Activity.AppendText(string.Join("\n", tx.Changes.Select(x => x.Id + ": " + x.Status)) + "\n"); audit = null; Findings.ItemsSource = null;
-        });
+        var changed = tx?.Changes.Count(x => x.Status == "Verified") ?? 0;
+        Status.Text = failure is null ? $"Finished · {changed} changes verified." : "Stopped · " + failure;
+        var lines = new List<string>();
+        foreach (var id in selected) {
+            var c = tx?.Changes.FirstOrDefault(x => x.Id == id);
+            var outcome = c?.Status == "Verified" ? "Changed · verified" : c is null || c.Status == "Prepared" ? "Not changed · not applied" : "Not verified · " + c.Status;
+            lines.Add(outcome + " — " + OptimizationCatalog.Get(id).Title);
+        }
+        foreach (var c in choices.Where(x => !selected.Contains(x.Finding.Action.Id))) lines.Add("Not changed · not selected — " + c.Title);
+        lines.Add("\nSettings backups and the full audit are saved locally. Removed app data and Recall snapshots cannot be restored from the settings backup. Windows may require sign-out or restart.");
+        ReportText.Text = string.Join("\n\n", lines); Findings.Visibility = Visibility.Collapsed; Report.Visibility = Visibility.Visible;
+        try { File.WriteAllText(Path.Combine(ReportsRoot,"report-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff")+".txt"),Status.Text+"\n\n"+ReportText.Text); }
+        catch (Exception ex) { Status.Text += " Report could not be saved: " + ex.Message; }
     }
-    private void CancelClick(object sender, RoutedEventArgs e) => operation?.Cancel();
-    private void DoneClick(object sender, RoutedEventArgs e) { if (!busy) Leave(); }
-    private void ReportsClick(object sender, RoutedEventArgs e) { Directory.CreateDirectory(ReportsRoot); Process.Start(new ProcessStartInfo(ReportsRoot) { UseShellExecute = true }); }
-    private void LaunchSandboxClick(object sender, RoutedEventArgs e)
+    private void DoneClick(object sender, RoutedEventArgs e) { if (!busy) { if (ExitRequested is not null) ExitRequested(); else Close(); } }
+    public async Task RunSandboxSmokeAsync(string screenshot)
     {
-        if (busy) return;
-        try { WindowsSandboxLauncher.Launch(Environment.ProcessPath ?? throw new InvalidOperationException("Executable unavailable.")); }
-        catch (Exception ex) { Status.Text = ex.Message; }
+        started = true; backend = new SandboxOptimizationBackend(); engine = new(backend, ReportsRoot);
+        await ScanAsync();
+        if (choices.Count == 0 || choices.Any(x => !x.Finding.Available)) throw new InvalidOperationException("Available-only scan failed.");
+        var tx = await engine.ApplyAsync(audit!,new[]{"advertising"},OptimizationProfile.Advanced,true,false,default,requireRecoveryPoint:true);
+        ShowReport(tx,new[]{"advertising"},null);
+        if (!ReportText.Text.Contains("Changed · verified")) throw new InvalidOperationException("Report missing verified result.");
+        await engine.RestoreAsync(tx.Id,default);
+        var content = (FrameworkElement)Content; Content = null;
+        var surface = new System.Windows.Controls.Border { Background=(Brush)FindResource("WindowBackgroundBrush"), Child=content };
+        if (surface.Background is not SolidColorBrush { Color.A:255 }) throw new InvalidOperationException("Embedded page must be opaque.");
+        var host = new Window {Width=1040,Height=780,Content=surface}; host.Show(); host.UpdateLayout();
+        var bitmap = new RenderTargetBitmap(1040,780,96,96,PixelFormats.Pbgra32); bitmap.Render(host);
+        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using (var file=File.Create(screenshot)) encoder.Save(file);
+        host.Content=null; surface.Child=null; host.Close(); Content=content;
     }
     private sealed class Choice
     {
         public OptimizationFinding Finding { get; }
         public bool Selected { get; set; }
-        public bool Enabled => Finding.Available;
         public string Title => Finding.Action.Title;
-        public string Description => $"{Finding.Action.Category} · {Finding.Current}\n{Finding.Action.Impact}" + (Finding.BlockedReason is null ? "" : "\n" + Finding.BlockedReason);
-        public Choice(OptimizationFinding finding) { Finding = finding; }
+        public string Description => Finding.Action.Category + " · " + Finding.Action.Impact;
+        public Choice(OptimizationFinding finding) { Finding=finding; }
     }
 }

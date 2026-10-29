@@ -40,7 +40,7 @@ public sealed class OptimizationEngine
     private readonly string root;
     private readonly SemaphoreSlim gate = new(1, 1);
     public OptimizationEngine(IOptimizationBackend backend, string root) { this.backend = backend; this.root = Path.GetFullPath(root); }
-    public async Task<OptimizationTransaction> ApplyAsync(OptimizationAudit audit, IEnumerable<string> selected, OptimizationProfile profile, bool confirmed, bool destructiveConfirmed, CancellationToken token)
+    public async Task<OptimizationTransaction> ApplyAsync(OptimizationAudit audit, IEnumerable<string> selected, OptimizationProfile profile, bool confirmed, bool destructiveConfirmed, CancellationToken token, bool requireRecoveryPoint = false)
     {
         if (!confirmed) throw new InvalidOperationException("Review and confirmation are required.");
         if (!audit.IsWindows11) throw new InvalidOperationException("Windows 11 is required.");
@@ -63,8 +63,8 @@ public sealed class OptimizationEngine
                 tx.Changes.Add(new(id, before, await backend.DesiredAsync(id, token), "Prepared"));
             }
             Save(tx);
-            if (ids.Any(id => OptimizationCatalog.Get(id).Irreversible || MaintenanceCatalog.Get(id).Destructive) && !await backend.VerifyRecoveryPointAsync(token))
-                throw new InvalidOperationException("No new restore point could be verified. App removal is blocked; use reversible settings or establish recovery first.");
+            if ((requireRecoveryPoint || ids.Any(id => OptimizationCatalog.Get(id).Irreversible || MaintenanceCatalog.Get(id).Destructive)) && !await backend.VerifyRecoveryPointAsync(token))
+                throw new InvalidOperationException("No new restore point could be verified. No selected changes were applied. Enable System Protection and create recovery capacity before trying again.");
             for (var i = 0; i < tx.Changes.Count; i++) {
                 token.ThrowIfCancellationRequested();
                 var change = tx.Changes[i];
