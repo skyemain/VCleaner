@@ -26,6 +26,6 @@ jobs:
           hdiutil attach releases/macos/Clenzy-latest-mac-universal.dmg -readonly -nobrowse -mountpoint /tmp/clenzy-production
           trap 'hdiutil detach /tmp/clenzy-production' EXIT
           codesign --verify --deep --strict /tmp/clenzy-production/Clenzy.app
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' /tmp/clenzy-production/Clenzy.app/Contents/Info.plist)" = '1.0.1'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' /tmp/clenzy-production/Clenzy.app/Contents/Info.plist)" = '1.0.2'
           ARCHS=$(lipo -archs /tmp/clenzy-production/Clenzy.app/Contents/MacOS/Clenzy)
           [[ "$ARCHS" == *arm64* && "$ARCHS" == *x86_64* ]]

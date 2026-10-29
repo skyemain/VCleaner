@@ -4,11 +4,11 @@ Main is the production download catalog. **Only macOS is approved for production
 
 ## Download and install on Mac
 
-[Download Clenzy 1.0.1 for Apple silicon and Intel](https://github.com/skyemain/VCleaner/raw/refs/heads/main/releases/macos/Clenzy-latest-mac-universal.dmg) · [SHA256 checksums](releases/macos/SHA256SUMS.txt).
+[Download Clenzy 1.0.2 for Apple silicon and Intel](https://github.com/skyemain/VCleaner/raw/refs/heads/main/releases/macos/Clenzy-latest-mac-universal.dmg) · [SHA256 checksums](releases/macos/SHA256SUMS.txt).
 
 Requires macOS 13+. Quit Clenzy, open the DMG, drag Clenzy to Applications and replace the existing copy. Eject the DMG and open the installed app. If upgrading from CleanSlate, remove its old app separately. These builds are ad-hoc signed and not notarized. macOS may require approval through Privacy & Security for first launch. No paid Apple signing identity is configured.
 
-Version 1.0.1 adds **Restart Clenzy after granting access** under Settings > Cleaning access. This prepares a helper, quits normally, waits for exit and reopens the same bundle. The app accepts system quit requests immediately. Native tests cover fixture restart sequencing; actual Full Disk Access interaction still needs confirmation on your Mac.
+Version 1.0.2 fixes the modal-sheet blocker that prevented quitting with Cleaning Access open. Settings and review sheets now allow system quit requests and the existing restart helper reopens the same bundle. Native tests and a real modal-window lifecycle fixture pass. Routine skipped-file counts are kept in details rather than the completion display; actual errors and access issues remain visible.
 
 ## Use and permissions
 
@@ -20,10 +20,10 @@ Clean Up RAM asks the five lowest-memory eligible running Dock apps to quit norm
 
 ## Platform source and candidate builds
 
-[Mac source](https://github.com/skyemain/VCleaner/tree/mac), [Windows](https://github.com/skyemain/VCleaner/tree/windows), [iOS](https://github.com/skyemain/VCleaner/tree/ios), [Android](https://github.com/skyemain/VCleaner/tree/android). Each platform branch contains only its own code/build files and one README with setup and test details. Windows candidates are self-contained x64 executables; Android candidates are debug-signed APKs. The iOS workflow produces an unsigned device archive, which needs your own signing for a device. iOS/Android cleanup is limited to authorized media/documents, not other apps' private caches or system RAM.
+[Mac source](https://github.com/skyemain/VCleaner/tree/mac), [Windows](https://github.com/skyemain/VCleaner/tree/windows), [iOS](https://github.com/skyemain/VCleaner/tree/ios), [Android](https://github.com/skyemain/VCleaner/tree/android). Each platform branch contains only its own code/build files and one README with setup and test details. Windows candidates are self-contained x64 executables; Android candidates use a permanent release signing key. The iOS workflow produces an unsigned device archive, which needs your own signing for a device. iOS/Android cleanup is limited to authorized media/documents, not other apps' private caches or system RAM.
 
 ## Maintainer reference and promotion
 
 releases/manifest.json records approved platform/version, source commit, build run, signing and checksum. CI verifies that only approved platforms appear, checks every checksum and verifies the Mac executable/signature/architecture. Main holds distribution files and this guide; platform source stays on its branch. Git history preserves the former Windows layout.
 
-Promote a new platform only after explicit user approval and successful platform builds/tests plus real-device validation. Copy only the verified final build and checksums into releases/<platform>, then update the manifest and this guide together. Mac is the currently approved platform; 1.0.1 is its tested maintenance fix. Do not copy unsigned iOS archives or debug Android APKs into production releases.
+Promote a new platform only after explicit user approval and successful platform builds/tests plus real-device validation. Copy only the verified final build and checksums into releases/<platform>, then update the manifest and this guide together. Mac is the currently approved platform; 1.0.2 is its tested maintenance fix. The DMG is also available in GitHub Releases. Do not copy unsigned iOS archives or debug Android APKs into production releases.

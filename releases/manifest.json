@@ -7,12 +7,12 @@
   "releases": [
     {
       "platform": "macos",
-      "version": "1.0.1",
-      "build": 11,
-      "file": "macos/Clenzy-1.0.1-mac-universal.dmg",
-      "sha256": "80c43b3bd4b8349c8c1ebb810499ff18d7cafbca4b08d1252f2453e9af5b6f04",
-      "source_commit": "24c1f71140c5e224009d2c2f17034c487a564328",
-      "build_run": "https://github.com/skyemain/VCleaner/actions/runs/40236998107",
+      "version": "1.0.2",
+      "build": 12,
+      "file": "macos/Clenzy-1.0.2-mac-universal.dmg",
+      "sha256": "2675617257d5418fbc4160c0b0fd5567946bea0dfa3940fb3e8e7ca498e4c7f5",
+      "source_commit": "c211228b728e460f05b04ae91be0bed4842e061a",
+      "build_run": "https://github.com/skyemain/VCleaner/actions/runs/40770316227",
       "signing": "ad-hoc; not notarized"
     }
   ],
