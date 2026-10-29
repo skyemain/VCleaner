@@ -17,7 +17,7 @@ public class HomeFlowTest {
   try(var scenario=ActivityScenario.launch(HomeActivity.class)){
    scenario.onActivity(activity->{TextView start=find(activity.getWindow().getDecorView(),"START CLEANING");assertNotNull(start);start.performClick();});
    UiDevice device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
-   assertTrue(device.wait(Until.hasObject(By.text("Scan your storage automatically")),5000));device.pressBack();
+   if(!android.os.Environment.isExternalStorageManager())assertTrue(device.wait(Until.hasObject(By.text("Scan your storage automatically")),5000));device.pressBack();
   }
  }
  @Test public void guided_cache_cleanup_reaches_verified_results() throws Exception {

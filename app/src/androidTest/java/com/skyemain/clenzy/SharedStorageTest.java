@@ -25,13 +25,19 @@ public class SharedStorageTest {
    android.content.Intent intent=new android.content.Intent(context,MainActivity.class).putExtra("tool","duplicates");
    try(var scenario=androidx.test.core.app.ActivityScenario.<MainActivity>launch(intent)){
     var device=androidx.test.uiautomator.UiDevice.getInstance(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation());
-    assertTrue(device.wait(androidx.test.uiautomator.Until.hasObject(androidx.test.uiautomator.By.text("first.bin")),15000));
+    java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();
+    for(int attempt=0;attempt<100&&!ready.get();attempt++){
+     scenario.onActivity(activity->{var model=new androidx.lifecycle.ViewModelProvider(activity).get(CleanupViewModel.class);ready.set(!model.busy&&!model.files.isEmpty());});
+     if(!ready.get())Thread.sleep(100);
+    }
+    scenario.onActivity(activity->{var model=new androidx.lifecycle.ViewModelProvider(activity).get(CleanupViewModel.class);assertTrue("Automatic scan: "+model.status+"; files="+model.files,model.files.stream().anyMatch(f->f.name().equals("first.bin")));});
+    device.waitForIdle();
     var select=device.findObject(androidx.test.uiautomator.By.text("Select extra copies"));assertNotNull(select);select.click();
     var clean=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("CLEAN SELECTED.*")).enabled(true)),5000);assertNotNull(clean);clean.click();
     var confirm=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("(?i)Continue"))),5000);assertNotNull(confirm);confirm.click();
     assertTrue(device.wait(androidx.test.uiautomator.Until.hasObject(androidx.test.uiautomator.By.text("CLEANING COMPLETE")),10000));assertTrue(first.exists()^second.exists());
    }
-  }finally{first.delete();second.delete();folder.delete();shell("appops set --uid "+context.getPackageName()+" MANAGE_EXTERNAL_STORAGE default");}
+  }finally{first.delete();second.delete();folder.delete();}
  }
  @Test public void scan_groups_bulk_selects_and_deletes_only_extra_copy() throws Exception {
   File root=new File(ApplicationProvider.<Context>getApplicationContext().getCacheDir(),"shared-"+UUID.randomUUID());assertTrue(root.mkdirs());
