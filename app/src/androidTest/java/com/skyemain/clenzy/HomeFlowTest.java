@@ -30,7 +30,7 @@ public class HomeFlowTest {
     UiDevice device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
     var start=device.wait(Until.findObject(By.text("START CLEANING")),10000);assertNotNull(start);start.click();
     var cache=device.wait(Until.findObject(By.text(java.util.regex.Pattern.compile("(?i)Clenzy cache"))),5000);assertNotNull(cache);cache.click();
-    var clean=device.wait(Until.findObject(By.text(java.util.regex.Pattern.compile("CLEAN SELECTED.*"))),10000);assertNotNull(clean);
+    var clean=device.wait(Until.findObject(By.text(java.util.regex.Pattern.compile("CLEAN SELECTED.*")).enabled(true)),10000);assertNotNull(clean);
     device.waitForIdle();clean.click();
     var confirm=device.wait(Until.findObject(By.text(java.util.regex.Pattern.compile("(?i)Continue"))),5000);assertNotNull(confirm);confirm.click();
     assertTrue(device.wait(Until.hasObject(By.text("CLEANING COMPLETE")),10000));assertFalse(fixture.exists());
