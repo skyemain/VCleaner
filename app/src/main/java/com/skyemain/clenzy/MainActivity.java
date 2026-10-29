@@ -18,8 +18,8 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.*;
 import java.util.*;
 
-public class MainActivity extends ComponentActivity {
-    private final int mint = Color.rgb(68, 239, 196), muted = Color.rgb(151, 179, 173);
+public class MainActivity extends androidx.appcompat.app.AppCompatActivity {
+    private final int mint = Color.rgb(103, 154, 255), muted = Color.rgb(151, 179, 173);
     private CleanupViewModel model;
     private Uri tree;
     private TextView status, metrics, selection;
@@ -38,8 +38,8 @@ public class MainActivity extends ComponentActivity {
         page.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{Color.rgb(15,42,36),Color.rgb(9,15,20)}));
         page.setOnApplyWindowInsetsListener((v, insets) -> { v.setPadding(dp(22), insets.getSystemWindowInsetTop()+dp(12), dp(22), insets.getSystemWindowInsetBottom()+dp(12)); return insets; });
         TextView brand = label("✦  C L E N Z Y", 14, mint); brand.setTypeface(null, Typeface.BOLD); page.addView(brand);
-        TextView title = label("A little lighter.", 30, Color.WHITE); title.setTypeface(null, Typeface.BOLD); page.addView(title);
-        page.addView(label("Keep what matters. Make room for more.", 14, muted));
+        TextView title = label("Cleanup ready", 30, Color.WHITE); title.setTypeface(null, Typeface.BOLD); page.addView(title);
+        page.addView(label("Select what you no longer need. Your files stay in your control.", 14, muted));
         LinearLayout storage = column(); styleCard(storage);
         storage.addView(label("DEVICE STORAGE", 11, mint)); metrics = label("", 22, Color.WHITE); storage.addView(metrics);
         usage = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal); usage.setProgressTintList(android.content.res.ColorStateList.valueOf(mint)); storage.addView(usage);
@@ -54,7 +54,7 @@ public class MainActivity extends ComponentActivity {
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal); progress.setIndeterminate(true); progress.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(mint)); page.addView(progress);
         status = label("", 12, muted); status.setMaxLines(4); page.addView(status);
         Spinner picker = new Spinner(this);
-        picker.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Large files · 100 MiB+", "Older than 30 days", "Exact duplicates", "Screenshots (name match)", "Videos"}));
+        picker.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Large files · 100 MiB+", "Older than 30 days", "Exact duplicates", "Screenshots (name match)", "Videos", "All accessible files"}));
         picker.setSelection(model.category.ordinal());
         picker.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             public void onItemSelected(AdapterView<?> p, View v, int position, long id) { model.category = ReviewRules.Category.values()[position]; model.changed(); }
@@ -65,14 +65,29 @@ public class MainActivity extends ComponentActivity {
         RecyclerView list = new RecyclerView(this); list.setLayoutManager(new LinearLayoutManager(this)); adapter = new ReviewAdapter(); list.setAdapter(adapter);
         page.addView(list, new LinearLayout.LayoutParams(-1,0,1));
         selection = label("", 12, muted); page.addView(selection);
-        remove = button("Review selected", this::confirmDelete); page.addView(remove);
+        remove = button("CLEAN SELECTED", this::confirmDelete); page.addView(remove);
         TextView help = label("Private by design · only files you authorize", 11, muted); help.setGravity(Gravity.CENTER); help.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("Your files, your choice").setMessage("Clenzy cannot clear other apps' private caches or RAM. Photos use Android's Trash confirmation on Android 11+. Folder deletion may be permanent and may affect cloud copies. Age alone never means junk.").setPositiveButton("Done", null).setNeutralButton("Permissions", (d,w) -> startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:"+getPackageName())))).show()); page.addView(help);
         launchingTrash = state != null && state.getBoolean("trashLaunched", false);
         setContentView(page);
         model.updates.observe(this, ignored -> render());
+        String tool=getIntent().getStringExtra("tool");
+        if(tool!=null) {
+            sources.setVisibility(View.GONE); actions.setVisibility(View.GONE);
+            model.category=tool.equals("large")?ReviewRules.Category.LARGE:tool.equals("duplicates")?ReviewRules.Category.DUPLICATES:ReviewRules.Category.ALL;
+            picker.setSelection(model.category.ordinal());
+            if(state==null) {
+                if(tool.equals("cache")) {model.ownCache=true;model.media=false;model.scan(false);}
+                else if(tool.equals("folder")||tool.equals("downloads")) explainFolder();
+                else if(model.tree!=null && !tool.equals("photos")) {model.ownCache=false;model.media=false;model.scan(false);}
+                else new AlertDialog.Builder(this).setTitle("Allow Clenzy to find files you can review").setMessage("Photos access covers only authorized images and videos. You can choose a folder instead for documents and downloads. Nothing personal is selected automatically.").setPositiveButton("Continue",(d,w)->mediaAccess()).setNeutralButton("Choose folder",(d,w)->chooseFolder()).setNegativeButton("Back",(d,w)->finish()).show();
+            }
+        }
     }
+    private void explainFolder() {new AlertDialog.Builder(this).setTitle("Choose a folder to review").setMessage("Android grants access only to the folder you select. On newer Android versions, choose a supported subfolder or document provider. Clenzy cannot access Android/data or other apps’ private storage.").setPositiveButton("Continue",(d,w)->chooseFolder()).setNegativeButton("Back",(d,w)->finish()).show();}
     private void render() {
+        if(model.completed && getIntent().hasExtra("tool")) {showResults();return;}
         tree = model.tree; status.setText(model.status); progress.setVisibility(model.busy ? View.VISIBLE : View.GONE); cancel.setVisibility(model.busy ? View.VISIBLE : View.GONE);
+        if(getIntent().hasExtra("tool")) { ((View)cancel.getParent()).setVisibility(model.busy?View.VISIBLE:View.GONE); scan.setVisibility(View.GONE);deep.setVisibility(View.GONE); }
         for (Button b : List.of(choose, photos, scan, deep)) b.setEnabled(!model.busy && model.pendingTrash == null);
         List<ReviewFile> visible = ReviewRules.filter(model.files, model.category, System.currentTimeMillis());
         if (sortByName && model.category != ReviewRules.Category.DUPLICATES) visible.sort(Comparator.comparing(ReviewFile::name, String.CASE_INSENSITIVE_ORDER));
@@ -87,13 +102,22 @@ public class MainActivity extends ComponentActivity {
     private void updateSelection() {
         long bytes = 0; for (ReviewFile f : model.chosen()) if (f.bytes() >= 0) bytes += f.bytes();
         selection.setText(model.selected.isEmpty() ? "Nothing selected · tap Preview to inspect a file" : model.selected.size()+" selected · "+bytes(bytes)+" source size");
-        remove.setText(model.media ? "Review & move to Trash" : "Review & delete files"); remove.setEnabled(!model.busy && model.pendingTrash == null && !model.selected.isEmpty());
+        remove.setText("CLEAN SELECTED — "+bytes(bytes)); remove.setEnabled(!model.busy && model.pendingTrash == null && !model.selected.isEmpty());
     }
     private void confirmDelete() {
         boolean all = ReviewRules.selectsEveryCopy(model.files, model.selected);
         new AlertDialog.Builder(this).setTitle(model.media ? "Move selected media to Trash?" : "Permanently delete selected files?")
             .setMessage((all ? "You selected EVERY copy in a duplicate group.\n\n" : "") + (model.media ? "Android will ask you to confirm. Trashed items may still use storage until removed." : "There may be no recycle bin. Cloud providers may delete synced copies too. Age does not mean a file is unnecessary."))
             .setNegativeButton("Cancel", null).setPositiveButton("Continue", (d,w) -> model.delete()).show();
+    }
+    private void showResults() {
+        LinearLayout result=column();result.setPadding(dp(28),dp(32),dp(28),dp(24));result.setBackgroundColor(Color.rgb(14,23,38));
+        result.addView(label("✓",48,mint));result.addView(label("CLEANING COMPLETE",26,Color.WHITE));
+        result.addView(label(bytes(model.recoveredBytes)+" successfully deleted",30,Color.WHITE));
+        result.addView(label(model.removedFiles+" files removed · "+model.skippedFiles+" skipped or unavailable",16,muted));
+        StatFs disk=new StatFs(Environment.getDataDirectory().getAbsolutePath());result.addView(label(bytes(disk.getAvailableBytes())+" available now",18,muted));
+        result.addView(label("Deletion totals reflect verified provider operations. Actual free space can differ because of provider trash, cloud storage and filesystem accounting.",13,muted));
+        result.addView(button("DONE",this::finish));setContentView(result);
     }
     private void chooseFolder() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
@@ -105,13 +129,13 @@ public class MainActivity extends ComponentActivity {
         if (Build.VERSION.SDK_INT >= 33) { permissions.add(Manifest.permission.READ_MEDIA_IMAGES); permissions.add(Manifest.permission.READ_MEDIA_VIDEO); if (Build.VERSION.SDK_INT >= 34) permissions.add(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED); }
         else permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
         boolean granted = true; for (String p : permissions) if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) granted = false;
-        if (!granted) requestPermissions(permissions.toArray(new String[0]), 20); else { model.media = true; model.scan(false); }
+        if (!granted) requestPermissions(permissions.toArray(new String[0]), 20); else { model.ownCache=false; model.media = true; model.scan(false); }
     }
     @Override public void onRequestPermissionsResult(int request, String[] permissions, int[] grants) {
         super.onRequestPermissionsResult(request, permissions, grants);
         if (request == 20) {
             boolean any = false; for (int g : grants) if (g == PackageManager.PERMISSION_GRANTED) any = true;
-            if (any) { model.media = true; model.scan(false); }
+            if (any) { model.ownCache=false; model.media = true; model.scan(false); }
             else { model.status = "Photos access denied. Choose a folder instead or change access in app settings."; model.changed(); }
         }
     }

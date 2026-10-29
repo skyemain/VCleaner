@@ -63,7 +63,7 @@ jobs:
           script: |
             gradle connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true || { find app/build/outputs/androidTest-results -name '*.xml' -exec cat {} +; adb logcat -d -s AndroidRuntime System.err; exit 1; }
             adb shell am force-stop com.skyemain.clenzy
-            adb shell am start -n com.skyemain.clenzy/.MainActivity
+            adb shell am start -n com.skyemain.clenzy/.HomeActivity
             sleep 3
             mkdir -p screenshots
             adb exec-out screencap -p > screenshots/Clenzy-Android-home.png
@@ -84,8 +84,8 @@ jobs:
           git fetch origin android
           if [ "$(git rev-parse origin/android)" != "${{ github.sha }}" ]; then exit 0; fi
           mkdir -p release
-          rm -f release/Clenzy-1.0-android-candidate.apk
-          cp app/build/outputs/apk/release/app-release.apk release/Clenzy-1.1-android-candidate.apk
+          rm -f release/Clenzy-*-android-candidate.apk
+          cp app/build/outputs/apk/release/app-release.apk release/Clenzy-1.2.0-android-candidate.apk
           (cd release && sha256sum *.apk > SHA256SUMS.txt)
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

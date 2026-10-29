@@ -3,13 +3,14 @@ package com.skyemain.clenzy;
 import java.util.*;
 
 public final class ReviewRules {
-    public enum Category { LARGE, OLD, DUPLICATES, SCREENSHOTS, VIDEOS }
+    public enum Category { LARGE, OLD, DUPLICATES, SCREENSHOTS, VIDEOS, ALL }
     public static List<ReviewFile> filter(List<ReviewFile> files, Category category, long now) {
         Map<String, Integer> hashes = new HashMap<>();
         for (ReviewFile file : files) if (file.digest() != null) hashes.merge(file.digest(), 1, Integer::sum);
         List<ReviewFile> result = new ArrayList<>();
         for (ReviewFile file : files) {
             boolean include = switch (category) {
+                case ALL -> true;
                 case SCREENSHOTS -> file.name() != null && file.name().toLowerCase(Locale.ROOT).contains("screenshot");
                 case VIDEOS -> file.uri().contains("/video/") || file.name().toLowerCase(Locale.ROOT).matches(".*\\.(mp4|mov|mkv|webm|avi|3gp)$");
                 case LARGE -> file.bytes() >= 100L * 1024 * 1024;
