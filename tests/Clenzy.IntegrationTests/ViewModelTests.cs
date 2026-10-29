@@ -11,6 +11,22 @@ public sealed class MainViewModelTests
     private static string TempFile(PresentationHarness h, string name) => h.Core.Temp.Combine("Users/tester/AppData/Local/Temp/" + name);
 
     [Fact]
+    public async Task Windows11_disk_cleanup_requires_review_and_preserves_recent_temp_until_confirmation()
+    {
+        using var h = new PresentationHarness(s => { s.CleanUserTemp = true; s.ReviewBeforeCleaning = false; s.CleanRecentTempFiles = true; });
+        h.UserTempFile("old.tmp", 1000);
+        h.UserTempFile("recent.tmp", 100, DateTime.UtcNow);
+        var run = h.Main.ReviewWindows11DiskCleanupAsync();
+        var review = await PresentationHarness.WaitFor(() => h.Main.CurrentPage as ReviewViewModel);
+        Assert.True(File.Exists(TempFile(h, "old.tmp")));
+        Assert.True(File.Exists(TempFile(h, "recent.tmp")));
+        review.ConfirmCommand.Execute(null);
+        await run;
+        Assert.False(File.Exists(TempFile(h, "old.tmp")));
+        Assert.True(File.Exists(TempFile(h, "recent.tmp")));
+    }
+
+    [Fact]
     public void Initial_state_is_ready_with_five_rows_and_a_clean_now_button()
     {
         using var h = new PresentationHarness();

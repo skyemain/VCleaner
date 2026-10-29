@@ -97,8 +97,8 @@ public sealed class Windows11OptimizationTests : IDisposable
     [Fact] public async Task Recall_policy_requires_destructive_consent_even_though_setting_is_reversible()
     {
         var b = new SandboxOptimizationBackend(); var e = new OptimizationEngine(b, root);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => e.ApplyAsync(awaitAudit(),new[]{"recall"},OptimizationProfile.Advanced,true,false,default));
-        OptimizationAudit awaitAudit() => b.AuditAsync(default).GetAwaiter().GetResult();
+        var audit = await b.AuditAsync(default);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => e.ApplyAsync(audit,new[]{"recall"},OptimizationProfile.Advanced,true,false,default));
         Assert.Empty(e.Transactions());
     }
     [Fact] public async Task Startup_command_can_be_restored_after_application_restart()
@@ -108,6 +108,29 @@ public sealed class Windows11OptimizationTests : IDisposable
         Assert.False((await b.ReadAsync("startup:Steam",default)).Exists);
         var restarted = new OptimizationEngine(b,root); await restarted.RestoreAsync(tx.Id,default);
         Assert.Equal("fixture.exe",(await b.ReadAsync("startup:Steam",default)).Value);
+    }
+    [Fact] public async Task Partial_failure_keeps_first_change_restorable_and_marks_failed_change()
+    {
+        var b = new PartialFailureBackend(); var e = new OptimizationEngine(b,root);
+        var audit = await b.AuditAsync(default);
+        await Assert.ThrowsAsync<IOException>(() => e.ApplyAsync(audit,new[]{"advertising","extensions"},OptimizationProfile.Safe,true,false,default));
+        Assert.Equal("0",(await b.ReadAsync("advertising",default)).Value);
+        Assert.Equal("1",(await b.ReadAsync("extensions",default)).Value);
+        var id = Assert.Single(e.Transactions());
+        var journal = File.ReadAllText(Path.Combine(root,id+".json"));
+        Assert.Contains("Review required",journal);
+        await e.RestoreAsync(id,default);
+        Assert.Equal("1",(await b.ReadAsync("advertising",default)).Value);
+    }
+    private sealed class PartialFailureBackend : IOptimizationBackend
+    {
+        private readonly SandboxOptimizationBackend inner = new();
+        public bool Sandbox => true;
+        public Task<OptimizationAudit> AuditAsync(CancellationToken token) => inner.AuditAsync(token);
+        public Task<OptimizationState> ReadAsync(string id,CancellationToken token) => inner.ReadAsync(id,token);
+        public Task<OptimizationState> DesiredAsync(string id,CancellationToken token) => inner.DesiredAsync(id,token);
+        public Task<bool> VerifyRecoveryPointAsync(CancellationToken token) => Task.FromResult(true);
+        public Task WriteAsync(string id,OptimizationState state,CancellationToken token) => id == "extensions" ? throw new IOException("Simulated denied write") : inner.WriteAsync(id,state,token);
     }
     private sealed class RecoveryFailureBackend : IOptimizationBackend
     {

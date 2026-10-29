@@ -104,6 +104,7 @@ try {
         New-Item -ItemType Directory -Force -Path $releaseFolder | Out-Null
         Get-ChildItem $releaseFolder -Filter 'Clenzy-*.exe' | Remove-Item -Force
         Copy-Item $exe $releaseFolder -Force
+        Copy-Item (Join-Path $root 'THIRD-PARTY-NOTICES.txt') $releaseFolder -Force
         $cer = Join-Path $root 'artifacts\dev-cert\Clenzy-dev.cer'
         if ($Sign -and (Test-Path $cer)) { Copy-Item $cer (Join-Path $releaseFolder 'Clenzy-dev.cer') -Force }
         "$((Get-FileHash (Join-Path $releaseFolder (Split-Path $exe -Leaf)) -Algorithm SHA256).Hash.ToLower())  $(Split-Path $exe -Leaf)" |

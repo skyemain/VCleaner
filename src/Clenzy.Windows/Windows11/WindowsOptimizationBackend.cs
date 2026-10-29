@@ -58,11 +58,17 @@ public sealed class WindowsOptimizationBackend : IOptimizationBackend
                     state = await ReadAsync(entry.Id, token);
                     if (!state.Exists && !entry.AllowCreate) reason = "No existing supported setting or startup entry on this profile.";
                     if (state.Exists && state.Kind != (entry.Kind == "Startup" ? "String" : "DWord")) reason = "Unsupported value type; preserved.";
+                    if (entry.Kind == "Startup") {
+                        using var approved = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run");
+                        var approval = approved?.GetValue(entry.Name) as byte[];
+                        if (approval is { Length: > 0 } && approval[0] != 2 && approval[0] != 6) reason = "Already disabled or managed by Windows startup controls; preserved.";
+                    }
                     if (entry.Policy && state.Exists && state != entry.DesiredState) reason = "An existing policy is configured; preserved. Review it in Windows Settings or with your administrator.";
                     if (entry.Policy && audit.TryGetProperty("DomainJoined", out var domain) && domain.GetBoolean()) reason = "Domain-managed policies are preserved.";
                 }
                 if (state == entry.DesiredState) reason = "Already configured; no change needed.";
-                var current = entry.Kind == "Package" ? (state.Exists ? "Installed" : "Not installed") : entry.Kind == "Startup" ? (state.Exists ? "Starts at sign-in" : "No Run entry") : state.Exists ? state.Value ?? "Unknown" : "Not configured";
+                var current = entry.Kind == "Package" ? (state.Exists ? "Installed" : "Not installed") : entry.Kind == "Startup" ? (state.Exists ? "Run entry present" : "No Run entry") : state.Exists ? state.Value ?? "Unknown" : "Not configured";
+                if (reason?.StartsWith("Could not inspect:", StringComparison.Ordinal) == true) current = "Could not inspect";
                 findings.Add(new(entry.Action, current, reason is null, reason, state));
             } catch (Exception ex) when (ex is not OperationCanceledException) {
                 findings.Add(new(entry.Action, "Could not inspect", false, ex.Message));

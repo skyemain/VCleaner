@@ -7,9 +7,10 @@ function Invoke-ClenzyWindows11 {
         'Capabilities' { return @{ PowerShell=$PSVersionTable.PSVersion.ToString(); CatalogCount=@($script:ClenzyCatalog).Count } }
         'Packages' {
             $script:PackageSnapshot = @(Get-AppxPackage)
+            $script:ProcessSnapshot = @(Get-Process)
             $results = @{}
-            try { foreach ($id in $allowed) { $results[$id] = Invoke-ClenzyWindows11 ([pscustomobject]@{Operation='Package';Id=$id}) } }
-            finally { $script:PackageSnapshot = $null }
+            try { foreach ($id in $allowed) { try { $results[$id] = Invoke-ClenzyWindows11 ([pscustomobject]@{Operation='Package';Id=$id}) } catch { $results[$id] = @{Exists=$false;FullName=$null;Blocked=$true;Unknown=$true;Reason=('Could not inspect: ' + $_.Exception.Message)} } } }
+            finally { $script:PackageSnapshot = $null; $script:ProcessSnapshot = $null }
             return $results
         }
         'Audit' {
@@ -26,6 +27,7 @@ function Invoke-ClenzyWindows11 {
                 RAMBytes = [long]$os.TotalVisibleMemorySize * 1024
                 GPU = @(Read-Section 'GPU' { Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion })
                 Disks = @(Read-Section 'Disks' { Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID,Size,FreeSpace })
+                TopMemoryProcesses = @(Read-Section 'Memory processes' { Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 ProcessName,Id,WorkingSet64 })
                 PowerShell = $PSVersionTable.PSVersion.ToString()
                 Administrator = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
                 Packages = $packages
@@ -50,7 +52,8 @@ function Invoke-ClenzyWindows11 {
             if ($p.Count -eq 0) { return @{ Exists=$false; FullName=$null; Blocked=$false; Reason='Not installed' } }
             $p = $p[0]
             $dependents = @($all | Where-Object { @($_.Dependencies | Where-Object { ($_.PackageFullName -eq $p.PackageFullName) -or ([string]$_ -ceq $p.PackageFullName) }).Count -gt 0 })
-            $running = @(Get-Process | Where-Object { try { $_.Path -and $p.InstallLocation -and $_.Path.StartsWith($p.InstallLocation + '\', [StringComparison]::OrdinalIgnoreCase) } catch { $false } })
+            $processes = if ($null -ne $script:ProcessSnapshot) { @($script:ProcessSnapshot) } else { @(Get-Process) }
+            $running = @($processes | Where-Object { try { $_.Path -and $p.InstallLocation -and $_.Path.StartsWith($p.InstallLocation + '\', [StringComparison]::OrdinalIgnoreCase) } catch { $false } })
             $blocked = $p.NonRemovable -or $p.IsFramework -or $p.IsResourcePackage -or $dependents.Count -gt 0 -or $running.Count -gt 0
             return @{ Exists=$true; FullName=$p.PackageFullName; Blocked=[bool]$blocked; Reason= $(if ($blocked) { 'Required, non-removable, depended on, or currently running; preserved.' } else { 'Installed for this user; usage history is unknown. Review before uninstalling.' }) }
         }

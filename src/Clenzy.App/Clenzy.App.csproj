@@ -37,4 +37,5 @@
     <Resource Include="Assets\Clenzy.ico" />
     <Resource Include="Assets\Clenzy.png" />
   </ItemGroup>
+  <ItemGroup><EmbeddedResource Include="../../THIRD-PARTY-NOTICES.txt" LogicalName="Clenzy.ThirdPartyNotices" /></ItemGroup>
 </Project>

@@ -70,5 +70,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create windows-v1.6.0 release/Clenzy-1.6.0-win-x64.exe release/SHA256SUMS.txt --target '${{ github.sha }}' --title 'Clenzy 1.6.0 for Windows' --prerelease --latest=false --notes 'Expands Windows 11 Cleanup with a shared 79-action catalog: 47 optional apps, advertising/privacy preferences, Recall policy, selective startup and guarded optional services. Reuses reviewed disk cleanup, preserves security and gaming dependencies, and records verified changes and rollback. Windows x64 unsigned candidate; live Windows 11 validation remains outstanding.'
+          gh release create windows-v1.6.0 release/Clenzy-1.6.0-win-x64.exe release/SHA256SUMS.txt release/THIRD-PARTY-NOTICES.txt --target '${{ github.sha }}' --title 'Clenzy 1.6.0 for Windows' --prerelease --latest=false --notes 'Expands Windows 11 Cleanup with a shared 79-action catalog: 47 optional apps, advertising/privacy preferences, Recall policy, selective startup and guarded optional services. Reuses reviewed disk cleanup, preserves security and gaming dependencies, and records verified changes and rollback. Windows x64 unsigned candidate; live Windows 11 validation remains outstanding.'
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
